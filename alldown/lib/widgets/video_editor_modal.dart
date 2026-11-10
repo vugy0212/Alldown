@@ -1,10 +1,11 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 import '../models/media_item.dart';
 import '../providers/media_library_provider.dart';
-import '../providers/settings_provider.dart';
 import '../services/video_editor_service.dart';
 import '../theme/app_colors.dart';
 
@@ -35,8 +36,8 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
   // Crop & Manual Zoom / Pan
   String _selectedCrop = 'original'; // original, 1:1, 9:16, 16:9, 4:5
   double _zoom = 1.0; // 1.0x to 3.0x
-  double _panX = 0.0; // -1.0 to 1.0
-  double _panY = 0.0; // -1.0 to 1.0
+  double _panX = 0.0; // -1.0 to 1.0 (0.0 is center)
+  double _panY = 0.0; // -1.0 to 1.0 (0.0 is center)
 
   bool _isProcessing = false;
   String _processingMessage = '';
@@ -91,7 +92,6 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
       final startMs = (_trimRange.start * 1000).toInt();
       final endMs = (_trimRange.end * 1000).toInt();
 
-      // If outside trimmed range, start cleanly from trimmed start
       if (posMs < startMs || posMs >= endMs) {
         _controller!.seekTo(Duration(milliseconds: startMs)).then((_) {
           _controller!.play();
@@ -112,14 +112,12 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
   }
 
   void _onRangeChanged(RangeValues values) {
-    // Minimum 0.5s clip
     if (values.end - values.start < 0.5) return;
 
     setState(() {
       _trimRange = values;
     });
 
-    // Pause and seek preview immediately to the chosen start point
     _controller?.pause();
     _controller?.seekTo(Duration(milliseconds: (values.start * 1000).toInt()));
   }
@@ -130,6 +128,26 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
       _panX = 0.0;
       _panY = 0.0;
     });
+  }
+
+  double _getPreviewAspectRatio() {
+    switch (_selectedCrop) {
+      case '1:1':
+        return 1.0;
+      case '9:16':
+        return 9.0 / 16.0;
+      case '16:9':
+        return 16.0 / 9.0;
+      case '4:5':
+        return 4.0 / 5.0;
+      case 'original':
+      default:
+        if (_controller != null && _controller!.value.isInitialized) {
+          final r = _controller!.value.aspectRatio;
+          return r > 0.2 ? r : (16.0 / 9.0);
+        }
+        return 16.0 / 9.0;
+    }
   }
 
   Future<void> _exportVideo() async {
@@ -146,8 +164,9 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
     });
 
     try {
-      final configuredDir = ref.read(settingsProvider).downloadDirectory;
-      final targetFolder = Directory('$configuredDir/Videos');
+      // 1. Always write to safe internal storage first to avoid EACCES Android Scoped Storage errors
+      final appDocDir = await getApplicationDocumentsDirectory();
+      final targetFolder = Directory('${appDocDir.path}/AllDown/Videos');
       if (!targetFolder.existsSync()) {
         targetFolder.createSync(recursive: true);
       }
@@ -175,7 +194,14 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
         final durSeconds = ((endMs - startMs) / 1000).round();
         final durStr = '${(durSeconds ~/ 60).toString().padLeft(2, '0')}:${(durSeconds % 60).toString().padLeft(2, '0')}';
 
-        // Add to library
+        // 2. Optionally copy to public Downloads folder for external gallery apps
+        try {
+          final pubDir = Directory('/storage/emulated/0/Download/AllDown/Videos');
+          if (!pubDir.existsSync()) pubDir.createSync(recursive: true);
+          File(outPath).copySync('${pubDir.path}/Trimmed_$timeStamp.mp4');
+        } catch (_) {}
+
+        // 3. Add to library state
         final newItem = MediaItem(
           id: 'trim_$timeStamp',
           title: '${widget.item.title} (Trimmed)',
@@ -203,7 +229,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Greška prilikom izrezivanja videa.')),
+          const SnackBar(content: Text('Greška prilikom izrezivanja videa. Provjerite format.')),
         );
       }
     } catch (e) {
@@ -229,8 +255,9 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
     });
 
     try {
-      final configuredDir = ref.read(settingsProvider).downloadDirectory;
-      final targetFolder = Directory('$configuredDir/GIFs');
+      // 1. Write to safe internal storage
+      final appDocDir = await getApplicationDocumentsDirectory();
+      final targetFolder = Directory('${appDocDir.path}/AllDown/GIFs');
       if (!targetFolder.existsSync()) {
         targetFolder.createSync(recursive: true);
       }
@@ -259,7 +286,14 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
         final durSeconds = ((endMs - startMs) / 1000).round();
         final durStr = '${(durSeconds ~/ 60).toString().padLeft(2, '0')}:${(durSeconds % 60).toString().padLeft(2, '0')}';
 
-        // Add to library
+        // 2. Copy to public Downloads/AllDown/GIFs
+        try {
+          final pubDir = Directory('/storage/emulated/0/Download/AllDown/GIFs');
+          if (!pubDir.existsSync()) pubDir.createSync(recursive: true);
+          File(outPath).copySync('${pubDir.path}/Clip_$timeStamp.gif');
+        } catch (_) {}
+
+        // 3. Add to library
         final newItem = MediaItem(
           id: 'gif_$timeStamp',
           title: '${widget.item.title} (GIF)',
@@ -300,26 +334,6 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
     }
   }
 
-  double _getPreviewAspectRatio() {
-    switch (_selectedCrop) {
-      case '1:1':
-        return 1.0;
-      case '9:16':
-        return 9.0 / 16.0;
-      case '16:9':
-        return 16.0 / 9.0;
-      case '4:5':
-        return 4.0 / 5.0;
-      case 'original':
-      default:
-        if (_controller != null && _controller!.value.isInitialized) {
-          final r = _controller!.value.aspectRatio;
-          return r > 0.2 ? r : (16.0 / 9.0);
-        }
-        return 16.0 / 9.0;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final startFormatted = VideoEditorService.formatMs((_trimRange.start * 1000).toInt());
@@ -327,16 +341,17 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
     final clipDurationSec = (_trimRange.end - _trimRange.start).toStringAsFixed(1);
     final isPlaying = _controller?.value.isPlaying ?? false;
     final previewAspect = _getPreviewAspectRatio();
+    final bottomNavPadding = MediaQuery.of(context).padding.bottom;
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.92,
+      height: MediaQuery.of(context).size.height * 0.94,
       decoration: const BoxDecoration(
         color: AppColors.surfaceContainer,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         children: [
-          // Header Drag Bar
+          // Header Drag Handle & Title
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Row(
@@ -369,14 +384,14 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
           ),
           const Divider(color: AppColors.stroke, height: 1),
 
-          // Scrollable Editor Content
+          // Scrollable Editor Controls
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Video Player Preview with live Crop & Zoom framing
+                  // Video Player Preview Box with live Aspect Ratio & Interactive Gesture Pan
                   ClipRRect(
                     borderRadius: BorderRadius.circular(16),
                     child: Container(
@@ -393,27 +408,52 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                               child: ClipRect(
                                 child: LayoutBuilder(
                                   builder: (context, constraints) {
-                                    // Live visual translation based on panX and panY
-                                    final maxOffsetX = constraints.maxWidth * (_zoom - 1.0) / 2;
-                                    final maxOffsetY = constraints.maxHeight * (_zoom - 1.0) / 2;
-                                    final dx = -_panX * maxOffsetX;
-                                    final dy = _panY * maxOffsetY;
+                                    final boxW = constraints.maxWidth;
+                                    final boxH = constraints.maxHeight;
 
-                                    return Transform.translate(
-                                      offset: Offset(dx, dy),
-                                      child: Transform.scale(
-                                        scale: _zoom,
-                                        child: FittedBox(
-                                          fit: BoxFit.cover,
-                                          child: SizedBox(
-                                            width: _controller!.value.size.width > 0
-                                                ? _controller!.value.size.width
-                                                : 1920,
-                                            height: _controller!.value.size.height > 0
-                                                ? _controller!.value.size.height
-                                                : 1080,
-                                            child: VideoPlayer(_controller!),
-                                          ),
+                                    final videoW = _controller!.value.size.width > 0 ? _controller!.value.size.width : 16.0;
+                                    final videoH = _controller!.value.size.height > 0 ? _controller!.value.size.height : 9.0;
+                                    final videoAspect = videoW / videoH;
+
+                                    // Calculate how video fills this box with BoxFit.cover + zoom
+                                    final double renderedW;
+                                    final double renderedH;
+                                    if (videoAspect > previewAspect) {
+                                      renderedH = boxH * _zoom;
+                                      renderedW = boxH * videoAspect * _zoom;
+                                    } else {
+                                      renderedW = boxW * _zoom;
+                                      renderedH = (boxW / videoAspect) * _zoom;
+                                    }
+
+                                    // Maximum allowed pixel offsets
+                                    final maxDx = math.max(0.0, (renderedW - boxW) / 2);
+                                    final maxDy = math.max(0.0, (renderedH - boxH) / 2);
+
+                                    // Pan values: -1.0 to 1.0
+                                    final pixelX = -_panX * maxDx;
+                                    final pixelY = _panY * maxDy;
+
+                                    return GestureDetector(
+                                      onPanUpdate: _isProcessing
+                                          ? null
+                                          : (details) {
+                                              if (maxDx <= 0 && maxDy <= 0) return;
+                                              setState(() {
+                                                if (maxDx > 0) {
+                                                  _panX = (_panX - (details.delta.dx / maxDx)).clamp(-1.0, 1.0);
+                                                }
+                                                if (maxDy > 0) {
+                                                  _panY = (_panY + (details.delta.dy / maxDy)).clamp(-1.0, 1.0);
+                                                }
+                                              });
+                                            },
+                                      child: Transform.translate(
+                                        offset: Offset(pixelX, pixelY),
+                                        child: SizedBox(
+                                          width: renderedW,
+                                          height: renderedH,
+                                          child: VideoPlayer(_controller!),
                                         ),
                                       ),
                                     );
@@ -431,7 +471,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                               right: 12,
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.7),
+                                  color: Colors.black.withValues(alpha: 0.75),
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
@@ -506,6 +546,31 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                               ),
                             ),
                           ),
+
+                          // Interactive Gesture Hint Overlay
+                          if (_zoom > 1.05 || _selectedCrop != 'original')
+                            Positioned(
+                              bottom: 12,
+                              left: 12,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.65),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.touch_app_rounded, size: 12, color: AppColors.onSurfaceVariant),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'Povucite prstom po videu za pomak kadra',
+                                      style: TextStyle(fontSize: 10, color: Colors.white70),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -573,7 +638,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 3. Manual Crop & Zoom Section (Zoom In / Zoom Out + Pan)
+                  // 3. Manual Crop & Zoom Section (Zoom In / Zoom Out + Pan Controls)
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -587,12 +652,12 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
+                            const Row(
                               children: [
-                                const Icon(Icons.zoom_in_rounded, size: 16, color: AppColors.secondary),
-                                const SizedBox(width: 6),
-                                const Text(
-                                  'Ručno podešavanje kadra (Zoom & Pan)',
+                                Icon(Icons.zoom_in_rounded, size: 16, color: AppColors.secondary),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Ručno podešavanje kadra (Zoom & Pozicija)',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
@@ -611,7 +676,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: const Text(
-                                    'Reset',
+                                    'Resetiraj',
                                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.secondary),
                                   ),
                                 ),
@@ -669,62 +734,44 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                           ],
                         ),
 
-                        // Pan Controls (Visible when zoomed or cropped)
-                        if (_zoom > 1.05 || _selectedCrop != 'original') ...[
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              const Icon(Icons.open_with_rounded, size: 14, color: AppColors.onSurfaceVariant),
-                              const SizedBox(width: 6),
-                              const Text(
-                                'Pozicija kadra (Horizontalno / Vertikalno)',
-                                style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              const Text('X:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.onSurfaceVariant)),
-                              Expanded(
-                                child: Slider(
-                                  value: _panX,
-                                  min: -1.0,
-                                  max: 1.0,
-                                  divisions: 20,
-                                  activeColor: AppColors.primary,
-                                  inactiveColor: AppColors.surfaceContainerHighest,
-                                  onChanged: _isProcessing
-                                      ? null
-                                      : (val) {
-                                          setState(() => _panX = val);
-                                        },
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              const Text('Y:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.onSurfaceVariant)),
-                              Expanded(
-                                child: Slider(
-                                  value: _panY,
-                                  min: -1.0,
-                                  max: 1.0,
-                                  divisions: 20,
-                                  activeColor: AppColors.primary,
-                                  inactiveColor: AppColors.surfaceContainerHighest,
-                                  onChanged: _isProcessing
-                                      ? null
-                                      : (val) {
-                                          setState(() => _panY = val);
-                                        },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                        // Pan Directional Fine-tuning Controls
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.open_with_rounded, size: 14, color: AppColors.onSurfaceVariant),
+                            const SizedBox(width: 6),
+                            const Text(
+                              'Fino podešavanje pozicije kadra:',
+                              style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                            ),
+                            const Spacer(),
+                            // Quick D-Pad Buttons
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              icon: const Icon(Icons.arrow_left_rounded, size: 24),
+                              onPressed: () => setState(() => _panX = (_panX - 0.15).clamp(-1.0, 1.0)),
+                            ),
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              icon: const Icon(Icons.arrow_right_rounded, size: 24),
+                              onPressed: () => setState(() => _panX = (_panX + 0.15).clamp(-1.0, 1.0)),
+                            ),
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              icon: const Icon(Icons.arrow_upward_rounded, size: 18),
+                              onPressed: () => setState(() => _panY = (_panY + 0.15).clamp(-1.0, 1.0)),
+                            ),
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              icon: const Icon(Icons.arrow_downward_rounded, size: 18),
+                              onPressed: () => setState(() => _panY = (_panY - 0.15).clamp(-1.0, 1.0)),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
 
                   // Processing State Overlay
                   if (_isProcessing) ...[
@@ -751,80 +798,87 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                   ],
-
-                  // Action Buttons (Save Video vs Make GIF)
-                  Row(
-                    children: [
-                      // Save Trimmed/Cropped Video
-                      Expanded(
-                        child: Container(
-                          height: 50,
-                          decoration: BoxDecoration(
-                            gradient: AppColors.primaryGradient,
-                            borderRadius: BorderRadius.circular(14),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primaryAccent.withValues(alpha: 0.35),
-                                blurRadius: 16,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            ),
-                            onPressed: _isProcessing ? null : _exportVideo,
-                            icon: const Icon(Icons.content_cut_rounded, size: 18, color: AppColors.onPrimaryContainer),
-                            label: const Text(
-                              'Spremi Video',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.onPrimaryContainer,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-
-                      // Create Animated GIF
-                      Expanded(
-                        child: Container(
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: AppColors.secondary.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: AppColors.secondary, width: 1.5),
-                          ),
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            ),
-                            onPressed: _isProcessing ? null : _exportGif,
-                            icon: const Icon(Icons.gif_rounded, size: 22, color: AppColors.secondary),
-                            label: const Text(
-                              'Izradi GIF',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.secondary,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
+            ),
+          ),
+
+          // FIXED BOTTOM ACTION BAR - Never overlaps with system navigation buttons
+          Container(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottomNavPadding),
+            decoration: const BoxDecoration(
+              color: AppColors.surfaceContainerLow,
+              border: Border(top: BorderSide(color: AppColors.stroke, width: 1)),
+            ),
+            child: Row(
+              children: [
+                // Save Video Button
+                Expanded(
+                  child: Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.primaryGradient,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primaryAccent.withValues(alpha: 0.35),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      onPressed: _isProcessing ? null : _exportVideo,
+                      icon: const Icon(Icons.content_cut_rounded, size: 18, color: AppColors.onPrimaryContainer),
+                      label: const Text(
+                        'Spremi Video',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.onPrimaryContainer,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+
+                // Make GIF Button
+                Expanded(
+                  child: Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.secondary, width: 1.5),
+                    ),
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      onPressed: _isProcessing ? null : _exportGif,
+                      icon: const Icon(Icons.gif_rounded, size: 22, color: AppColors.secondary),
+                      label: const Text(
+                        'Izradi GIF',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.secondary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

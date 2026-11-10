@@ -6,6 +6,7 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import androidx.media3.common.Effect
 import androidx.media3.common.MediaItem
 import androidx.media3.effect.Crop
@@ -21,6 +22,8 @@ import kotlin.math.max
 import kotlin.math.min
 
 object VideoEditorHelper {
+
+    private const val TAG = "VideoEditorHelper"
 
     /**
      * Hardware-accelerated Video Crop, Zoom, Pan & Trim using Jetpack Media3 Transformer.
@@ -43,9 +46,13 @@ object VideoEditorHelper {
         val mainHandler = Handler(Looper.getMainLooper())
 
         try {
+            Log.d(TAG, "cropAndTrimVideo: input=$inputPath, output=$outputPath, startMs=$startMs, endMs=$endMs, ratio=$cropRatio, zoom=$zoom, panX=$panX, panY=$panY")
+
             val inFile = File(inputPath)
             if (!inFile.exists()) {
-                mainHandler.post { callback(false, "Input file does not exist") }
+                val err = "Ulazna video datoteka ne postoji: $inputPath"
+                Log.e(TAG, err)
+                mainHandler.post { callback(false, err) }
                 return
             }
 
@@ -89,32 +96,38 @@ object VideoEditorHelper {
                 retriever.release()
 
                 val origRatio = origW / origH
-                var visibleFractionX = 1.0f
-                var visibleFractionY = 1.0f
+                var visibleFracX = 1.0f
+                var visibleFracY = 1.0f
 
                 if (targetRatio != null) {
                     if (origRatio > targetRatio) {
-                        visibleFractionX = targetRatio / origRatio
-                    } else if (origRatio < targetRatio) {
-                        visibleFractionY = origRatio / targetRatio
+                        // Original is wider than target -> target height is 100%, width is smaller
+                        visibleFracX = targetRatio / origRatio
+                        visibleFracY = 1.0f
+                    } else {
+                        // Original is taller than target -> target width is 100%, height is smaller
+                        visibleFracX = 1.0f
+                        visibleFracY = origRatio / targetRatio
                     }
                 }
 
-                // Apply Zoom
-                val halfW = (visibleFractionX / safeZoom).coerceIn(0.1f, 1.0f)
-                val halfH = (visibleFractionY / safeZoom).coerceIn(0.1f, 1.0f)
+                // Window half-sizes in NDC (where full width is [-1, 1], length = 2.0)
+                val windowHalfW = (visibleFracX / safeZoom).coerceIn(0.05f, 1.0f)
+                val windowHalfH = (visibleFracY / safeZoom).coerceIn(0.05f, 1.0f)
 
-                // Apply Pan (-1.0 to 1.0)
-                val maxPanX = (1.0f - halfW).coerceAtLeast(0f)
-                val maxPanY = (1.0f - halfH).coerceAtLeast(0f)
+                // Maximum center shift allowed without showing black outside boundaries
+                val maxPanX = (1.0f - windowHalfW).coerceAtLeast(0f)
+                val maxPanY = (1.0f - windowHalfH).coerceAtLeast(0f)
+
                 val centerX = (safePanX * maxPanX).coerceIn(-maxPanX, maxPanX)
                 val centerY = (safePanY * maxPanY).coerceIn(-maxPanY, maxPanY)
 
-                val left = (centerX - halfW).coerceIn(-1.0f, 1.0f)
-                val right = (centerX + halfW).coerceIn(-1.0f, 1.0f)
-                val bottom = (centerY - halfH).coerceIn(-1.0f, 1.0f)
-                val top = (centerY + halfH).coerceIn(-1.0f, 1.0f)
+                val left = (centerX - windowHalfW).coerceIn(-1.0f, 1.0f)
+                val right = (centerX + windowHalfW).coerceIn(-1.0f, 1.0f)
+                val bottom = (centerY - windowHalfH).coerceIn(-1.0f, 1.0f)
+                val top = (centerY + windowHalfH).coerceIn(-1.0f, 1.0f)
 
+                Log.d(TAG, "Media3 Crop parameters: left=$left, right=$right, bottom=$bottom, top=$top (halfW=$windowHalfW, halfH=$windowHalfH)")
                 effectsList.add(Crop(left, right, bottom, top))
             }
 
@@ -125,6 +138,7 @@ object VideoEditorHelper {
             val transformer = Transformer.Builder(context)
                 .addListener(object : Transformer.Listener {
                     override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                        Log.i(TAG, "Transformer export completed successfully -> $outputPath")
                         mainHandler.post { callback(true, null) }
                     }
 
@@ -133,6 +147,7 @@ object VideoEditorHelper {
                         exportResult: ExportResult,
                         exportException: ExportException
                     ) {
+                        Log.e(TAG, "Transformer export error: ${exportException.message}", exportException)
                         mainHandler.post { callback(false, exportException.message) }
                     }
                 })
@@ -140,7 +155,7 @@ object VideoEditorHelper {
 
             transformer.start(editedMediaItem, outputPath)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Exception during cropAndTrimVideo setup: ${e.message}", e)
             mainHandler.post { callback(false, e.message) }
         }
     }
@@ -166,9 +181,13 @@ object VideoEditorHelper {
             val retriever = MediaMetadataRetriever()
             var fos: FileOutputStream? = null
             try {
+                Log.d(TAG, "createGif: input=$inputPath, output=$outputPath, startMs=$startMs, endMs=$endMs, fps=$fps")
+
                 val inFile = File(inputPath)
                 if (!inFile.exists()) {
-                    mainHandler.post { callback(false, "Input file does not exist") }
+                    val err = "Ulazna video datoteka ne postoji: $inputPath"
+                    Log.e(TAG, err)
+                    mainHandler.post { callback(false, err) }
                     return@Thread
                 }
 
@@ -180,7 +199,8 @@ object VideoEditorHelper {
                 fos = FileOutputStream(outFile)
 
                 val encoder = AnimatedGifEncoder()
-                val frameDelayMs = 1000 / fps.coerceIn(5, 20)
+                val safeFps = fps.coerceIn(5, 20)
+                val frameDelayMs = 1000 / safeFps
                 encoder.setDelay(frameDelayMs)
                 encoder.setRepeat(0) // Infinite loop
                 encoder.start(fos)
@@ -198,7 +218,10 @@ object VideoEditorHelper {
 
                 while (currentMs <= endMs) {
                     val frameUs = currentMs * 1000L
-                    val rawFrame = retriever.getFrameAtTime(frameUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                    // Use OPTION_CLOSEST so every 100ms frame is actual distinct animation frame, not static duplicate
+                    val rawFrame = retriever.getFrameAtTime(frameUs, MediaMetadataRetriever.OPTION_CLOSEST)
+                        ?: retriever.getFrameAtTime(frameUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+
                     if (rawFrame != null) {
                         val processed = processFrameForGif(rawFrame, targetRatio, zoom, panX, panY)
                         encoder.addFrame(processed)
@@ -211,9 +234,10 @@ object VideoEditorHelper {
                 }
 
                 encoder.finish()
+                Log.i(TAG, "createGif: Successfully generated GIF -> $outputPath")
                 mainHandler.post { callback(true, null) }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e(TAG, "Exception during createGif: ${e.message}", e)
                 mainHandler.post { callback(false, e.message) }
             } finally {
                 try {
@@ -235,18 +259,20 @@ object VideoEditorHelper {
     ): Bitmap {
         var bmp = src
 
-        // 1. Calculate crop dimensions with aspect ratio
-        val srcRatio = src.width.toFloat() / src.height.toFloat()
-        var baseW = src.width.toFloat()
-        var baseH = src.height.toFloat()
+        val srcW = src.width.toFloat()
+        val srcH = src.height.toFloat()
+        val srcRatio = srcW / srcH
+
+        var baseW = srcW
+        var baseH = srcH
 
         if (targetRatio != null) {
             if (srcRatio > targetRatio) {
-                baseH = src.height.toFloat()
-                baseW = src.height * targetRatio
+                baseH = srcH
+                baseW = srcH * targetRatio
             } else {
-                baseW = src.width.toFloat()
-                baseH = src.width / targetRatio
+                baseW = srcW
+                baseH = srcW / targetRatio
             }
         }
 
@@ -262,13 +288,14 @@ object VideoEditorHelper {
         val safePanX = panX.coerceIn(-1.0f, 1.0f)
         val safePanY = panY.coerceIn(-1.0f, 1.0f)
 
-        // 0.0 is center, -1.0 is left/bottom, +1.0 is right/top
+        // 0.0 is center, -1.0 is left, +1.0 is right
         val startX = (((safePanX + 1.0f) / 2.0f) * maxOffsetX).toInt().coerceIn(0, maxOffsetX)
+        // 0.0 is center, -1.0 is bottom (high Y), +1.0 is top (low Y = 0)
         val startY = (((1.0f - safePanY) / 2.0f) * maxOffsetY).toInt().coerceIn(0, maxOffsetY)
 
         bmp = Bitmap.createBitmap(src, startX, startY, cropW, cropH)
 
-        // 2. Scale down for optimal GIF performance and filesize (max width 420px)
+        // Scale down for optimal GIF size (max width 420px)
         val maxWidth = 420
         if (bmp.width > maxWidth) {
             val scale = maxWidth.toFloat() / bmp.width.toFloat()
