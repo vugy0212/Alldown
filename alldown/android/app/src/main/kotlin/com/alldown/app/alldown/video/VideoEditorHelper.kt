@@ -3,6 +3,7 @@ package com.alldown.app.alldown.video
 import android.content.Context
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
@@ -101,21 +102,17 @@ object VideoEditorHelper {
 
                 if (targetRatio != null) {
                     if (origRatio > targetRatio) {
-                        // Original is wider than target -> target height is 100%, width is smaller
                         visibleFracX = targetRatio / origRatio
                         visibleFracY = 1.0f
                     } else {
-                        // Original is taller than target -> target width is 100%, height is smaller
                         visibleFracX = 1.0f
                         visibleFracY = origRatio / targetRatio
                     }
                 }
 
-                // Window half-sizes in NDC (where full width is [-1, 1], length = 2.0)
                 val windowHalfW = (visibleFracX / safeZoom).coerceIn(0.05f, 1.0f)
                 val windowHalfH = (visibleFracY / safeZoom).coerceIn(0.05f, 1.0f)
 
-                // Maximum center shift allowed without showing black outside boundaries
                 val maxPanX = (1.0f - windowHalfW).coerceAtLeast(0f)
                 val maxPanY = (1.0f - windowHalfH).coerceAtLeast(0f)
 
@@ -127,7 +124,6 @@ object VideoEditorHelper {
                 val bottom = (centerY - windowHalfH).coerceIn(-1.0f, 1.0f)
                 val top = (centerY + windowHalfH).coerceIn(-1.0f, 1.0f)
 
-                Log.d(TAG, "Media3 Crop parameters: left=$left, right=$right, bottom=$bottom, top=$top (halfW=$windowHalfW, halfH=$windowHalfH)")
                 effectsList.add(Crop(left, right, bottom, top))
             }
 
@@ -139,6 +135,8 @@ object VideoEditorHelper {
                 .addListener(object : Transformer.Listener {
                     override fun onCompleted(composition: Composition, exportResult: ExportResult) {
                         Log.i(TAG, "Transformer export completed successfully -> $outputPath")
+                        // Immediately register file in Samsung/Android Gallery MediaStore
+                        MediaScannerConnection.scanFile(context, arrayOf(outputPath), arrayOf("video/mp4"), null)
                         mainHandler.post { callback(true, null) }
                     }
 
@@ -162,8 +160,10 @@ object VideoEditorHelper {
 
     /**
      * Converts a selected video segment into an animated GIF (.gif) with optional crop, zoom & pan.
+     * Uses Floyd-Steinberg dithering and adaptive palette for true HD quality.
      */
     fun createGif(
+        context: Context,
         inputPath: String,
         outputPath: String,
         startMs: Long,
@@ -199,7 +199,7 @@ object VideoEditorHelper {
                 fos = FileOutputStream(outFile)
 
                 val encoder = AnimatedGifEncoder()
-                val safeFps = fps.coerceIn(5, 20)
+                val safeFps = fps.coerceIn(5, 15)
                 val frameDelayMs = 1000 / safeFps
                 encoder.setDelay(frameDelayMs)
                 encoder.setRepeat(0) // Infinite loop
@@ -218,7 +218,6 @@ object VideoEditorHelper {
 
                 while (currentMs <= endMs) {
                     val frameUs = currentMs * 1000L
-                    // Use OPTION_CLOSEST so every 100ms frame is actual distinct animation frame, not static duplicate
                     val rawFrame = retriever.getFrameAtTime(frameUs, MediaMetadataRetriever.OPTION_CLOSEST)
                         ?: retriever.getFrameAtTime(frameUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
 
@@ -235,6 +234,10 @@ object VideoEditorHelper {
 
                 encoder.finish()
                 Log.i(TAG, "createGif: Successfully generated GIF -> $outputPath")
+
+                // Immediately index into Android/Samsung Gallery
+                MediaScannerConnection.scanFile(context, arrayOf(outputPath), arrayOf("image/gif"), null)
+
                 mainHandler.post { callback(true, null) }
             } catch (e: Exception) {
                 Log.e(TAG, "Exception during createGif: ${e.message}", e)
@@ -288,15 +291,13 @@ object VideoEditorHelper {
         val safePanX = panX.coerceIn(-1.0f, 1.0f)
         val safePanY = panY.coerceIn(-1.0f, 1.0f)
 
-        // 0.0 is center, -1.0 is left, +1.0 is right
         val startX = (((safePanX + 1.0f) / 2.0f) * maxOffsetX).toInt().coerceIn(0, maxOffsetX)
-        // 0.0 is center, -1.0 is bottom (high Y), +1.0 is top (low Y = 0)
         val startY = (((1.0f - safePanY) / 2.0f) * maxOffsetY).toInt().coerceIn(0, maxOffsetY)
 
         bmp = Bitmap.createBitmap(src, startX, startY, cropW, cropH)
 
-        // Scale down for optimal GIF size and smooth encoding (max width 360px)
-        val maxWidth = 360
+        // Scale to crisp 540px width for sharp, high-definition GIF playback
+        val maxWidth = 540
         if (bmp.width > maxWidth) {
             val scale = maxWidth.toFloat() / bmp.width.toFloat()
             val targetH = (bmp.height * scale).toInt().coerceAtLeast(1)

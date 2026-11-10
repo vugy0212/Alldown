@@ -84,6 +84,22 @@ class VideoEditorService {
     }
   }
 
+  /// Registers newly saved media with Android MediaStore so it appears instantly in the Samsung Gallery
+  static Future<bool> scanMediaFile({
+    required String path,
+    required String mimeType,
+  }) async {
+    try {
+      final res = await _channel.invokeMethod<bool>('scanMediaFile', {
+        'path': path,
+        'mimeType': mimeType,
+      });
+      return res ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Formats milliseconds into mm:ss display
   static String formatMs(int ms) {
     final totalSeconds = (ms / 1000).floor();

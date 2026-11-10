@@ -193,11 +193,23 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
         final durSeconds = ((endMs - startMs) / 1000).round();
         final durStr = '${(durSeconds ~/ 60).toString().padLeft(2, '0')}:${(durSeconds % 60).toString().padLeft(2, '0')}';
 
-        // Copy to public Downloads/AllDown/Videos
+        // Copy to public gallery folders (Movies and Downloads) so Samsung Gallery sees it immediately
+        String? galleryPath;
+        try {
+          final picturesDir = Directory('/storage/emulated/0/Movies/AllDown');
+          if (!picturesDir.existsSync()) picturesDir.createSync(recursive: true);
+          final pubFile = File('${picturesDir.path}/Trimmed_$timeStamp.mp4');
+          File(outPath).copySync(pubFile.path);
+          galleryPath = pubFile.path;
+          VideoEditorService.scanMediaFile(path: galleryPath, mimeType: 'video/mp4');
+        } catch (_) {}
+
         try {
           final pubDir = Directory('/storage/emulated/0/Download/AllDown/Videos');
           if (!pubDir.existsSync()) pubDir.createSync(recursive: true);
-          File(outPath).copySync('${pubDir.path}/Trimmed_$timeStamp.mp4');
+          final pubFile = File('${pubDir.path}/Trimmed_$timeStamp.mp4');
+          File(outPath).copySync(pubFile.path);
+          VideoEditorService.scanMediaFile(path: pubFile.path, mimeType: 'video/mp4');
         } catch (_) {}
 
         // Add to library
@@ -284,11 +296,21 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
         final durSeconds = ((endMs - startMs) / 1000).round();
         final durStr = '${(durSeconds ~/ 60).toString().padLeft(2, '0')}:${(durSeconds % 60).toString().padLeft(2, '0')}';
 
-        // Copy to public Downloads/AllDown/GIFs
+        // Copy to public gallery folders (Pictures and Downloads) so Samsung Gallery displays it instantly
+        try {
+          final picturesDir = Directory('/storage/emulated/0/Pictures/AllDown');
+          if (!picturesDir.existsSync()) picturesDir.createSync(recursive: true);
+          final pubFile = File('${picturesDir.path}/Clip_$timeStamp.gif');
+          File(outPath).copySync(pubFile.path);
+          VideoEditorService.scanMediaFile(path: pubFile.path, mimeType: 'image/gif');
+        } catch (_) {}
+
         try {
           final pubDir = Directory('/storage/emulated/0/Download/AllDown/GIFs');
           if (!pubDir.existsSync()) pubDir.createSync(recursive: true);
-          File(outPath).copySync('${pubDir.path}/Clip_$timeStamp.gif');
+          final pubFile = File('${pubDir.path}/Clip_$timeStamp.gif');
+          File(outPath).copySync(pubFile.path);
+          VideoEditorService.scanMediaFile(path: pubFile.path, mimeType: 'image/gif');
         } catch (_) {}
 
         // Add to library
@@ -313,7 +335,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Animirani GIF uspješno kreiran: ${newItem.title}'),
+            content: Text('Animirani GIF spremljen u Galeriju i Biblioteku: ${newItem.title}'),
             backgroundColor: AppColors.secondary,
           ),
         );

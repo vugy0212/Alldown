@@ -1,14 +1,22 @@
 package com.alldown.app.alldown.video
 
 import android.graphics.Bitmap
-import android.graphics.Color
+import android.media.MediaScannerConnection
+import java.io.File
 import java.io.IOException
 import java.io.OutputStream
+import java.util.PriorityQueue
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 
 /**
- * Standard Animated GIF Encoder (GIF89a compliant)
- * Uses a vibrant, instantaneous 256-color palette (216 Web-Safe color cube + 32 grayscale levels + 8 primaries)
- * and robust LZW compression. Extremely fast (< 0.5s) with true-to-life color rendering.
+ * Professional High-Quality Animated GIF Encoder (GIF89a)
+ * Features:
+ * - Dynamic 256-color Median-Cut adaptive palette per frame (true-to-life colors)
+ * - Floyd-Steinberg Error Diffusion Dithering (eliminates cartoon banding/posterization)
+ * - Compliant GIF89a Logical Screen Descriptor & single Netscape 2.0 Loop extension
+ * - High-speed LZW compression
  */
 class AnimatedGifEncoder {
     private var width = 0
@@ -19,6 +27,7 @@ class AnimatedGifEncoder {
     private var isStarted = false
     private var isFirstFrame = true
     private var indexedPixels: ByteArray? = null
+    private var currentPalette: ByteArray? = null
     private val colorDepth = 8
 
     fun setDelay(ms: Int) {
@@ -47,21 +56,21 @@ class AnimatedGifEncoder {
                 writeString("GIF89a")
                 // 2. Logical Screen Descriptor (7 bytes)
                 writeLogicalScreenDesc()
-                // 3. Netscape 2.0 Loop Extension (written ONCE at the start)
+                // 3. Netscape 2.0 Loop Extension (written ONCE at start)
                 if (repeat >= 0) {
                     writeNetscapeExt()
                 }
                 isFirstFrame = false
             }
 
-            // Map all pixels to 256-color palette
-            quantizePixels(im)
+            // Adaptive palette generation + Floyd-Steinberg Dithering
+            quantizeWithDithering(im)
 
-            // 4. Graphic Control Extension (timing & animation control)
+            // 4. Graphic Control Extension
             writeGraphicCtrlExt()
             // 5. Image Descriptor
             writeImageDesc()
-            // 6. Local Color Table (256 colors = 768 bytes)
+            // 6. Local Color Table (256 adaptive colors)
             writePalette()
             // 7. LZW Compressed Pixel Data
             writePixels()
@@ -86,63 +95,43 @@ class AnimatedGifEncoder {
     private fun writeLogicalScreenDesc() {
         writeShort(width)
         writeShort(height)
-        // Packed fields: 0x70 = No global color table, 8-bit color resolution
-        out?.write(0x70)
-        out?.write(0) // Background color index
-        out?.write(0) // Pixel aspect ratio
-    }
-
-    private fun quantizePixels(image: Bitmap) {
-        val w = image.width
-        val h = image.height
-        val total = w * h
-        val rgb = IntArray(total)
-        image.getPixels(rgb, 0, w, 0, 0, w, h)
-
-        val idxArr = ByteArray(total)
-        for (i in 0 until total) {
-            val c = rgb[i]
-            val r = (c shr 16) and 0xff
-            val g = (c shr 8) and 0xff
-            val b = c and 0xff
-            idxArr[i] = FastColorQuantizer.mapColor(r, g, b)
-        }
-        indexedPixels = idxArr
+        out?.write(0x70) // No global table, 8-bit resolution
+        out?.write(0)    // Background index
+        out?.write(0)    // Aspect ratio
     }
 
     private fun writeGraphicCtrlExt() {
         out?.write(0x21) // Extension introducer
         out?.write(0xf9) // GCE label
         out?.write(4)    // Block size
-        out?.write(0x04) // Packed fields: Disposal method = 1 (do not dispose), transparency = 0
-        writeShort(delay / 10) // Delay time in 100ths of a second
+        out?.write(0x04) // Disposal method 1 (do not dispose, keep graphics intact)
+        writeShort(delay / 10) // Delay in 100ths of second
         out?.write(0)    // Transparent color index
         out?.write(0)    // Block terminator
     }
 
     private fun writeImageDesc() {
         out?.write(0x2c) // Image separator
-        writeShort(0)    // Left position = 0
-        writeShort(0)    // Top position = 0
+        writeShort(0)
+        writeShort(0)
         writeShort(width)
         writeShort(height)
-        // Packed: 0x87 = Local Color Table present + 256 colors
-        out?.write(0x87)
+        out?.write(0x87) // Local Color Table flag + 256 colors
     }
 
     private fun writePalette() {
-        out?.write(FastColorQuantizer.palette)
+        currentPalette?.let { out?.write(it) }
     }
 
     private fun writeNetscapeExt() {
-        out?.write(0x21) // Extension introducer
-        out?.write(0xff) // App extension label
-        out?.write(11)   // Block size
+        out?.write(0x21)
+        out?.write(0xff)
+        out?.write(11)
         writeString("NETSCAPE2.0")
-        out?.write(3)    // Sub-block size
-        out?.write(1)    // Loop sub-block ID
-        writeShort(repeat) // Loop count (0 = infinite)
-        out?.write(0)    // Block terminator
+        out?.write(3)
+        out?.write(1)
+        writeShort(repeat)
+        out?.write(0)
     }
 
     private fun writePixels() {
@@ -160,60 +149,255 @@ class AnimatedGifEncoder {
             out?.write(ch.code)
         }
     }
-}
 
-/**
- * High-speed 256-color palette quantizer
- * 216 RGB cube colors (6x6x6) + 32 grayscale levels + 8 vibrant primaries
- */
-private object FastColorQuantizer {
-    val palette: ByteArray = ByteArray(256 * 3).apply {
-        var idx = 0
-        // 1. 216 RGB cube colors (steps: 0, 51, 102, 153, 204, 255)
-        for (r in 0..5) {
-            for (g in 0..5) {
-                for (b in 0..5) {
-                    this[idx++] = (r * 51).toByte()
-                    this[idx++] = (g * 51).toByte()
-                    this[idx++] = (b * 51).toByte()
+    /**
+     * Extracts an adaptive 256-color palette via Median-Cut,
+     * then maps pixels using Floyd-Steinberg Error Diffusion Dithering.
+     */
+    private fun quantizeWithDithering(image: Bitmap) {
+        val w = image.width
+        val h = image.height
+        val total = w * h
+        val rgb = IntArray(total)
+        image.getPixels(rgb, 0, w, 0, 0, w, h)
+
+        // 1. Build 256-color adaptive palette using Median-Cut
+        val paletteColors = MedianCutQuantizer.quantize(rgb, 256)
+        val paletteBytes = ByteArray(256 * 3)
+        val palR = IntArray(256)
+        val palG = IntArray(256)
+        val palB = IntArray(256)
+
+        var pIdx = 0
+        for (i in 0 until 256) {
+            val c = paletteColors[i]
+            val r = (c shr 16) and 0xff
+            val g = (c shr 8) and 0xff
+            val b = c and 0xff
+            palR[i] = r
+            palG[i] = g
+            palB[i] = b
+            paletteBytes[pIdx++] = r.toByte()
+            paletteBytes[pIdx++] = g.toByte()
+            paletteBytes[pIdx++] = b.toByte()
+        }
+        currentPalette = paletteBytes
+
+        // 2. Floyd-Steinberg Error Diffusion Dithering
+        // Split image into working R, G, B channels with error accumulation
+        val rChan = IntArray(total)
+        val gChan = IntArray(total)
+        val bChan = IntArray(total)
+        for (i in 0 until total) {
+            val c = rgb[i]
+            rChan[i] = (c shr 16) and 0xff
+            gChan[i] = (c shr 8) and 0xff
+            bChan[i] = c and 0xff
+        }
+
+        val outIdx = ByteArray(total)
+
+        for (y in 0 until h) {
+            val rowOffset = y * w
+            for (x in 0 until w) {
+                val idx = rowOffset + x
+                val curR = rChan[idx].coerceIn(0, 255)
+                val curG = gChan[idx].coerceIn(0, 255)
+                val curB = bChan[idx].coerceIn(0, 255)
+
+                // Find closest color in adaptive palette
+                var bestDist = Int.MAX_VALUE
+                var bestColorIdx = 0
+                for (p in 0 until 256) {
+                    val dr = curR - palR[p]
+                    val dg = curG - palG[p]
+                    val db = curB - palB[p]
+                    val dist = dr * dr + dg * dg + db * db
+                    if (dist < bestDist) {
+                        bestDist = dist
+                        bestColorIdx = p
+                        if (dist == 0) break
+                    }
+                }
+
+                outIdx[idx] = bestColorIdx.toByte()
+
+                // Compute quantization error
+                val errR = curR - palR[bestColorIdx]
+                val errG = curG - palG[bestColorIdx]
+                val errB = curB - palB[bestColorIdx]
+
+                // Diffuse error:
+                // (x + 1, y)     += 7/16
+                // (x - 1, y + 1) += 3/16
+                // (x,     y + 1) += 5/16
+                // (x + 1, y + 1) += 1/16
+                if (x + 1 < w) {
+                    val target = idx + 1
+                    rChan[target] += (errR * 7) shr 4
+                    gChan[target] += (errG * 7) shr 4
+                    bChan[target] += (errB * 7) shr 4
+                }
+                if (y + 1 < h) {
+                    val nextRowOffset = (y + 1) * w
+                    if (x > 0) {
+                        val target = nextRowOffset + x - 1
+                        rChan[target] += (errR * 3) shr 4
+                        gChan[target] += (errG * 3) shr 4
+                        bChan[target] += (errB * 3) shr 4
+                    }
+                    val targetCenter = nextRowOffset + x
+                    rChan[targetCenter] += (errR * 5) shr 4
+                    gChan[targetCenter] += (errG * 5) shr 4
+                    bChan[targetCenter] += (errB * 5) shr 4
+                    if (x + 1 < w) {
+                        val targetRight = nextRowOffset + x + 1
+                        rChan[targetRight] += (errR * 1) shr 4
+                        gChan[targetRight] += (errG * 1) shr 4
+                        bChan[targetRight] += (errB * 1) shr 4
+                    }
                 }
             }
         }
-        // 2. 32 smooth grayscale levels
-        for (i in 0 until 32) {
-            val v = (i * 255 / 31).toByte()
-            this[idx++] = v
-            this[idx++] = v
-            this[idx++] = v
+
+        indexedPixels = outIdx
+    }
+}
+
+/**
+ * Fast Median-Cut Color Palette Generator
+ */
+private object MedianCutQuantizer {
+
+    fun quantize(pixels: IntArray, maxColors: Int): IntArray {
+        // Sample pixels for fast execution (< 25,000 samples)
+        val step = max(1, pixels.size / 25000)
+        val sampleCount = (pixels.size + step - 1) / step
+        val sampled = IntArray(sampleCount)
+        var sIdx = 0
+        var i = 0
+        while (i < pixels.size && sIdx < sampleCount) {
+            sampled[sIdx++] = pixels[i]
+            i += step
         }
-        // 3. 8 vivid accent colors
-        val extras = intArrayOf(
-            0xFF0000, 0x00FF00, 0x0000FF, 0xFFFF00,
-            0x00FFFF, 0xFF00FF, 0xFFA500, 0xFFFFFF
-        )
-        for (c in extras) {
-            this[idx++] = ((c shr 16) and 0xff).toByte()
-            this[idx++] = ((c shr 8) and 0xff).toByte()
-            this[idx++] = (c and 0xff).toByte()
+
+        val boxes = PriorityQueue<Box>(maxColors) { b1, b2 -> b2.volume.compareTo(b1.volume) }
+        boxes.add(Box(sampled, 0, sIdx))
+
+        while (boxes.size < maxColors) {
+            val box = boxes.poll() ?: break
+            if (box.canSplit()) {
+                val (b1, b2) = box.split()
+                boxes.add(b1)
+                boxes.add(b2)
+            } else {
+                boxes.add(box)
+                break
+            }
         }
+
+        val result = IntArray(maxColors)
+        var idx = 0
+        for (b in boxes) {
+            result[idx++] = b.averageColor()
+            if (idx >= maxColors) break
+        }
+        while (idx < maxColors) {
+            result[idx] = result[idx - 1]
+            idx++
+        }
+        return result
     }
 
-    fun mapColor(r: Int, g: Int, b: Int): Byte {
-        val maxC = maxOf(r, maxOf(g, b))
-        val minC = minOf(r, minOf(g, b))
+    private class Box(val colors: IntArray, val start: Int, val end: Int) {
+        var minR = 255; var maxR = 0
+        var minG = 255; var maxG = 0
+        var minB = 255; var maxB = 0
 
-        // If grayscale or near-neutral, map to grayscale ramp for smooth shading
-        if (maxC - minC < 10) {
-            val grayIdx = (r * 31 / 255).coerceIn(0, 31)
-            return (216 + grayIdx).toByte()
+        init {
+            for (i in start until end) {
+                val c = colors[i]
+                val r = (c shr 16) and 0xff
+                val g = (c shr 8) and 0xff
+                val b = c and 0xff
+                if (r < minR) minR = r
+                if (r > maxR) maxR = r
+                if (g < minG) minG = g
+                if (g > maxG) maxG = g
+                if (b < minB) minB = b
+                if (b > maxB) maxB = b
+            }
         }
 
-        // Map to 6x6x6 RGB cube
-        val rIdx = ((r * 5 + 25) / 255).coerceIn(0, 5)
-        val gIdx = ((g * 5 + 25) / 255).coerceIn(0, 5)
-        val bIdx = ((b * 5 + 25) / 255).coerceIn(0, 5)
-        val cubeIdx = rIdx * 36 + gIdx * 6 + bIdx
-        return cubeIdx.toByte()
+        val volume: Int get() = (maxR - minR + 1) * (maxG - minG + 1) * (maxB - minB + 1)
+
+        fun canSplit(): Boolean = end - start > 1 && volume > 1
+
+        fun split(): Pair<Box, Box> {
+            val rDiff = maxR - minR
+            val gDiff = maxG - minG
+            val bDiff = maxB - minB
+
+            // Sort by the widest color channel
+            if (rDiff >= gDiff && rDiff >= bDiff) {
+                quickSelect(colors, start, end - 1, (start + end) / 2) { (it shr 16) and 0xff }
+            } else if (gDiff >= bDiff) {
+                quickSelect(colors, start, end - 1, (start + end) / 2) { (it shr 8) and 0xff }
+            } else {
+                quickSelect(colors, start, end - 1, (start + end) / 2) { it and 0xff }
+            }
+
+            val mid = (start + end) / 2
+            return Pair(Box(colors, start, mid), Box(colors, mid, end))
+        }
+
+        fun averageColor(): Int {
+            var rSum = 0L; var gSum = 0L; var bSum = 0L
+            val count = end - start
+            if (count <= 0) return 0
+            for (i in start until end) {
+                val c = colors[i]
+                rSum += (c shr 16) and 0xff
+                gSum += (c shr 8) and 0xff
+                bSum += c and 0xff
+            }
+            val r = (rSum / count).toInt().coerceIn(0, 255)
+            val g = (gSum / count).toInt().coerceIn(0, 255)
+            val b = (bSum / count).toInt().coerceIn(0, 255)
+            return (r shl 16) or (g shl 8) or b
+        }
+
+        private fun quickSelect(arr: IntArray, left: Int, right: Int, k: Int, key: (Int) -> Int) {
+            var l = left
+            var r = right
+            while (l < r) {
+                val pivotIndex = partition(arr, l, r, key)
+                if (pivotIndex == k) {
+                    return
+                } else if (pivotIndex < k) {
+                    l = pivotIndex + 1
+                } else {
+                    r = pivotIndex - 1
+                }
+            }
+        }
+
+        private fun partition(arr: IntArray, left: Int, right: Int, key: (Int) -> Int): Int {
+            val pivotValue = key(arr[right])
+            var storeIndex = left
+            for (i in left until right) {
+                if (key(arr[i]) < pivotValue) {
+                    val tmp = arr[storeIndex]
+                    arr[storeIndex] = arr[i]
+                    arr[i] = tmp
+                    storeIndex++
+                }
+            }
+            val tmp = arr[storeIndex]
+            arr[storeIndex] = arr[right]
+            arr[right] = tmp
+            return storeIndex
+        }
     }
 }
 

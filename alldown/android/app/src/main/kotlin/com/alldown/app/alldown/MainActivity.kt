@@ -156,6 +156,7 @@ class MainActivity : FlutterActivity() {
                         val fps = call.argument<Int>("fps") ?: 10
                         if (input != null && output != null) {
                             VideoEditorHelper.createGif(
+                                context = applicationContext,
                                 inputPath = input,
                                 outputPath = output,
                                 startMs = startMs,
@@ -174,6 +175,21 @@ class MainActivity : FlutterActivity() {
                             }
                         } else {
                             result.error("INVALID_ARGS", "Missing paths", null)
+                        }
+                    }
+                    "scanMediaFile" -> {
+                        val path = call.argument<String>("path")
+                        val mime = call.argument<String>("mimeType") ?: "*/*"
+                        if (path != null) {
+                            android.media.MediaScannerConnection.scanFile(
+                                applicationContext,
+                                arrayOf(path),
+                                arrayOf(mime),
+                                null
+                            )
+                            result.success(true)
+                        } else {
+                            result.error("INVALID_PATH", "Path is required", null)
                         }
                     }
                     else -> result.notImplemented()
