@@ -22,100 +22,116 @@ class LibraryItemCard extends StatelessWidget {
   });
 
   void _showContextMenu(BuildContext context) {
+    final isGif = item.format == 'GIF' || item.localPath.toLowerCase().endsWith('.gif');
+    final bottomNavPadding = MediaQuery.of(context).padding.bottom;
+
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: AppColors.surfaceContainerHigh,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.onSurfaceVariant.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
+        top: false,
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.85,
+          ),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(8, 12, 8, 12 + bottomNavPadding),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.onSurfaceVariant.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              ListTile(
-                leading: const Icon(Icons.play_circle_outline_rounded, color: AppColors.primary),
-                title: const Text('Play with In-App Player'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  onPlay();
-                },
-              ),
-              if (!item.isAudio)
+                const SizedBox(height: 12),
                 ListTile(
-                  leading: const Icon(Icons.content_cut_rounded, color: AppColors.secondary),
-                  title: const Text('Trim, Crop & Make GIF'),
-                  subtitle: const Text('Izreži isječak, prilagodi kadar ili izradi GIF'),
+                  leading: Icon(
+                    isGif ? Icons.gif_rounded : Icons.play_circle_outline_rounded,
+                    color: isGif ? AppColors.secondary : AppColors.primary,
+                    size: isGif ? 26 : 22,
+                  ),
+                  title: Text(isGif ? 'Pregledaj GIF animaciju' : 'Play with In-App Player'),
                   onTap: () {
                     Navigator.pop(ctx);
-                    VideoEditorModal.show(context, item);
+                    onPlay();
                   },
                 ),
-              ListTile(
-                leading: const Icon(Icons.share_outlined, color: AppColors.outline),
-                title: const Text('Share / Open Externally'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  SharePlus.instance.share(
-                    ShareParams(
-                      files: [XFile(item.localPath)],
-                      text: item.title,
-                    ),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.folder_open_outlined, color: AppColors.outline),
-                title: const Text('Show File Path'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Saved at: ${item.localPath}')),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.content_copy_rounded, color: AppColors.outline),
-                title: const Text('Copy Path'),
-                onTap: () {
-                  Clipboard.setData(ClipboardData(text: item.localPath));
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Path copied to clipboard')),
-                  );
-                },
-              ),
-              ListTile(
-                leading: Icon(
-                  item.isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                  color: item.isFavorite ? AppColors.errorAccent : AppColors.outline,
+                if (!item.isAudio && !isGif)
+                  ListTile(
+                    leading: const Icon(Icons.content_cut_rounded, color: AppColors.secondary),
+                    title: const Text('Trim, Crop & Make GIF'),
+                    subtitle: const Text('Izreži isječak, prilagodi kadar ili izradi GIF'),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      VideoEditorModal.show(context, item);
+                    },
+                  ),
+                ListTile(
+                  leading: const Icon(Icons.share_outlined, color: AppColors.outline),
+                  title: const Text('Share / Open Externally'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    SharePlus.instance.share(
+                      ShareParams(
+                        files: [XFile(item.localPath)],
+                        text: item.title,
+                      ),
+                    );
+                  },
                 ),
-                title: Text(item.isFavorite ? 'Remove from Favorites' : 'Add to Favorites'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  onToggleFavorite();
-                },
-              ),
-              const Divider(color: AppColors.stroke),
-              ListTile(
-                leading: const Icon(Icons.delete_outline_rounded, color: AppColors.errorAccent),
-                title: const Text('Delete File', style: TextStyle(color: AppColors.errorAccent)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  onDelete();
-                },
-              ),
-            ],
+                ListTile(
+                  leading: const Icon(Icons.folder_open_outlined, color: AppColors.outline),
+                  title: const Text('Show File Path'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Saved at: ${item.localPath}')),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.content_copy_rounded, color: AppColors.outline),
+                  title: const Text('Copy Path'),
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: item.localPath));
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Path copied to clipboard')),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: Icon(
+                    item.isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    color: item.isFavorite ? AppColors.errorAccent : AppColors.outline,
+                  ),
+                  title: Text(item.isFavorite ? 'Remove from Favorites' : 'Add to Favorites'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    onToggleFavorite();
+                  },
+                ),
+                const Divider(color: AppColors.stroke),
+                ListTile(
+                  leading: const Icon(Icons.delete_outline_rounded, color: AppColors.errorAccent),
+                  title: const Text('Delete File', style: TextStyle(color: AppColors.errorAccent)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    onDelete();
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),
