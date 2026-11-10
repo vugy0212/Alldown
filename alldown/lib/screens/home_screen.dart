@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/app_settings.dart';
 import '../models/download_options.dart';
 import '../providers/quick_download_provider.dart';
+import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -44,17 +46,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ref.read(quickDownloadProvider.notifier).clearUrl();
   }
 
-  String _selectedActionLabel(DownloadOptions options) {
+  String _selectedActionLabel(DownloadOptions options, AppSettings settings) {
     if (options.format == TargetFormat.audioMp3) {
+      final codecName = settings.audioCodec == AudioCodec.opus ? 'Opus' : (settings.audioCodec == AudioCodec.aac ? 'M4A' : 'MP3/M4A');
       switch (options.audioQuality) {
         case AudioQuality.kbps320:
-          return '320 kbps';
+          return '320 kbps $codecName';
         case AudioQuality.kbps256:
-          return '256 kbps';
+          return '256 kbps $codecName';
         case AudioQuality.kbps192:
-          return '192 kbps';
+          return '192 kbps $codecName';
         case AudioQuality.kbps128:
-          return '128 kbps';
+          return '128 kbps $codecName';
       }
     }
     if (options.format == TargetFormat.customRaw) {
@@ -72,17 +75,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  String _selectedQualityBadge(DownloadOptions options) {
+  String _selectedQualityBadge(DownloadOptions options, AppSettings settings) {
     if (options.format == TargetFormat.audioMp3) {
+      final tag = settings.audioCodec == AudioCodec.opus ? 'Opus' : (settings.audioCodec == AudioCodec.aac ? 'M4A' : 'HQ');
       switch (options.audioQuality) {
         case AudioQuality.kbps320:
-          return '320k HQ';
+          return '320k $tag';
         case AudioQuality.kbps256:
-          return '256k';
+          return '256k $tag';
         case AudioQuality.kbps192:
-          return '192k';
+          return '192k $tag';
         case AudioQuality.kbps128:
-          return '128k';
+          return '128k $tag';
       }
     }
     switch (options.quality) {
@@ -97,17 +101,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  String _selectedQualitySubtitle(DownloadOptions options) {
+  String _selectedQualitySubtitle(DownloadOptions options, AppSettings settings) {
     if (options.format == TargetFormat.audioMp3) {
+      final codecDesc = settings.audioCodec == AudioCodec.opus
+          ? 'Opus / WebM Audio'
+          : (settings.audioCodec == AudioCodec.aac ? 'M4A / AAC (Lossless Stream)' : 'M4A / MP3 Audio');
       switch (options.audioQuality) {
         case AudioQuality.kbps320:
-          return 'Master Studio • 320 kbps MP3';
+          return 'Master Studio • 320 kbps • $codecDesc';
         case AudioQuality.kbps256:
-          return 'High Fidelity • 256 kbps MP3';
+          return 'High Fidelity • 256 kbps • $codecDesc';
         case AudioQuality.kbps192:
-          return 'Standard • 192 kbps MP3';
+          return 'Standard • 192 kbps • $codecDesc';
         case AudioQuality.kbps128:
-          return 'Compact Saver • 128 kbps MP3';
+          return 'Compact Saver • 128 kbps • $codecDesc';
       }
     }
     switch (options.quality) {
@@ -126,6 +133,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(quickDownloadProvider);
     final notifier = ref.read(quickDownloadProvider.notifier);
+    final settings = ref.watch(settingsProvider);
+
+    final audioTabTitle = settings.audioCodec == AudioCodec.opus
+        ? 'Audio (Opus)'
+        : (settings.audioCodec == AudioCodec.aac ? 'Audio (M4A)' : 'Audio (M4A/MP3)');
 
     if (_urlController.text != state.url) {
       _urlController.value = TextEditingValue(
@@ -665,7 +677,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     onTap: () => notifier.setFormat(TargetFormat.videoMp4),
                   ),
                   _buildFormatTab(
-                    title: 'Audio (MP3)',
+                    title: audioTabTitle,
                     icon: Icons.headphones_rounded,
                     selected: state.options.format == TargetFormat.audioMp3,
                     onTap: () => notifier.setFormat(TargetFormat.audioMp3),
@@ -736,7 +748,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  _selectedQualitySubtitle(state.options),
+                                  _selectedQualitySubtitle(state.options, settings),
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: AppColors.onSurfaceVariant,
@@ -752,7 +764,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              _selectedQualityBadge(state.options),
+                              _selectedQualityBadge(state.options, settings),
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
@@ -784,7 +796,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           if (state.options.format == TargetFormat.audioMp3) ...[
                             _buildQualityCard(
                               title: '320 kbps (High Quality)',
-                              subtitle: 'Studio Master • Pristine Audio • ~2.4 MB/min',
+                              subtitle: settings.audioCodec == AudioCodec.opus
+                                  ? 'Opus / WebM • Pristine Audio • ~2.4 MB/min'
+                                  : (settings.audioCodec == AudioCodec.aac
+                                      ? 'M4A / AAC • Pristine Audio • ~2.4 MB/min'
+                                      : 'M4A / MP3 • Pristine Audio • ~2.4 MB/min'),
                               size: media?.estimateSizeForQuality(VideoQuality.res1080p, true, AudioQuality.kbps320) ?? 'Auto',
                               badge: 'Recommended',
                               tag: '320k',
@@ -795,7 +811,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             const SizedBox(height: 8),
                             _buildQualityCard(
                               title: '256 kbps (Standard)',
-                              subtitle: 'High Fidelity VBR • ~1.9 MB/min',
+                              subtitle: settings.audioCodec == AudioCodec.opus
+                                  ? 'Opus • High Fidelity VBR • ~1.9 MB/min'
+                                  : (settings.audioCodec == AudioCodec.aac
+                                      ? 'M4A / AAC • High Fidelity VBR • ~1.9 MB/min'
+                                      : 'M4A / MP3 • High Fidelity VBR • ~1.9 MB/min'),
                               size: media?.estimateSizeForQuality(VideoQuality.res1080p, true, AudioQuality.kbps256) ?? 'Auto',
                               tag: '256k',
                               icon: Icons.graphic_eq_rounded,
@@ -805,7 +825,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             const SizedBox(height: 8),
                             _buildQualityCard(
                               title: '192 kbps (Medium)',
-                              subtitle: 'Balanced Quality • ~1.4 MB/min',
+                              subtitle: settings.audioCodec == AudioCodec.opus
+                                  ? 'Opus • Balanced Quality • ~1.4 MB/min'
+                                  : (settings.audioCodec == AudioCodec.aac
+                                      ? 'M4A / AAC • Balanced Quality • ~1.4 MB/min'
+                                      : 'M4A / MP3 • Balanced Quality • ~1.4 MB/min'),
                               size: media?.estimateSizeForQuality(VideoQuality.res1080p, true, AudioQuality.kbps192) ?? 'Auto',
                               tag: '192k',
                               icon: Icons.audiotrack_rounded,
@@ -815,7 +839,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             const SizedBox(height: 8),
                             _buildQualityCard(
                               title: '128 kbps (Saver)',
-                              subtitle: 'Smallest File Size • Voice/Podcast • ~1.0 MB/min',
+                              subtitle: settings.audioCodec == AudioCodec.opus
+                                  ? 'Opus • Voice/Podcast • ~1.0 MB/min'
+                                  : (settings.audioCodec == AudioCodec.aac
+                                      ? 'M4A / AAC • Voice/Podcast • ~1.0 MB/min'
+                                      : 'M4A / MP3 • Voice/Podcast • ~1.0 MB/min'),
                               size: media?.estimateSizeForQuality(VideoQuality.res1080p, true, AudioQuality.kbps128) ?? 'Auto',
                               tag: '128k',
                               icon: Icons.music_note_rounded,
@@ -950,7 +978,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         child: Text(
                           state.isDownloadAdded
                               ? 'Added to Transfer Queue'
-                              : 'Start Download (${_selectedActionLabel(state.options)})',
+                              : 'Start Download (${_selectedActionLabel(state.options, settings)})',
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 16,
