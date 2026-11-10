@@ -460,9 +460,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             const SizedBox(height: 18),
 
-            // Network & Directory Section
+            // SECTION: INTERACTIVE SETTINGS ACCORDIONS / OPENING MENUS
             const Text(
-              'NETWORK & DIRECTORY',
+              'POSTAVKE PREUZIMANJA I SERVISA',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
@@ -471,326 +471,486 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.stroke, width: 1),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Default Save Directory
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+            // MENU 1: Podržani Servisi i Ekstraktori (Expandable Menu)
+            _buildExpandableCard(
+              icon: Icons.hub_rounded,
+              iconColor: AppColors.primary,
+              title: 'Podržani Servisi i Ekstraktori',
+              subtitle: 'Pregled 12+ aktivnih modula za preuzimanje',
+              badge: '12+ Servisa',
+              badgeColor: AppColors.primary,
+              initiallyExpanded: false,
+              children: [
+                const Text(
+                  'Svi navedeni servisi su provjereni i aktivni za izravno preuzimanje videa, glazbe ili zvuka:',
+                  style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant, height: 1.4),
+                ),
+                const SizedBox(height: 10),
+                const Divider(color: AppColors.stroke, height: 1),
+                const SizedBox(height: 8),
+                _buildServiceRow(
+                  icon: Icons.play_circle_fill_rounded,
+                  iconColor: Colors.redAccent,
+                  name: 'YouTube & YouTube Shorts',
+                  description: 'Puna podrška za 4K, 1080p, 720p i M4A audio',
+                  badge: 'AKTIVAN',
+                ),
+                _buildServiceRow(
+                  icon: Icons.tag_rounded,
+                  iconColor: Colors.white,
+                  name: 'X (Twitter)',
+                  description: 'Automatska ekstrakcija HD MP4 videozapisa',
+                  badge: 'AKTIVAN',
+                ),
+                _buildServiceRow(
+                  icon: Icons.music_note_rounded,
+                  iconColor: Colors.cyanAccent,
+                  name: 'TikTok',
+                  description: 'Preuzimanje bez vodenog žiga u punoj rezoluciji',
+                  badge: 'AKTIVAN',
+                ),
+                _buildServiceRow(
+                  icon: Icons.facebook_rounded,
+                  iconColor: Colors.blueAccent,
+                  name: 'Facebook Watch & Reels',
+                  description: 'Izravno dekodiranje 1080p HD i 480p SD streamova',
+                  badge: 'AKTIVAN',
+                ),
+                _buildServiceRow(
+                  icon: Icons.stream_rounded,
+                  iconColor: Colors.indigoAccent,
+                  name: 'Streamable',
+                  description: 'Izravna integracija API-ja za brzi MP4 download',
+                  badge: 'AKTIVAN',
+                ),
+                _buildServiceRow(
+                  icon: Icons.account_balance_rounded,
+                  iconColor: Colors.amberAccent,
+                  name: 'Archive.org',
+                  description: 'Javna arhiva filmova, knjiga i audio zapisa',
+                  badge: 'AKTIVAN',
+                ),
+                _buildServiceRow(
+                  icon: Icons.public_rounded,
+                  iconColor: Colors.tealAccent,
+                  name: 'Wikimedia Commons',
+                  description: 'Slobodni multimedijski video/audio repozitorij',
+                  badge: 'AKTIVAN',
+                ),
+                _buildServiceRow(
+                  icon: Icons.cloud_download_rounded,
+                  iconColor: Colors.orangeAccent,
+                  name: 'Test-Videos & Global CDNs',
+                  description: 'Visokobrzinski H.264 / AAC video i audio serveri',
+                  badge: 'AKTIVAN',
+                ),
+                _buildServiceRow(
+                  icon: Icons.html_rounded,
+                  iconColor: Colors.deepOrangeAccent,
+                  name: 'W3Schools & HTML5 Portali',
+                  description: 'HTML5 video i audio izvori',
+                  badge: 'AKTIVAN',
+                ),
+                _buildServiceRow(
+                  icon: Icons.code_rounded,
+                  iconColor: Colors.purpleAccent,
+                  name: 'GitHub Raw & Release Assets',
+                  description: 'Repozitoriji s izravnim medijskim datotekama',
+                  badge: 'AKTIVAN',
+                ),
+                _buildServiceRow(
+                  icon: Icons.video_library_rounded,
+                  iconColor: Colors.blueGrey,
+                  name: 'Dailymotion & Vimeo',
+                  description: 'Automatski web video parser',
+                  badge: 'AKTIVAN',
+                ),
+                _buildServiceRow(
+                  icon: Icons.link_rounded,
+                  iconColor: AppColors.secondary,
+                  name: 'Univerzalni Direktni Mediji',
+                  description: 'Bilo koji izravni .mp4, .webm, .m4a, .mp3, .wav URL',
+                  badge: 'AKTIVAN',
+                ),
+              ],
+            ),
+
+            // MENU 2: Video i Format Kontejner (Expandable Menu with Dropdowns)
+            _buildExpandableCard(
+              icon: Icons.video_settings_rounded,
+              iconColor: AppColors.secondary,
+              title: 'Video i Kontejner Postavke',
+              subtitle: 'Format: ${settings.videoContainer} • Rezolucija: ${_formatMaxRes(settings.maxResolution)}',
+              badge: settings.videoContainer,
+              badgeColor: AppColors.secondary,
+              initiallyExpanded: false,
+              children: [
+                _buildDropdownRow<String>(
+                  title: 'Zadani Video Kontejner',
+                  subtitle: 'Format izlazne video datoteke',
+                  value: settings.videoContainer,
+                  items: const [
+                    DropdownMenuItem(value: 'MP4', child: Text('MP4 (H.264 / AAC)')),
+                    DropdownMenuItem(value: 'MKV', child: Text('MKV (Matroska)')),
+                    DropdownMenuItem(value: 'WebM', child: Text('WebM (VP9 / Opus)')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) notifier.setVideoContainer(val);
+                  },
+                ),
+                const Divider(color: AppColors.stroke, height: 16),
+                _buildDropdownRow<MaxResolution>(
+                  title: 'Maksimalna Rezolucija',
+                  subtitle: 'Automatski limit za preuzimanje videa',
+                  value: settings.maxResolution,
+                  items: const [
+                    DropdownMenuItem(value: MaxResolution.noLimit, child: Text('Bez limita (8K)')),
+                    DropdownMenuItem(value: MaxResolution.res4k, child: Text('4K Ultra HD (2160p)')),
+                    DropdownMenuItem(value: MaxResolution.res1440p, child: Text('1440p QHD')),
+                    DropdownMenuItem(value: MaxResolution.res1080p, child: Text('1080p FHD (Zadano)')),
+                    DropdownMenuItem(value: MaxResolution.res720p, child: Text('720p HD')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) notifier.setMaxResolution(val);
+                  },
+                ),
+                const Divider(color: AppColors.stroke, height: 16),
+                _buildSettingSwitch(
+                  title: 'Automatski remux u MP4',
+                  subtitle: 'Osigurava kompatibilnost sa svim Android playerima',
+                  value: settings.autoRemuxToMp4,
+                  onChanged: (_) => notifier.toggleAutoRemux(),
+                ),
+                const Divider(color: AppColors.stroke, height: 16),
+                _buildSettingSwitch(
+                  title: 'SponsorBlock Filtar',
+                  subtitle: 'Automatski izreži sponzorirane segmente i uvode',
+                  badge: 'v5.8',
+                  value: settings.sponsorBlockEnabled,
+                  onChanged: (_) => notifier.toggleSponsorBlock(),
+                ),
+              ],
+            ),
+
+            // MENU 3: Audio Ekstrakcija i Kvaliteta (Expandable Menu with Dropdowns)
+            _buildExpandableCard(
+              icon: Icons.graphic_eq_rounded,
+              iconColor: AppColors.tertiary,
+              title: 'Audio Ekstrakcija i Kvaliteta',
+              subtitle: 'Kodek: ${settings.audioCodec.name.toUpperCase()} • Bitrate: ${settings.audioBitrate}',
+              badge: settings.audioBitrate,
+              badgeColor: AppColors.tertiary,
+              initiallyExpanded: false,
+              children: [
+                const Text(
+                  'Format Zvuka (Kodek)',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainerLowest,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
                     children: [
-                      const Expanded(
-                        child: Text(
-                          'Default Save Directory',
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
-                        ),
+                      _buildCodecTab(
+                        title: 'MP3 (Universal)',
+                        isSelected: settings.audioCodec == AudioCodec.mp3,
+                        onTap: () => notifier.setAudioCodec(AudioCodec.mp3),
                       ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          InkWell(
-                            onTap: () async {
-                              final messenger = ScaffoldMessenger.of(context);
-                              final picked = await notifier.pickDownloadDirectory();
-                              if (mounted && picked != null) {
-                                messenger.showSnackBar(
-                                  SnackBar(content: Text('Download directory updated to: $picked')),
-                                );
-                              }
-                            },
-                            borderRadius: BorderRadius.circular(6),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryContainer.withValues(alpha: 0.3),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.drive_file_move_rounded, size: 13, color: AppColors.primary),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'Change',
-                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          InkWell(
-                            onTap: () {
-                              notifier.resetDownloadDirectory();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Reset to default: /storage/emulated/0/Download/AllDown')),
-                              );
-                            },
-                            borderRadius: BorderRadius.circular(6),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceContainerLowest,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: const Text(
-                                'Reset',
-                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.secondary),
-                              ),
-                            ),
-                          ),
-                        ],
+                      _buildCodecTab(
+                        title: 'M4A / AAC',
+                        isSelected: settings.audioCodec == AudioCodec.aac,
+                        onTap: () => notifier.setAudioCodec(AudioCodec.aac),
+                      ),
+                      _buildCodecTab(
+                        title: 'Opus / FLAC',
+                        isSelected: settings.audioCodec == AudioCodec.opus,
+                        onTap: () => notifier.setAudioCodec(AudioCodec.opus),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  InkWell(
-                    onTap: () async {
-                      final messenger = ScaffoldMessenger.of(context);
-                      final picked = await notifier.pickDownloadDirectory();
-                      if (mounted && picked != null) {
-                        messenger.showSnackBar(
-                          SnackBar(content: Text('Download directory updated to: $picked')),
-                        );
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                ),
+                const Divider(color: AppColors.stroke, height: 16),
+                _buildDropdownRow<String>(
+                  title: 'Kvaliteta Zvuka (Bitrate)',
+                  subtitle: 'Ciljana brzina prijenosa za audio',
+                  value: settings.audioBitrate,
+                  items: const [
+                    DropdownMenuItem(value: '320 kbps', child: Text('320 kbps (Studio Master)')),
+                    DropdownMenuItem(value: '256 kbps', child: Text('256 kbps (Visoka kvaliteta)')),
+                    DropdownMenuItem(value: '192 kbps', child: Text('192 kbps (Standard CD)')),
+                    DropdownMenuItem(value: '128 kbps', child: Text('128 kbps (Podcast / Glas)')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) notifier.setAudioBitrate(val);
+                  },
+                ),
+              ],
+            ),
+
+            // MENU 4: Mrežni Protokol, Dretve i Brzina (Expandable Menu with Dropdowns)
+            _buildExpandableCard(
+              icon: Icons.speed_rounded,
+              iconColor: AppColors.primary,
+              title: 'Mrežni Protokol i Brzina',
+              subtitle: 'Paralelno: ${settings.maxConcurrentDownloads} veze • Timeout: ${settings.connectionTimeout}s',
+              badge: '${settings.maxConcurrentDownloads} Taska',
+              badgeColor: AppColors.primary,
+              initiallyExpanded: false,
+              children: [
+                _buildDropdownRow<String>(
+                  title: 'User-Agent Identitet',
+                  subtitle: 'Mrežni identifikator preglednika za preuzimanje',
+                  value: settings.userAgent,
+                  items: const [
+                    DropdownMenuItem(value: 'Android Chrome', child: Text('Android Chrome (Zadano)')),
+                    DropdownMenuItem(value: 'Windows Desktop', child: Text('Windows Desktop Chrome')),
+                    DropdownMenuItem(value: 'iOS Safari', child: Text('Apple iOS Safari')),
+                    DropdownMenuItem(value: 'Custom AllDown', child: Text('AllDown Engine v1.0')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) notifier.setUserAgent(val);
+                  },
+                ),
+                const Divider(color: AppColors.stroke, height: 16),
+                _buildDropdownRow<int>(
+                  title: 'Vrijeme Čekanja Veze (Timeout)',
+                  subtitle: 'Maksimalno vrijeme odziva poslužitelja',
+                  value: settings.connectionTimeout,
+                  items: const [
+                    DropdownMenuItem(value: 10, child: Text('10 sekundi (Brzo)')),
+                    DropdownMenuItem(value: 15, child: Text('15 sekundi (Preporučeno)')),
+                    DropdownMenuItem(value: 30, child: Text('30 sekundi (Sporije veze)')),
+                    DropdownMenuItem(value: 60, child: Text('60 sekundi (Ultra stabilno)')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) notifier.setConnectionTimeout(val);
+                  },
+                ),
+                const Divider(color: AppColors.stroke, height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Istovremena Preuzimanja',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                          ),
+                          Text(
+                            'Broj paralelnih aktivnih preuzimanja',
+                            style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceContainerLowest,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.stroke, width: 0.8),
+                        color: AppColors.primaryContainer,
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.folder_rounded, size: 16, color: AppColors.primary),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              settings.downloadDirectory,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: AppColors.onSurface,
-                                fontFamily: 'monospace',
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const Icon(Icons.edit_rounded, size: 14, color: AppColors.outline),
-                        ],
+                      child: Text(
+                        '${settings.maxConcurrentDownloads} Zadataka',
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.onPrimary),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Concurrent Downloads Slider
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Concurrent Downloads',
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
-                            ),
-                            Text(
-                              'Simultaneous active connections',
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryContainer,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${settings.maxConcurrentDownloads} Tasks',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.onPrimary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Slider(
-                    value: settings.maxConcurrentDownloads.toDouble(),
-                    min: 1,
-                    max: 8,
-                    divisions: 7,
-                    label: '${settings.maxConcurrentDownloads}',
-                    onChanged: (val) => notifier.setConcurrentDownloads(val.toInt()),
-                  ),
-                  const Divider(color: AppColors.stroke, height: 16),
-
-                  // Wi-Fi Only Toggle
-                  _buildSettingSwitch(
-                    title: 'Download over Wi-Fi only',
-                    subtitle: 'Pause tasks on cellular data connections',
-                    value: settings.wifiOnly,
-                    onChanged: (_) => notifier.toggleWifiOnly(),
-                  ),
-                  const Divider(color: AppColors.stroke, height: 16),
-
-                  // Auto-retry Toggle
-                  _buildSettingSwitch(
-                    title: 'Auto-retry failed streams',
-                    subtitle: '3 attempts with exponential backoff',
-                    value: settings.autoRetry,
-                    onChanged: (_) => notifier.toggleAutoRetry(),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+                Slider(
+                  value: settings.maxConcurrentDownloads.toDouble(),
+                  min: 1,
+                  max: 8,
+                  divisions: 7,
+                  activeColor: AppColors.primary,
+                  inactiveColor: AppColors.surfaceContainerLowest,
+                  label: '${settings.maxConcurrentDownloads}',
+                  onChanged: (val) => notifier.setConcurrentDownloads(val.toInt()),
+                ),
+                const Divider(color: AppColors.stroke, height: 16),
+                _buildSettingSwitch(
+                  title: 'Preuzimanje samo preko Wi-Fi mreže',
+                  subtitle: 'Zaustavi zadatke na mobilnim podatcima za uštedu prometa',
+                  value: settings.wifiOnly,
+                  onChanged: (_) => notifier.toggleWifiOnly(),
+                ),
+                const Divider(color: AppColors.stroke, height: 16),
+                _buildSettingSwitch(
+                  title: 'Automatski ponovni pokušaj (Auto-retry)',
+                  subtitle: '3 pokušaja s eksponencijalnim odgodama pri prekidu',
+                  value: settings.autoRetry,
+                  onChanged: (_) => notifier.toggleAutoRetry(),
+                ),
+              ],
             ),
-            const SizedBox(height: 18),
 
-            // Media Processing Engine Section
-            const Text(
-              'MEDIA PROCESSING ENGINE',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
-                color: AppColors.secondary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.stroke, width: 1),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSettingSwitch(
-                    title: 'Auto-remux to MP4',
-                    subtitle: 'Seamless playback across Jellyfin & Android players',
-                    value: settings.autoRemuxToMp4,
-                    onChanged: (_) => notifier.toggleAutoRemux(),
-                  ),
-                  const Divider(color: AppColors.stroke, height: 16),
-
-                  // Audio Codec Selector
-                  const Text(
-                    'Audio Codec Preference',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(10),
+            // MENU 5: Upravljanje Memorijom i Mapama (Expandable Menu)
+            _buildExpandableCard(
+              icon: Icons.folder_copy_rounded,
+              iconColor: AppColors.secondary,
+              title: 'Upravljanje Memorijom i Mapama',
+              subtitle: 'Zadana mapa: ${settings.downloadDirectory}',
+              badge: 'Pohrana',
+              badgeColor: AppColors.secondary,
+              initiallyExpanded: false,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Zadana Mapa Preuzimanja',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                      ),
                     ),
-                    child: Row(
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        _buildCodecTab(
-                          title: 'MP3 (Universal)',
-                          isSelected: settings.audioCodec == AudioCodec.mp3,
-                          onTap: () => notifier.setAudioCodec(AudioCodec.mp3),
+                        InkWell(
+                          onTap: () async {
+                            final messenger = ScaffoldMessenger.of(context);
+                            final picked = await notifier.pickDownloadDirectory();
+                            if (mounted && picked != null) {
+                              messenger.showSnackBar(
+                                SnackBar(content: Text('Mapa ažurirana na: $picked')),
+                              );
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryContainer.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.drive_file_move_rounded, size: 13, color: AppColors.primary),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Promijeni',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                        _buildCodecTab(
-                          title: 'M4A / AAC',
-                          isSelected: settings.audioCodec == AudioCodec.aac,
-                          onTap: () => notifier.setAudioCodec(AudioCodec.aac),
-                        ),
-                        _buildCodecTab(
-                          title: 'Opus / FLAC',
-                          isSelected: settings.audioCodec == AudioCodec.opus,
-                          onTap: () => notifier.setAudioCodec(AudioCodec.opus),
+                        const SizedBox(width: 6),
+                        InkWell(
+                          onTap: () {
+                            notifier.resetDownloadDirectory();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Vraćeno na zadano: /storage/emulated/0/Download/AllDown')),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceContainerLowest,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'Reset',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.secondary),
+                            ),
+                          ),
                         ),
                       ],
                     ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainerLowest,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.stroke, width: 0.8),
                   ),
-                  const Divider(color: AppColors.stroke, height: 16),
-
-                  // Max Target Resolution
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Row(
                     children: [
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Max Target Resolution',
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
-                            ),
-                            Text(
-                              'Downscale feeds exceeding threshold',
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
-                            ),
-                          ],
-                        ),
-                      ),
+                      const Icon(Icons.folder_rounded, size: 16, color: AppColors.primary),
                       const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceContainerLowest,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: DropdownButton<MaxResolution>(
-                          value: settings.maxResolution,
-                          isDense: true,
-                          dropdownColor: AppColors.surfaceContainerHigh,
-                          underline: const SizedBox.shrink(),
-                          icon: const Icon(Icons.expand_more_rounded, size: 16, color: AppColors.secondary),
+                      Expanded(
+                        child: Text(
+                          settings.downloadDirectory,
                           style: const TextStyle(
                             fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.secondary,
+                            color: AppColors.onSurface,
+                            fontFamily: 'monospace',
                           ),
-                          items: const [
-                            DropdownMenuItem(value: MaxResolution.noLimit, child: Text('No Limit (8K)')),
-                            DropdownMenuItem(value: MaxResolution.res4k, child: Text('4K Ultra HD')),
-                            DropdownMenuItem(value: MaxResolution.res1440p, child: Text('1440p QHD')),
-                            DropdownMenuItem(value: MaxResolution.res1080p, child: Text('1080p FHD')),
-                            DropdownMenuItem(value: MaxResolution.res720p, child: Text('720p HD')),
-                          ],
-                          onChanged: (res) {
-                            if (res != null) notifier.setMaxResolution(res);
-                          },
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
-                  const Divider(color: AppColors.stroke, height: 16),
-
-                  // SponsorBlock Filter
-                  _buildSettingSwitch(
-                    title: 'SponsorBlock Filter',
-                    subtitle: 'Automatically snip sponsored segments and intros',
-                    badge: 'v5.8',
-                    value: settings.sponsorBlockEnabled,
-                    onChanged: (_) => notifier.toggleSponsorBlock(),
+                ),
+                const SizedBox(height: 12),
+                const Divider(color: AppColors.stroke, height: 1),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.secondary,
+                      side: const BorderSide(color: AppColors.stroke),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () {
+                      notifier.resetAllSettings();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Sve postavke su vraćene na zadane tvorničke vrijednosti.')),
+                      );
+                    },
+                    icon: const Icon(Icons.restore_rounded, size: 16),
+                    label: const Text('Resetiraj Sve Postavke na Tvorničke', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const SizedBox(height: 18),
+
+            // MENU 6: Obavijesti i Pozadinski Rad (Expandable Menu)
+            _buildExpandableCard(
+              icon: Icons.notifications_active_rounded,
+              iconColor: AppColors.tertiary,
+              title: 'Obavijesti i Pozadinski Servis',
+              subtitle: 'Android Foreground Service s prikazom napretka',
+              badge: 'Aktivan',
+              badgeColor: AppColors.tertiary,
+              initiallyExpanded: false,
+              children: [
+                _buildSettingSwitch(
+                  title: 'Obavijest po završetku preuzimanja',
+                  subtitle: 'Prikaz skočnog obavještenja kada se zadatak dovrši',
+                  value: settings.notifyOnComplete,
+                  onChanged: (_) => notifier.toggleNotifyOnComplete(),
+                ),
+                const Divider(color: AppColors.stroke, height: 16),
+                const Row(
+                  children: [
+                    Icon(Icons.shield_outlined, size: 18, color: AppColors.tertiary),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Pozadinski servis omogućuje neprekinuto preuzimanje čak i kada je ekran zaključan ili koristite druge aplikacije.',
+                        style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant, height: 1.3),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
 
             // Engine & Core Runtime Section
             const Text(
@@ -1256,6 +1416,212 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  String _formatMaxRes(MaxResolution res) {
+    switch (res) {
+      case MaxResolution.noLimit:
+        return '8K';
+      case MaxResolution.res4k:
+        return '4K';
+      case MaxResolution.res1440p:
+        return '1440p';
+      case MaxResolution.res1080p:
+        return '1080p';
+      case MaxResolution.res720p:
+        return '720p';
+    }
+  }
+
+  Widget _buildExpandableCard({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    String? badge,
+    Color? badgeColor,
+    bool initiallyExpanded = false,
+    required List<Widget> children,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.stroke, width: 1),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: initiallyExpanded,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+          leading: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 20, color: iconColor),
+          ),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.onSurface,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (badge != null) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: (badgeColor ?? AppColors.primary).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: (badgeColor ?? AppColors.primary).withValues(alpha: 0.4),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Text(
+                    badge,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: badgeColor ?? AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          subtitle: Text(
+            subtitle,
+            style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+            overflow: TextOverflow.ellipsis,
+          ),
+          iconColor: iconColor,
+          collapsedIconColor: AppColors.onSurfaceVariant,
+          children: children,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDropdownRow<T>({
+    required String title,
+    required String subtitle,
+    required T value,
+    required List<DropdownMenuItem<T>> items,
+    required ValueChanged<T?> onChanged,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                subtitle,
+                style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.stroke, width: 0.8),
+          ),
+          child: DropdownButton<T>(
+            value: value,
+            isDense: true,
+            dropdownColor: AppColors.surfaceContainerHigh,
+            underline: const SizedBox.shrink(),
+            icon: const Icon(Icons.expand_more_rounded, size: 16, color: AppColors.secondary),
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: AppColors.secondary,
+            ),
+            items: items,
+            onChanged: onChanged,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildServiceRow({
+    required IconData icon,
+    required Color iconColor,
+    required String name,
+    required String description,
+    required String badge,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(icon, size: 15, color: iconColor),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                ),
+                Text(
+                  description,
+                  style: const TextStyle(fontSize: 10, color: AppColors.onSurfaceVariant),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.tertiary.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              badge,
+              style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.tertiary),
+            ),
+          ),
+        ],
       ),
     );
   }

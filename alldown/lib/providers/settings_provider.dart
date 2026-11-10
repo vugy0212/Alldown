@@ -92,6 +92,36 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     return false;
   }
 
+  void setAudioBitrate(String bitrate) {
+    state = state.copyWith(audioBitrate: bitrate);
+    _storage.saveSettings(state);
+  }
+
+  void setVideoContainer(String container) {
+    state = state.copyWith(videoContainer: container);
+    _storage.saveSettings(state);
+  }
+
+  void setUserAgent(String ua) {
+    state = state.copyWith(userAgent: ua);
+    _storage.saveSettings(state);
+  }
+
+  void setConnectionTimeout(int timeout) {
+    state = state.copyWith(connectionTimeout: timeout);
+    _storage.saveSettings(state);
+  }
+
+  void toggleNotifyOnComplete() {
+    state = state.copyWith(notifyOnComplete: !state.notifyOnComplete);
+    _storage.saveSettings(state);
+  }
+
+  void resetAllSettings() {
+    state = const AppSettings();
+    _storage.saveSettings(state);
+  }
+
   void clearAppCache() {
     // Cache clearing action
   }

@@ -389,6 +389,164 @@ class MetadataFetcherService {
     }
   }
 
+  static bool isStreamableUrl(String input) {
+    final lower = input.toLowerCase();
+    return lower.contains('streamable.com/');
+  }
+
+  static bool isDirectMediaUrl(String input) {
+    try {
+      final uri = Uri.parse(input.startsWith('http') ? input : 'https://$input');
+      final path = uri.path.toLowerCase();
+      return path.endsWith('.mp4') ||
+          path.endsWith('.webm') ||
+          path.endsWith('.mkv') ||
+          path.endsWith('.mov') ||
+          path.endsWith('.m4a') ||
+          path.endsWith('.mp3') ||
+          path.endsWith('.wav') ||
+          path.endsWith('.flac') ||
+          path.endsWith('.ogg') ||
+          path.endsWith('.aac');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Resolves direct MP4 stream from Streamable API
+  static Future<ResolvedDirectStream?> resolveStreamableStream(String url) async {
+    try {
+      final match = RegExp(r'streamable\.com\/([a-zA-Z0-9]+)', caseSensitive: false).firstMatch(url);
+      if (match == null) return null;
+      final code = match.group(1)!;
+
+      final apiUri = Uri.parse('https://api.streamable.com/videos/$code');
+      final response = await http.get(apiUri, headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      }).timeout(const Duration(seconds: 8));
+      if (response.statusCode != 200) return null;
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final files = (data['files'] as Map<String, dynamic>?) ?? {};
+
+      final mp4Obj = files['mp4'] as Map<String, dynamic>? ??
+          files['original'] as Map<String, dynamic>? ??
+          files['mp4-mobile'] as Map<String, dynamic>?;
+      if (mp4Obj == null) return null;
+
+      var streamUrl = mp4Obj['url'] as String? ?? '';
+      if (streamUrl.startsWith('//')) {
+        streamUrl = 'https:$streamUrl';
+      }
+      if (streamUrl.isEmpty) return null;
+
+      final rawTitle = (data['title'] as String? ?? '').trim();
+      final title = rawTitle.isNotEmpty ? rawTitle : 'Streamable Video ($code)';
+      var thumb = data['thumbnail_url'] as String? ?? '';
+      if (thumb.startsWith('//')) {
+        thumb = 'https:$thumb';
+      }
+
+      final durSec = ((mp4Obj['duration'] as num?)?.toDouble() ?? 30.0).round().clamp(1, 86400);
+      final height = mp4Obj['height'] ?? 720;
+
+      return ResolvedDirectStream(
+        streamUrl: streamUrl,
+        title: title,
+        author: 'Streamable',
+        duration: formatDuration(Duration(seconds: durSec)),
+        thumbnailUrl: thumb,
+        resolutionLabel: '${height}p HD',
+        platform: 'Streamable',
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Universal stream extractor: scans HTML for OpenGraph og:video, HTML5 video sources, or direct CDN links
+  static Future<ResolvedDirectStream?> resolveGenericWebpageStream(String url) async {
+    try {
+      final uri = Uri.parse(url.startsWith('http') ? url : 'https://$url');
+      final client = http.Client();
+      final req = http.Request('GET', uri);
+      req.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
+      req.headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,video/*,audio/*,*/*;q=0.8';
+      req.followRedirects = true;
+      req.maxRedirects = 5;
+
+      final streamed = await client.send(req).timeout(const Duration(seconds: 8));
+      final contentType = (streamed.headers['content-type'] ?? '').toLowerCase();
+
+      // If URL directly returned media bytes
+      if (contentType.contains('video/') || contentType.contains('audio/') || contentType.contains('application/octet-stream')) {
+        client.close();
+        final domain = uri.host.replaceFirst('www.', '');
+        final lastSeg = uri.pathSegments.isNotEmpty ? uri.pathSegments.last : 'media';
+        final cleanTitle = Uri.decodeComponent(lastSeg.replaceAll(RegExp(r'\.[a-zA-Z0-9]+$'), ''));
+        final isAudio = contentType.contains('audio');
+        return ResolvedDirectStream(
+          streamUrl: url,
+          title: cleanTitle.isNotEmpty ? cleanTitle : 'Direct Media Stream',
+          author: domain,
+          duration: 'Stream',
+          thumbnailUrl: '',
+          resolutionLabel: isAudio ? 'Audio Stream' : 'HD Media',
+          platform: domain,
+        );
+      }
+
+      final body = await streamed.stream.bytesToString();
+      client.close();
+      if (body.isEmpty) return null;
+
+      final patterns = [
+        RegExp(r'<meta\s+property=["\x27]og:video(?::secure_url|:url)?["\x27]\s+content=["\x27]([^"\x27]+)["\x27]', caseSensitive: false),
+        RegExp(r'<meta\s+name=["\x27]twitter:player:stream["\x27]\s+content=["\x27]([^"\x27]+)["\x27]', caseSensitive: false),
+        RegExp(r'<meta\s+itemprop=["\x27]contentUrl["\x27]\s+content=["\x27]([^"\x27]+)["\x27]', caseSensitive: false),
+        RegExp(r'<source\s+[^>]*src=["\x27]([^"\x27]+\.(?:mp4|webm|m4a|mp3)[^"\x27]*)["\x27]', caseSensitive: false),
+        RegExp(r'<video\s+[^>]*src=["\x27]([^"\x27]+\.(?:mp4|webm|m4a|mp3)[^"\x27]*)["\x27]', caseSensitive: false),
+        RegExp(r'''["'](https?:\/\/[^\s"'<>]+\.(?:mp4|webm|m4a|mp3)[^\s"'<>]*)["']''', caseSensitive: false),
+      ];
+
+      String? foundStream;
+      for (final p in patterns) {
+        final m = p.firstMatch(body);
+        if (m != null && m.group(1) != null) {
+          var cand = m.group(1)!.trim();
+          cand = cand.replaceAll(r'\/', '/');
+          cand = cand.replaceAll(r'\u0026', '&');
+          cand = cand.replaceAll('&amp;', '&');
+          if (cand.startsWith('//')) cand = 'https:$cand';
+          if (cand.startsWith('http')) {
+            foundStream = cand;
+            break;
+          }
+        }
+      }
+
+      if (foundStream != null) {
+        final ogTitle = RegExp(r'<meta\s+property=["\x27]og:title["\x27]\s+content=["\x27]([^"\x27]+)["\x27]', caseSensitive: false).firstMatch(body)?.group(1);
+        final titleTag = RegExp(r'<title>([^<]+)<\/title>', caseSensitive: false).firstMatch(body)?.group(1);
+        var title = (ogTitle ?? titleTag ?? uri.host).trim();
+        title = title.replaceAll(RegExp(r'\s*\|\s*.*$'), '').trim();
+
+        final thumb = RegExp(r'<meta\s+property=["\x27]og:image["\x27]\s+content=["\x27]([^"\x27]+)["\x27]', caseSensitive: false).firstMatch(body)?.group(1) ?? '';
+
+        return ResolvedDirectStream(
+          streamUrl: foundStream,
+          title: title.isNotEmpty ? title : 'Web Video',
+          author: uri.host.replaceFirst('www.', ''),
+          duration: 'Stream',
+          thumbnailUrl: thumb,
+          resolutionLabel: 'Web HD',
+          platform: uri.host.replaceFirst('www.', ''),
+        );
+      }
+    } catch (_) {}
+    return null;
+  }
+
   /// Fetches real metadata for any media URL
   static Future<DetectedMedia> fetchMediaInfo(String url) async {
     final trimmed = url.trim();
@@ -551,7 +709,69 @@ class MetadataFetcherService {
       }
     }
 
-    // 5. Generic NoEmbed for Vimeo, SoundCloud, Reddit, etc.
+    // 5. Check Streamable URL
+    if (isStreamableUrl(trimmed)) {
+      final st = await resolveStreamableStream(trimmed);
+      if (st != null) {
+        return DetectedMedia(
+          title: st.title,
+          channel: st.author,
+          subscribers: 'Streamable Video',
+          duration: st.duration,
+          durationSeconds: 30,
+          uploadTime: 'Streamable HD',
+          viewCount: 'Direct MP4',
+          license: 'Direct Stream',
+          thumbnailUrl: st.thumbnailUrl,
+          platform: 'Streamable',
+          badgeText: st.resolutionLabel,
+        );
+      }
+    }
+
+    // 6. Check Direct Media File URL (.mp4, .webm, .m4a, .mp3, etc.)
+    if (isDirectMediaUrl(trimmed)) {
+      final domain = _extractCleanDomain(trimmed);
+      final uri = Uri.tryParse(trimmed.startsWith('http') ? trimmed : 'https://$trimmed');
+      final lastSeg = uri != null && uri.pathSegments.isNotEmpty ? uri.pathSegments.last : 'media';
+      final cleanTitle = Uri.decodeComponent(lastSeg.replaceAll(RegExp(r'\.[a-zA-Z0-9]+$'), ''));
+      final ext = lastSeg.contains('.') ? lastSeg.split('.').last.toUpperCase() : 'MP4';
+      final isAudio = ['MP3', 'M4A', 'WAV', 'FLAC', 'AAC', 'OGG'].contains(ext);
+
+      return DetectedMedia(
+        title: cleanTitle.isNotEmpty ? cleanTitle : 'Direct $ext Stream',
+        channel: domain,
+        subscribers: 'Direct Media File',
+        duration: 'Stream',
+        durationSeconds: 180,
+        uploadTime: '$ext Format',
+        viewCount: 'Fast Direct Download',
+        license: 'Direct Stream',
+        thumbnailUrl: '',
+        platform: domain,
+        badgeText: isAudio ? 'Audio $ext' : 'HD $ext',
+      );
+    }
+
+    // 7. Generic Webpage Video Parser (og:video, HTML5 <video>)
+    final webStream = await resolveGenericWebpageStream(trimmed);
+    if (webStream != null) {
+      return DetectedMedia(
+        title: webStream.title,
+        channel: webStream.author,
+        subscribers: 'Web Media Extractor',
+        duration: webStream.duration,
+        durationSeconds: 180,
+        uploadTime: 'Web Media',
+        viewCount: 'Stream Ready',
+        license: 'Web Stream',
+        thumbnailUrl: webStream.thumbnailUrl,
+        platform: webStream.platform,
+        badgeText: webStream.resolutionLabel,
+      );
+    }
+
+    // 8. Generic NoEmbed for Vimeo, SoundCloud, Reddit, etc.
     try {
       final noembedUri = Uri.parse('https://noembed.com/embed?url=${Uri.encodeComponent(trimmed)}');
       final response = await http.get(noembedUri).timeout(const Duration(seconds: 5));

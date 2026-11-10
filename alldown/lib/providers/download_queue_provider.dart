@@ -152,6 +152,8 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
       final twitterId = MetadataFetcherService.extractTwitterStatusId(task.url);
       final isTikTok = MetadataFetcherService.isTikTokUrl(task.url);
       final isFacebook = MetadataFetcherService.isFacebookUrl(task.url);
+      final isStreamable = MetadataFetcherService.isStreamableUrl(task.url);
+      final isDirectMedia = MetadataFetcherService.isDirectMediaUrl(task.url);
 
       Stream<List<int>> byteStream;
       int totalBytes = 0;
@@ -329,22 +331,96 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
         }
         totalBytes = resp.contentLength ?? 0;
         byteStream = resp.stream;
-      } else {
-        // Direct HTTP media stream download
+      } else if (isStreamable) {
+        _updateTask(
+          task.id,
+          (t) => t.copyWith(
+            speed: "Extracting Streamable video...",
+            eta: "Resolving MP4...",
+            progress: 0.03,
+          ),
+        );
+
+        final resolved = await MetadataFetcherService.resolveStreamableStream(task.url);
+        if (resolved == null) {
+          throw Exception('Could not extract Streamable MP4 stream.');
+        }
+
+        realTitle = resolved.title;
+        realChannel = resolved.author;
+        realDuration = resolved.duration;
+        if (resolved.thumbnailUrl.isNotEmpty) {
+          realThumb = resolved.thumbnailUrl;
+        }
+        actualResolution = resolved.resolutionLabel;
+        realPlatform = 'Streamable';
+
         final client = http.Client();
         job.httpClient = client;
-        final req = http.Request('GET', Uri.parse(task.url));
+        final req = http.Request('GET', Uri.parse(resolved.streamUrl));
+        req.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
+        final resp = await client.send(req);
+        if (resp.statusCode >= 400) {
+          throw Exception('HTTP ${resp.statusCode}');
+        }
+        totalBytes = resp.contentLength ?? 0;
+        byteStream = resp.stream;
+      } else {
+        // Direct media URL or generic webpage containing video/audio
+        ResolvedDirectStream? resolvedStream;
+        if (!isDirectMedia) {
+          _updateTask(
+            task.id,
+            (t) => t.copyWith(
+              speed: "Scanning webpage for media streams...",
+              eta: "Resolving...",
+              progress: 0.03,
+            ),
+          );
+          resolvedStream = await MetadataFetcherService.resolveGenericWebpageStream(task.url);
+        }
+
+        final targetDownloadUrl = resolvedStream != null ? resolvedStream.streamUrl : task.url;
+        if (resolvedStream != null) {
+          realTitle = resolvedStream.title;
+          realChannel = resolvedStream.author;
+          if (resolvedStream.thumbnailUrl.isNotEmpty) {
+            realThumb = resolvedStream.thumbnailUrl;
+          }
+          realPlatform = resolvedStream.platform;
+          actualResolution = resolvedStream.resolutionLabel;
+        }
+
+        final client = http.Client();
+        job.httpClient = client;
+        final req = http.Request('GET', Uri.parse(targetDownloadUrl));
+        req.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
         final resp = await client.send(req);
         if (resp.statusCode >= 400) {
           throw Exception('HTTP ${resp.statusCode}');
         }
         final contentType = (resp.headers['content-type'] ?? '').toLowerCase();
         if (contentType.contains('text/html')) {
-          throw Exception('URL points to a webpage, not a direct media stream.');
+          throw Exception('URL points to a webpage with no downloadable media stream.');
         }
+
+        if (contentType.contains('webm')) {
+          ext = 'webm';
+          actualFormat = 'WEBM';
+        } else if (contentType.contains('audio/mpeg') || contentType.contains('audio/mp3')) {
+          ext = 'mp3';
+          actualFormat = 'MP3';
+        } else if (contentType.contains('audio/mp4') || contentType.contains('audio/m4a') || contentType.contains('audio/aac')) {
+          ext = 'm4a';
+          actualFormat = 'M4A';
+        } else if (contentType.contains('video/mp4')) {
+          ext = 'mp4';
+          actualFormat = 'MP4';
+        }
+
         totalBytes = resp.contentLength ?? 0;
         byteStream = resp.stream;
-        realChannel = Uri.tryParse(task.url)?.host.replaceFirst('www.', '') ?? 'Web';
+        realChannel = Uri.tryParse(targetDownloadUrl)?.host.replaceFirst('www.', '') ?? realChannel;
       }
 
       final safeName = _sanitizeFileName(realTitle);

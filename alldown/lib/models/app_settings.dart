@@ -25,6 +25,11 @@ class AppSettings {
   final bool sponsorBlockEnabled;
   final String ytDlpVersion;
   final String ffmpegVersion;
+  final String audioBitrate;
+  final String videoContainer;
+  final String userAgent;
+  final int connectionTimeout;
+  final bool notifyOnComplete;
 
   const AppSettings({
     this.downloadDirectory = "/storage/emulated/0/Download/AllDown",
@@ -39,6 +44,11 @@ class AppSettings {
     this.sponsorBlockEnabled = true,
     this.ytDlpVersion = "v2025.01.26-nightly",
     this.ffmpegVersion = "v7.1 Android-ARM64",
+    this.audioBitrate = "320 kbps",
+    this.videoContainer = "MP4",
+    this.userAgent = "Android Chrome",
+    this.connectionTimeout = 15,
+    this.notifyOnComplete = true,
   });
 
   AppSettings copyWith({
@@ -54,6 +64,11 @@ class AppSettings {
     bool? sponsorBlockEnabled,
     String? ytDlpVersion,
     String? ffmpegVersion,
+    String? audioBitrate,
+    String? videoContainer,
+    String? userAgent,
+    int? connectionTimeout,
+    bool? notifyOnComplete,
   }) {
     return AppSettings(
       downloadDirectory: downloadDirectory ?? this.downloadDirectory,
@@ -68,6 +83,11 @@ class AppSettings {
       sponsorBlockEnabled: sponsorBlockEnabled ?? this.sponsorBlockEnabled,
       ytDlpVersion: ytDlpVersion ?? this.ytDlpVersion,
       ffmpegVersion: ffmpegVersion ?? this.ffmpegVersion,
+      audioBitrate: audioBitrate ?? this.audioBitrate,
+      videoContainer: videoContainer ?? this.videoContainer,
+      userAgent: userAgent ?? this.userAgent,
+      connectionTimeout: connectionTimeout ?? this.connectionTimeout,
+      notifyOnComplete: notifyOnComplete ?? this.notifyOnComplete,
     );
   }
 
@@ -84,6 +104,11 @@ class AppSettings {
     'sponsorBlockEnabled': sponsorBlockEnabled,
     'ytDlpVersion': ytDlpVersion,
     'ffmpegVersion': ffmpegVersion,
+    'audioBitrate': audioBitrate,
+    'videoContainer': videoContainer,
+    'userAgent': userAgent,
+    'connectionTimeout': connectionTimeout,
+    'notifyOnComplete': notifyOnComplete,
   };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -106,6 +131,11 @@ class AppSettings {
       sponsorBlockEnabled: json['sponsorBlockEnabled'] as bool? ?? true,
       ytDlpVersion: json['ytDlpVersion'] as String? ?? "v2025.01.26-nightly",
       ffmpegVersion: json['ffmpegVersion'] as String? ?? "v7.1 Android-ARM64",
+      audioBitrate: json['audioBitrate'] as String? ?? "320 kbps",
+      videoContainer: json['videoContainer'] as String? ?? "MP4",
+      userAgent: json['userAgent'] as String? ?? "Android Chrome",
+      connectionTimeout: json['connectionTimeout'] as int? ?? 15,
+      notifyOnComplete: json['notifyOnComplete'] as bool? ?? true,
     );
   }
 }
