@@ -57,9 +57,10 @@ class VideoPlayerModal extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: isGif
@@ -80,24 +81,30 @@ class VideoPlayerModal extends ConsumerWidget {
                               color: isGif ? AppColors.secondary : AppColors.primary,
                             ),
                             const SizedBox(width: 4),
-                            Text(
-                              isGif
-                                  ? 'Animated GIF Player'
-                                  : item.isAudio
-                                      ? 'Audio Player'
-                                      : 'Video Player (${item.resolution})',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: isGif ? AppColors.secondary : AppColors.primary,
+                            Flexible(
+                              child: Text(
+                                isGif
+                                    ? 'Animated GIF Player'
+                                    : item.isAudio
+                                        ? 'Audio Player'
+                                        : 'Video Player (${item.resolution})',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: isGif ? AppColors.secondary : AppColors.primary,
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       if (!item.isAudio && !isGif)
                         IconButton(
