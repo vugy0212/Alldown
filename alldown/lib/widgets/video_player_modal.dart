@@ -156,7 +156,7 @@ class VideoPlayerModal extends ConsumerWidget {
                             fit: BoxFit.contain,
                             errorBuilder: (_, err, _) => Center(
                               child: Text(
-                                'Greška učitavanja GIF-a: $err',
+                                'Error loading GIF: $err',
                                 style: const TextStyle(color: Colors.white70, fontSize: 12),
                               ),
                             ),
@@ -252,7 +252,7 @@ class VideoPlayerModal extends ConsumerWidget {
                       Icon(Icons.all_inclusive_rounded, size: 18, color: AppColors.secondary),
                       SizedBox(width: 8),
                       Text(
-                        'Beskonačna GIF animacija (Loop)',
+                        'Infinite GIF Loop Animation',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -365,7 +365,7 @@ class VideoPlayerModal extends ConsumerWidget {
                     );
                   },
                   icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                  label: Text(isGif ? 'Podijeli / Pošalji GIF' : 'Share / Open in External Video Player'),
+                  label: Text(isGif ? 'Share / Send GIF' : 'Share / Open in External Video Player'),
                 ),
               ),
             ],

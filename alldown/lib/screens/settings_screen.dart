@@ -462,7 +462,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
             // SECTION: DOWNLOAD & MEDIA SETTINGS
             Text(
-              'POSTAVKE PREUZIMANJA I MEDIJA',
+              'DOWNLOAD & MEDIA SETTINGS',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
@@ -476,15 +476,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _buildExpandableCard(
               icon: Icons.video_settings_rounded,
               iconColor: AppColors.secondary,
-              title: 'Video i Kontejner Postavke',
-              subtitle: 'Format: ${settings.videoContainer} • Rezolucija: ${_formatMaxRes(settings.maxResolution)}',
+              title: 'Video & Container Settings',
+              subtitle: 'Format: ${settings.videoContainer} • Max Resolution: ${_formatMaxRes(settings.maxResolution)}',
               badge: settings.videoContainer,
               badgeColor: AppColors.secondary,
               initiallyExpanded: false,
               children: [
                 _buildDropdownRow<String>(
-                  title: 'Zadani Video Kontejner',
-                  subtitle: 'Format izlazne video datoteke',
+                  title: 'Default Video Container',
+                  subtitle: 'Output video container format',
                   value: settings.videoContainer,
                   items: const [
                     DropdownMenuItem(value: 'MP4', child: Text('MP4 (H.264 / AAC)')),
@@ -497,14 +497,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildDropdownRow<MaxResolution>(
-                  title: 'Maksimalna Rezolucija',
-                  subtitle: 'Automatski limit za preuzimanje videa',
+                  title: 'Maximum Video Resolution',
+                  subtitle: 'Automatic upper limit for downloads',
                   value: settings.maxResolution,
                   items: const [
-                    DropdownMenuItem(value: MaxResolution.noLimit, child: Text('Bez limita (8K)')),
+                    DropdownMenuItem(value: MaxResolution.noLimit, child: Text('No limit (Up to 8K)')),
                     DropdownMenuItem(value: MaxResolution.res4k, child: Text('4K Ultra HD (2160p)')),
                     DropdownMenuItem(value: MaxResolution.res1440p, child: Text('1440p QHD')),
-                    DropdownMenuItem(value: MaxResolution.res1080p, child: Text('1080p FHD (Zadano)')),
+                    DropdownMenuItem(value: MaxResolution.res1080p, child: Text('1080p FHD (Default)')),
                     DropdownMenuItem(value: MaxResolution.res720p, child: Text('720p HD')),
                   ],
                   onChanged: (val) {
@@ -513,15 +513,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildSettingSwitch(
-                  title: 'Automatski remux u MP4',
-                  subtitle: 'Osigurava kompatibilnost sa svim Android playerima',
+                  title: 'Auto-remux to MP4',
+                  subtitle: 'Ensures compatibility with all Android media players',
                   value: settings.autoRemuxToMp4,
                   onChanged: (_) => notifier.toggleAutoRemux(),
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildSettingSwitch(
-                  title: 'SponsorBlock Filtar',
-                  subtitle: 'Automatski izreži sponzorirane segmente i uvode',
+                  title: 'SponsorBlock Filter',
+                  subtitle: 'Automatically skip sponsored segments and intros',
                   badge: 'v5.8',
                   value: settings.sponsorBlockEnabled,
                   onChanged: (_) => notifier.toggleSponsorBlock(),
@@ -529,18 +529,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ],
             ),
 
-            // MENU 3: Audio Ekstrakcija i Kvaliteta (Expandable Menu with Dropdowns)
+            // MENU 3: Audio Extraction & Quality (Expandable Menu with Dropdowns)
             _buildExpandableCard(
               icon: Icons.graphic_eq_rounded,
               iconColor: AppColors.tertiary,
-              title: 'Audio Ekstrakcija i Kvaliteta',
-              subtitle: 'Kodek: ${settings.audioCodec.name.toUpperCase()} • Bitrate: ${settings.audioBitrate}',
+              title: 'Audio Extraction & Quality',
+              subtitle: 'Codec: ${settings.audioCodec.name.toUpperCase()} • Bitrate: ${settings.audioBitrate}',
               badge: settings.audioBitrate,
               badgeColor: AppColors.tertiary,
               initiallyExpanded: false,
               children: [
                 Text(
-                  'Format Zvuka (Kodek)',
+                  'Audio Format (Codec)',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
                 ),
                 const SizedBox(height: 8),
@@ -572,14 +572,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildDropdownRow<String>(
-                  title: 'Kvaliteta Zvuka (Bitrate)',
-                  subtitle: 'Ciljana brzina prijenosa za audio',
+                  title: 'Audio Quality (Bitrate)',
+                  subtitle: 'Target bitrate for extracted audio',
                   value: settings.audioBitrate,
                   items: const [
                     DropdownMenuItem(value: '320 kbps', child: Text('320 kbps (Studio Master)')),
-                    DropdownMenuItem(value: '256 kbps', child: Text('256 kbps (Visoka kvaliteta)')),
+                    DropdownMenuItem(value: '256 kbps', child: Text('256 kbps (High Quality)')),
                     DropdownMenuItem(value: '192 kbps', child: Text('192 kbps (Standard CD)')),
-                    DropdownMenuItem(value: '128 kbps', child: Text('128 kbps (Podcast / Glas)')),
+                    DropdownMenuItem(value: '128 kbps', child: Text('128 kbps (Voice / Podcast)')),
                   ],
                   onChanged: (val) {
                     if (val != null) notifier.setAudioBitrate(val);
@@ -592,18 +592,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _buildExpandableCard(
               icon: Icons.speed_rounded,
               iconColor: AppColors.primary,
-              title: 'Mrežni Protokol i Brzina',
-              subtitle: 'Paralelno: ${settings.maxConcurrentDownloads} veze • Timeout: ${settings.connectionTimeout}s',
-              badge: '${settings.maxConcurrentDownloads} Taska',
+              title: 'Network Protocol & Speed',
+              subtitle: 'Concurrent: ${settings.maxConcurrentDownloads} tasks • Timeout: ${settings.connectionTimeout}s',
+              badge: '${settings.maxConcurrentDownloads} Tasks',
               badgeColor: AppColors.primary,
               initiallyExpanded: false,
               children: [
                 _buildDropdownRow<String>(
-                  title: 'User-Agent Identitet',
-                  subtitle: 'Mrežni identifikator preglednika za preuzimanje',
+                  title: 'Browser User-Agent',
+                  subtitle: 'Browser identifier sent with stream requests',
                   value: settings.userAgent,
                   items: const [
-                    DropdownMenuItem(value: 'Android Chrome', child: Text('Android Chrome (Zadano)')),
+                    DropdownMenuItem(value: 'Android Chrome', child: Text('Android Chrome (Default)')),
                     DropdownMenuItem(value: 'Windows Desktop', child: Text('Windows Desktop Chrome')),
                     DropdownMenuItem(value: 'iOS Safari', child: Text('Apple iOS Safari')),
                     DropdownMenuItem(value: 'Custom AllDown', child: Text('AllDown Engine v1.0')),
@@ -614,14 +614,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildDropdownRow<int>(
-                  title: 'Vrijeme Čekanja Veze (Timeout)',
-                  subtitle: 'Maksimalno vrijeme odziva poslužitelja',
+                  title: 'Connection Timeout',
+                  subtitle: 'Maximum server response wait time',
                   value: settings.connectionTimeout,
                   items: const [
-                    DropdownMenuItem(value: 10, child: Text('10 sekundi (Brzo)')),
-                    DropdownMenuItem(value: 15, child: Text('15 sekundi (Preporučeno)')),
-                    DropdownMenuItem(value: 30, child: Text('30 sekundi (Sporije veze)')),
-                    DropdownMenuItem(value: 60, child: Text('60 sekundi (Ultra stabilno)')),
+                    DropdownMenuItem(value: 10, child: Text('10 seconds (Fast)')),
+                    DropdownMenuItem(value: 15, child: Text('15 seconds (Recommended)')),
+                    DropdownMenuItem(value: 30, child: Text('30 seconds (Slow connections)')),
+                    DropdownMenuItem(value: 60, child: Text('60 seconds (Ultra stable)')),
                   ],
                   onChanged: (val) {
                     if (val != null) notifier.setConnectionTimeout(val);
@@ -636,11 +636,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Istovremena Preuzimanja',
+                            'Concurrent Downloads',
                             style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
                           ),
                           Text(
-                            'Broj paralelnih aktivnih preuzimanja',
+                            'Number of simultaneous active downloads',
                             style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                           ),
                         ],
@@ -653,7 +653,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        '${settings.maxConcurrentDownloads} Zadataka',
+                        '${settings.maxConcurrentDownloads} Tasks',
                         style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.onPrimary),
                       ),
                     ),
@@ -671,28 +671,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildSettingSwitch(
-                  title: 'Preuzimanje samo preko Wi-Fi mreže',
-                  subtitle: 'Zaustavi zadatke na mobilnim podatcima za uštedu prometa',
+                  title: 'Download on Wi-Fi Only',
+                  subtitle: 'Pause download tasks on cellular data',
                   value: settings.wifiOnly,
                   onChanged: (_) => notifier.toggleWifiOnly(),
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildSettingSwitch(
-                  title: 'Automatski ponovni pokušaj (Auto-retry)',
-                  subtitle: '3 pokušaja s eksponencijalnim odgodama pri prekidu',
+                  title: 'Automatic Retry',
+                  subtitle: '3 attempts with exponential backoff on network drop',
                   value: settings.autoRetry,
                   onChanged: (_) => notifier.toggleAutoRetry(),
                 ),
               ],
             ),
 
-            // MENU 5: Upravljanje Memorijom i Mapama (Expandable Menu)
+            // MENU 5: Storage & Directory Management (Expandable Menu)
             _buildExpandableCard(
               icon: Icons.folder_copy_rounded,
               iconColor: AppColors.secondary,
-              title: 'Upravljanje Memorijom i Mapama',
-              subtitle: 'Zadana mapa: ${settings.downloadDirectory}',
-              badge: 'Pohrana',
+              title: 'Storage & Directory Management',
+              subtitle: 'Default directory: ${settings.downloadDirectory}',
+              badge: 'Storage',
               badgeColor: AppColors.secondary,
               initiallyExpanded: false,
               children: [
@@ -701,7 +701,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        'Zadana Mapa Preuzimanja',
+                        'Default Download Directory',
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
                       ),
                     ),
@@ -714,7 +714,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             final picked = await notifier.pickDownloadDirectory();
                             if (mounted && picked != null) {
                               messenger.showSnackBar(
-                                SnackBar(content: Text('Mapa ažurirana na: $picked')),
+                                SnackBar(content: Text('Download directory updated to: $picked')),
                               );
                             }
                           },
@@ -731,7 +731,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 Icon(Icons.drive_file_move_rounded, size: 13, color: AppColors.primary),
                                 SizedBox(width: 4),
                                 Text(
-                                  'Promijeni',
+                                  'Change',
                                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
                                 ),
                               ],
@@ -743,7 +743,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           onTap: () {
                             notifier.resetDownloadDirectory();
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Vraćeno na zadano: /storage/emulated/0/Download/AllDown')),
+                              const SnackBar(content: Text('Reset to default: /storage/emulated/0/Download/AllDown')),
                             );
                           },
                           borderRadius: BorderRadius.circular(6),
@@ -805,11 +805,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     onPressed: () {
                       notifier.resetAllSettings();
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Sve postavke su vraćene na zadane tvorničke vrijednosti.')),
+                        const SnackBar(content: Text('All settings have been reset to factory defaults.')),
                       );
                     },
                     icon: const Icon(Icons.restore_rounded, size: 16),
-                    label: const Text('Resetiraj Sve Postavke na Tvorničke', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    label: const Text('Reset All Settings to Defaults', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -819,15 +819,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _buildExpandableCard(
               icon: Icons.notifications_active_rounded,
               iconColor: AppColors.tertiary,
-              title: 'Obavijesti i Pozadinski Servis',
-              subtitle: 'Android Foreground Service s prikazom napretka',
-              badge: 'Aktivan',
+              title: 'Notifications & Background Service',
+              subtitle: 'Android Foreground Service with active notification',
+              badge: 'Active',
               badgeColor: AppColors.tertiary,
               initiallyExpanded: false,
               children: [
                 _buildSettingSwitch(
-                  title: 'Obavijest po završetku preuzimanja',
-                  subtitle: 'Prikaz skočnog obavještenja kada se zadatak dovrši',
+                  title: 'Notification on Complete',
+                  subtitle: 'Show popup alert when a download finishes',
                   value: settings.notifyOnComplete,
                   onChanged: (_) => notifier.toggleNotifyOnComplete(),
                 ),
@@ -838,7 +838,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Pozadinski servis omogućuje neprekinuto preuzimanje čak i kada je ekran zaključan ili koristite druge aplikacije.',
+                        'Foreground service keeps downloads running smoothly in background when screen is off or while using other apps.',
                         style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant, height: 1.3),
                       ),
                     ),
@@ -850,7 +850,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
             // SECTION: HELP, SYSTEM & ABOUT
             Text(
-              'INFORMACIJE, POMOĆ I SUSTAV',
+              'INFORMATION, HELP & SYSTEM',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
@@ -860,71 +860,71 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             const SizedBox(height: 8),
 
-            // DRAWER: Pomoć i Upute za Korištenje (Help & Guide)
+            // DRAWER: Help & User Guide (Help & Guide)
             _buildExpandableCard(
               icon: Icons.help_outline_rounded,
               iconColor: AppColors.tertiary,
-              title: 'Pomoć i Upute za Korištenje',
-              subtitle: 'Vodič za preuzimanje, Video Studio i izradu GIF-a',
-              badge: 'Pomoć',
+              title: 'Help & User Guide',
+              subtitle: 'Complete guide for downloads, Video Studio & GIF creation',
+              badge: 'Guide',
               badgeColor: AppColors.tertiary,
               initiallyExpanded: false,
               children: [
                 _buildHelpStep(
                   icon: Icons.download_rounded,
                   iconColor: AppColors.primary,
-                  title: '1. Kako preuzeti video ili glazbu',
+                  title: '1. How to download videos or music',
                   description:
-                      'Kopirajte poveznicu željenog videa (YouTube, TikTok, X, Facebook, Streamable...) i zalijepite je u polje na početnom ekranu, ili unutar druge aplikacije kliknite "Dijeli" (Share) i odaberite AllDown.',
+                      'Copy any video or music link (YouTube, TikTok, X, Facebook, Streamable...) and paste it on the home screen, or tap "Share" in any other app and select AllDown.',
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildHelpStep(
                   icon: Icons.content_cut_rounded,
                   iconColor: AppColors.secondary,
-                  title: '2. Korištenje Video Studija (Trimmer & Cropper)',
+                  title: '2. Using Video Studio (Trimmer & Cropper)',
                   description:
-                      'Nakon preuzimanja otvorite video u kartici "Biblioteka", kliknite na opcije (...) i odaberite "Izreži / Uredi video". Možete precizno odrediti početak i kraj, promijeniti omjer (16:9, 9:16 Shorts/Reels, 1:1 Kvadrat, 4:5, 21:9) te prstom po ekranu pomicati i zumirati kadar.',
+                      'After downloading, open the video in the "Library" tab, tap options (...) and select "Trim, Crop & Make GIF". Precisely set start and end timestamps, adjust aspect ratios (16:9, 9:16 Shorts/Reels, 1:1 Square, 4:5, 21:9), and drag video to pan or zoom.',
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildHelpStep(
                   icon: Icons.gif_box_rounded,
                   iconColor: AppColors.tertiary,
-                  title: '3. Izrada HD Animirani GIF-ova',
+                  title: '3. Creating High-Definition Animated GIFs',
                   description:
-                      'U Video Studiju kliknite na "Izradi GIF". Aplikacija koristi napredni Median-Cut 256-bojni algoritam s Floyd-Steinberg ditheringom za oštru sliku. GIF se automatski sprema u sistemsku Galeriju u album Pictures/AllDown.',
+                      'Inside Video Studio, tap "Generate GIF". AllDown uses an advanced 256-color median-cut palette with Floyd-Steinberg dithering for crisp images. GIFs are automatically indexed in your device Gallery under Pictures/AllDown.',
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildHelpStep(
                   icon: Icons.audiotrack_rounded,
                   iconColor: Colors.pinkAccent,
-                  title: '4. Ekstrakcija zvuka (Audio)',
+                  title: '4. Audio Extraction',
                   description:
-                      'Prilikom preuzimanja odaberite karticu "Zvuk (Audio)" kako biste preuzeli čisti MP3 (do 320 kbps), M4A ili Opus zapis bez video toka.',
+                      'When downloading, select the "Audio (MP3)" tab to extract clean MP3 (up to 320 kbps), M4A, or Opus audio files without video overhead.',
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildHelpStep(
                   icon: Icons.vpn_key_rounded,
                   iconColor: Colors.amberAccent,
-                  title: '5. Preuzimanje 18+ i zaštićenih videozapisa',
+                  title: '5. Age-Restricted & Protected Media',
                   description:
-                      'Uvezite "cookies.txt" datoteku iz vašeg web preglednika unutar kartice "Browser Cookies & Auth" kako biste preuzimali sadržaj koji zahtijeva prijavu ili dobnu potvrdu.',
+                      'Import a "cookies.txt" file from your browser under the "Browser Cookies & Auth" tab to download streams that require sign-in or age confirmation.',
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildHelpStep(
                   icon: Icons.folder_special_rounded,
                   iconColor: Colors.tealAccent,
-                  title: '6. Gdje se nalaze spremljene datoteke',
+                  title: '6. Saved File Storage Locations',
                   description:
-                      'Preuzeti videozapisi nalaze se u mapi Download/AllDown, obrađeni isječci u Movies/AllDown, a animirani GIF-ovi u Pictures/AllDown. Sve datoteke se trenutačno pojavljuju u Samsung Galeriji.',
+                      'Downloaded videos are saved to Download/AllDown, edited clips in Movies/AllDown, and animated GIFs in Pictures/AllDown. All files immediately appear in your device Gallery.',
                 ),
               ],
             ),
 
-            // DRAWER: Engine & Jezgra Sustava (Engine & Core Runtime)
+            // DRAWER: Engine & Core Runtime (Engine & Core Runtime)
             _buildExpandableCard(
               icon: Icons.terminal_rounded,
               iconColor: AppColors.secondary,
-              title: 'Engine & Jezgra Sustava',
+              title: 'Engine & Core Runtime',
               subtitle: '${settings.ytDlpVersion} • ${settings.ffmpegVersion}',
               badge: 'Media3',
               badgeColor: AppColors.secondary,
@@ -1064,7 +1064,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         }
                       } else {
                         messenger.showSnackBar(
-                          const SnackBar(content: Text('Aplikacija i moduli za preuzimanje su ažurni!')),
+                          const SnackBar(content: Text('AllDown engine and modules are up to date!')),
                         );
                       }
                     },
@@ -1076,7 +1076,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           )
                         : const Icon(Icons.sync_rounded, size: 18),
                     label: Text(
-                      _isCheckingUpdate ? 'Provjera novih verzija...' : 'Provjeri ažuriranja (GitHub)',
+                      _isCheckingUpdate ? 'Checking for updates...' : 'Check for Updates (GitHub)',
                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -1088,7 +1088,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onPressed: () => launchUrl(Uri.parse('https://github.com/yt-dlp/yt-dlp')),
                   icon: Icon(Icons.code_rounded, size: 16, color: AppColors.outline),
                   label: Text(
-                    'Open Source Licenses & GitHub Repository',
+                    'yt-dlp Extraction Engine (GitHub)',
                     style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                   ),
                 ),
@@ -1099,8 +1099,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _buildExpandableCard(
               icon: Icons.info_outline_rounded,
               iconColor: AppColors.primary,
-              title: 'O Aplikaciji',
-              subtitle: 'Informacije o projektu i podržani servisi',
+              title: 'About AllDown',
+              subtitle: 'Project details, license and supported extractors',
               initiallyExpanded: false,
               children: [
                 // App Logo Header
@@ -1186,72 +1186,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 _buildAboutRow(
                   icon: Icons.verified_rounded,
                   iconColor: AppColors.secondary,
-                  label: 'Verzija',
+                  label: 'Version',
                   value: '1.0 (Build 1.0.0)',
                 ),
                 const SizedBox(height: 10),
                 _buildAboutRow(
                   icon: Icons.person_rounded,
                   iconColor: AppColors.primary,
-                  label: 'Autor',
+                  label: 'Author',
                   value: 'Allen',
                 ),
                 const SizedBox(height: 10),
                 _buildAboutRow(
                   icon: Icons.code_rounded,
                   iconColor: AppColors.tertiary,
-                  label: 'Licenca',
-                  value: 'GNU GPL v3.0 (Open Source)',
+                  label: 'License',
+                  value: 'GNU General Public License v3.0',
                 ),
                 const SizedBox(height: 14),
 
-                // Open Source Licenses viewer (official Flutter LicensePage)
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: AppColors.stroke),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    onPressed: () {
-                      showLicensePage(
-                        context: context,
-                        applicationName: 'AllDown',
-                        applicationVersion: '1.0.0',
-                        applicationLegalese: 'Copyright © 2026 Allen\nLicencirano pod GNU General Public License v3.0.',
-                        applicationIcon: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.asset('assets/images/app_logo.png', width: 48, height: 48),
-                          ),
-                        ),
-                      );
-                    },
-                    icon: Icon(Icons.description_outlined, size: 16, color: AppColors.primary),
-                    label: Text(
-                      'Pregled svih licenci (Open Source)',
-                      style: TextStyle(fontSize: 12, color: AppColors.onSurface),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
 
-                // GitHub Repository Link
-                Center(
-                  child: TextButton.icon(
-                    onPressed: () => launchUrl(
-                      Uri.parse('https://github.com/vugy0212/Alldown'),
-                      mode: LaunchMode.externalApplication,
-                    ),
-                    icon: Icon(Icons.code_rounded, size: 15, color: AppColors.outline),
-                    label: Text(
-                      'GitHub Repozitorij (vugy0212/Alldown)',
-                      style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
-                    ),
-                  ),
-                ),
                 const SizedBox(height: 16),
 
                 // Ugniježđena ladica za Podržane Servise unutar About-a
@@ -1270,11 +1224,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                       leading: Icon(Icons.hub_rounded, size: 20, color: AppColors.primary),
                       title: Text(
-                        'Podržani Servisi i Ekstraktori',
+                        'Supported Services & Extractors',
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
                       ),
                       subtitle: Text(
-                        '12+ testiranih servisa i univerzalni parser',
+                        '12+ tested services & universal stream parser',
                         style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                       ),
                       children: [
@@ -1284,85 +1238,85 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           icon: Icons.play_circle_fill_rounded,
                           iconColor: Colors.redAccent,
                           name: 'YouTube & YouTube Shorts',
-                          description: '4K, 1080p, 720p i M4A audio',
-                          badge: 'AKTIVAN',
+                          description: '4K, 1080p, 720p & M4A audio',
+                          badge: 'ACTIVE',
                         ),
                         _buildServiceRow(
                           icon: Icons.tag_rounded,
                           iconColor: Colors.white,
                           name: 'X (Twitter)',
-                          description: 'HD MP4 videozapisi izravno iz postova',
-                          badge: 'AKTIVAN',
+                          description: 'HD MP4 video directly from posts',
+                          badge: 'ACTIVE',
                         ),
                         _buildServiceRow(
                           icon: Icons.music_note_rounded,
                           iconColor: Colors.cyanAccent,
                           name: 'TikTok',
-                          description: 'Preuzimanje bez vodenog žiga',
-                          badge: 'AKTIVAN',
+                          description: 'Watermark-free video downloads',
+                          badge: 'ACTIVE',
                         ),
                         _buildServiceRow(
                           icon: Icons.facebook_rounded,
                           iconColor: Colors.blueAccent,
                           name: 'Facebook Watch & Reels',
-                          description: '1080p HD i 480p SD streamovi',
-                          badge: 'AKTIVAN',
+                          description: '1080p HD & 480p SD video streams',
+                          badge: 'ACTIVE',
                         ),
                         _buildServiceRow(
                           icon: Icons.stream_rounded,
                           iconColor: Colors.indigoAccent,
                           name: 'Streamable',
-                          description: 'API integracija za MP4 download',
-                          badge: 'AKTIVAN',
+                          description: 'Fast API integration for MP4 downloads',
+                          badge: 'ACTIVE',
                         ),
                         _buildServiceRow(
                           icon: Icons.account_balance_rounded,
                           iconColor: Colors.amberAccent,
                           name: 'Archive.org',
-                          description: 'Javna arhiva filmova i audio zapisa',
-                          badge: 'AKTIVAN',
+                          description: 'Public domain movies and audio archive',
+                          badge: 'ACTIVE',
                         ),
                         _buildServiceRow(
                           icon: Icons.public_rounded,
                           iconColor: Colors.tealAccent,
                           name: 'Wikimedia Commons',
-                          description: 'Slobodni multimedijski repozitorij',
-                          badge: 'AKTIVAN',
+                          description: 'Free open educational media repository',
+                          badge: 'ACTIVE',
                         ),
                         _buildServiceRow(
                           icon: Icons.cloud_download_rounded,
                           iconColor: Colors.orangeAccent,
                           name: 'Test-Videos & Global CDNs',
-                          description: 'Visokobrzinski medijski poslužitelji',
-                          badge: 'AKTIVAN',
+                          description: 'High-speed edge content delivery network',
+                          badge: 'ACTIVE',
                         ),
                         _buildServiceRow(
                           icon: Icons.html_rounded,
                           iconColor: Colors.deepOrangeAccent,
                           name: 'W3Schools & HTML5 Portali',
-                          description: 'HTML5 video i audio izvori',
-                          badge: 'AKTIVAN',
+                          description: 'HTML5 embedded video & audio media',
+                          badge: 'ACTIVE',
                         ),
                         _buildServiceRow(
                           icon: Icons.code_rounded,
                           iconColor: Colors.purpleAccent,
                           name: 'GitHub Raw & Assets',
-                          description: 'Medijski repozitoriji datoteka',
-                          badge: 'AKTIVAN',
+                          description: 'Direct repository raw media assets',
+                          badge: 'ACTIVE',
                         ),
                         _buildServiceRow(
                           icon: Icons.video_library_rounded,
                           iconColor: Colors.blueGrey,
                           name: 'Dailymotion & Vimeo',
                           description: 'OpenGraph web media scraper',
-                          badge: 'AKTIVAN',
+                          badge: 'ACTIVE',
                         ),
                         _buildServiceRow(
                           icon: Icons.link_rounded,
                           iconColor: AppColors.secondary,
-                          name: 'Univerzalni Direktni Mediji',
+                          name: 'Universal Direct Stream Links',
                           description: '.mp4, .webm, .m4a, .mp3, .wav',
-                          badge: 'AKTIVAN',
+                          badge: 'ACTIVE',
                         ),
                       ],
                     ),
@@ -1388,7 +1342,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                     icon: Icon(Icons.open_in_browser_rounded, size: 18, color: AppColors.primary),
                     label: const Text(
-                      'Posjeti GitHub Repozitorij',
+                      'Visit GitHub Repository',
                       style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                   ),

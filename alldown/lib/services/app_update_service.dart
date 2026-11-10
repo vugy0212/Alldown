@@ -39,7 +39,7 @@ class AppUpdateService {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final tagName = data['tag_name'] as String? ?? 'v1.0.1';
         final title = data['name'] as String? ?? 'AllDown $tagName';
-        final body = data['body'] as String? ?? 'Nova verzija donosi poboljšanja performansi i ispravke.';
+        final body = data['body'] as String? ?? 'New release includes performance improvements and fixes.';
         final publishedAt = data['published_at'] as String? ?? '';
 
         String apkUrl = data['html_url'] as String? ?? 'https://github.com/$repo/releases';
@@ -76,7 +76,7 @@ class AppUpdateService {
     return const AppReleaseInfo(
       tagName: 'v1.0.0',
       title: 'AllDown v1.0.0 - Initial Release',
-      notes: '• Nova podrška za YouTube, Facebook, X (Twitter) i TikTok\n• Dinamički odabir kvalitete i formata (Video MP4 / Audio MP3)\n• Harmonika izbornici za kompaktno sučelje\n• Ugrađeni reproduktor i upravljanje preuzimanjima',
+      notes: '• Universal engine support for YouTube, Facebook, X (Twitter), TikTok and direct media streams\n• Dynamic quality and format selection (Video MP4 / Audio MP3)\n• Compact accordion drawers and Video Studio\n• Built-in background downloader and ExoPlayer playback',
       downloadUrl: 'https://github.com/vugy0212/Alldown/releases',
       publishedAt: '2026-11-10',
       isNewer: false,
@@ -149,7 +149,7 @@ class AppUpdateService {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          info.isNewer ? 'Dostupna je nova verzija!' : 'Aplikacija je ažurna',
+                          info.isNewer ? 'New version available!' : 'AllDown is up to date',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -237,7 +237,7 @@ class AppUpdateService {
                         ),
                       ),
                       onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Zatvori'),
+                      child: const Text('Close'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -261,7 +261,7 @@ class AppUpdateService {
                       },
                       icon: const Icon(Icons.download_rounded, size: 18),
                       label: Text(
-                        info.isNewer ? 'Preuzmi nadogradnju' : 'GitHub Releases',
+                        info.isNewer ? 'Download Update' : 'GitHub Releases',
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),

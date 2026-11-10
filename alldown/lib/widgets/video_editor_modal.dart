@@ -160,7 +160,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
 
     setState(() {
       _isProcessing = true;
-      _processingMessage = isCustomFraming ? 'Izrezivanje kadra i obrada videa...' : 'Precizno rezanje videa...';
+      _processingMessage = isCustomFraming ? 'Cropping frame and rendering video...' : 'Trimming video...';
     });
 
     try {
@@ -212,7 +212,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
           format: 'MP4',
           resolution: isCustomFraming ? '$_selectedCrop (${_zoom.toStringAsFixed(1)}x)' : widget.item.resolution,
           sizeFormatted: '$sizeMb MB',
-          completedDateFormatted: 'Danas',
+          completedDateFormatted: 'Today',
           duration: durStr,
           thumbnailUrl: widget.item.thumbnailUrl,
           localPath: savedPath,
@@ -226,20 +226,20 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Video uspješno izrezan i spremljen: ${newItem.title}'),
+            content: Text('Video trimmed and saved: ${newItem.title}'),
             backgroundColor: AppColors.primary,
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Greška prilikom izrezivanja videa.')),
+          const SnackBar(content: Text('Error trimming video.')),
         );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isProcessing = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Greška: $e')),
+          SnackBar(content: Text('Error: $e')),
         );
       }
     }
@@ -254,7 +254,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
 
     setState(() {
       _isProcessing = true;
-      _processingMessage = 'Izrada optimiziranog animiranog GIF-a...';
+      _processingMessage = 'Generating optimized animated GIF...';
     });
 
     try {
@@ -307,7 +307,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
           format: 'GIF',
           resolution: 'Animated GIF',
           sizeFormatted: '$sizeMb MB',
-          completedDateFormatted: 'Danas',
+          completedDateFormatted: 'Today',
           duration: durStr,
           thumbnailUrl: widget.item.thumbnailUrl,
           localPath: savedPath,
@@ -321,20 +321,20 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Animirani GIF spremljen u Galeriju i Biblioteku: ${newItem.title}'),
+            content: Text('Animated GIF saved to Gallery and Library: ${newItem.title}'),
             backgroundColor: AppColors.secondary,
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Greška prilikom izrade GIF-a.')),
+          const SnackBar(content: Text('Error generating GIF.')),
         );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isProcessing = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Greška: $e')),
+          SnackBar(content: Text('Error: $e')),
         );
       }
     }
@@ -555,7 +555,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                                   const Icon(Icons.repeat_rounded, size: 12, color: Colors.white),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '${clipDurationSec}s Isječak',
+                                    '${clipDurationSec}s Clip',
                                     style: const TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
@@ -584,7 +584,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                                     Icon(Icons.touch_app_rounded, size: 12, color: AppColors.onSurfaceVariant),
                                     SizedBox(width: 4),
                                     Text(
-                                      'Povucite prstom za pomak kadra',
+                                      'Drag video to adjust framing',
                                       style: TextStyle(fontSize: 10, color: Colors.white70),
                                     ),
                                   ],
@@ -603,7 +603,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                     children: [
                       Expanded(
                         child: Text(
-                          'Vremenski isječak (Trim)',
+                          'Trim Range',
                           style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -640,7 +640,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
 
                   // 2. Crop Aspect Ratio Section
                   Text(
-                    'Omjer kadra (Aspect Ratio)',
+                    'Crop Aspect Ratio',
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
                   ),
                   const SizedBox(height: 8),
@@ -650,13 +650,13 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                       children: [
                         _buildCropChip('original', 'Original', Icons.aspect_ratio_rounded),
                         const SizedBox(width: 8),
-                        _buildCropChip('1:1', '1:1 Kvadrat', Icons.crop_square_rounded),
+                        _buildCropChip('1:1', '1:1 Square', Icons.crop_square_rounded),
                         const SizedBox(width: 8),
                         _buildCropChip('9:16', '9:16 Reels/TikTok', Icons.stay_current_portrait_rounded),
                         const SizedBox(width: 8),
-                        _buildCropChip('16:9', '16:9 Široki', Icons.stay_current_landscape_rounded),
+                        _buildCropChip('16:9', '16:9 Wide', Icons.stay_current_landscape_rounded),
                         const SizedBox(width: 8),
-                        _buildCropChip('4:5', '4:5 Portret', Icons.crop_portrait_rounded),
+                        _buildCropChip('4:5', '4:5 Portrait', Icons.crop_portrait_rounded),
                       ],
                     ),
                   ),
@@ -683,7 +683,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                                   SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
-                                      'Ručno podešavanje kadra',
+                                      'Manual Framing & Zoom',
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold,
@@ -705,7 +705,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
-                                    'Resetiraj',
+                                    'Reset',
                                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.secondary),
                                   ),
                                 ),
@@ -772,7 +772,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                               SizedBox(width: 6),
                               Expanded(
                                 child: Text(
-                                  'Pozicija kadra (povucite prstom po videu ili klizačima):',
+                                  'Frame Position (drag video or sliders):',
                                   style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -890,7 +890,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                       onPressed: _isProcessing ? null : _exportVideo,
                       icon: Icon(Icons.content_cut_rounded, size: 18, color: AppColors.onPrimaryContainer),
                       label: Text(
-                        'Spremi Video',
+                        'Save Video',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
@@ -920,7 +920,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                       onPressed: _isProcessing ? null : _exportGif,
                       icon: Icon(Icons.gif_rounded, size: 22, color: AppColors.secondary),
                       label: Text(
-                        'Izradi GIF',
+                        'Generate GIF',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,

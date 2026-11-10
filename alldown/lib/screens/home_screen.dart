@@ -15,7 +15,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   late TextEditingController _urlController;
   bool _isQualityExpanded = false;
-  bool _isPreProcessingExpanded = false;
 
   @override
   void initState() {
@@ -121,14 +120,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       case VideoQuality.res480p:
         return 'SD • 854x480 • Mobile Friendly';
     }
-  }
-
-  String _preProcessingBadge(DownloadOptions options) {
-    int count = 0;
-    if (options.createSubfolder) count++;
-    if (options.embedSubtitles) count++;
-    if (options.saveMetadata) count++;
-    return '$count active';
   }
 
   @override
@@ -899,136 +890,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 12),
-
-            // 2. Expandable Pre-Processing & Organization Accordion
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: _isPreProcessingExpanded ? AppColors.secondary.withValues(alpha: 0.5) : AppColors.stroke,
-                  width: 1,
-                ),
-              ),
-              child: Column(
-                children: [
-                  InkWell(
-                    onTap: () {
-                      setState(() {
-                        _isPreProcessingExpanded = !_isPreProcessingExpanded;
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceContainerHigh,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(
-                              Icons.settings_suggest_rounded,
-                              size: 18,
-                              color: AppColors.secondary,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Pre-Processing & Organization',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.onSurface,
-                                  ),
-                                ),
-                                SizedBox(height: 2),
-                                Text(
-                                  'Subfolders, subtitles & metadata',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.secondary.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              _preProcessingBadge(state.options),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.secondary,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          AnimatedRotation(
-                            turns: _isPreProcessingExpanded ? 0.5 : 0.0,
-                            duration: const Duration(milliseconds: 200),
-                            child: Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              color: AppColors.outline,
-                              size: 20,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  AnimatedCrossFade(
-                    firstChild: const SizedBox(width: double.infinity, height: 0),
-                    secondChild: Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-                      child: Column(
-                        children: [
-                          Divider(color: AppColors.stroke, height: 12),
-                          _buildToggleTile(
-                            title: 'Create subfolder with title',
-                            subtitle: 'Organizes media by artist and stream name',
-                            icon: Icons.create_new_folder_outlined,
-                            value: state.options.createSubfolder,
-                            onChanged: (_) => notifier.toggleSubfolder(),
-                          ),
-                          Divider(color: AppColors.stroke, height: 16),
-                          _buildToggleTile(
-                            title: 'Embed Subtitles',
-                            subtitle: 'Auto-detect CC: hr, sr, bs, en',
-                            icon: Icons.subtitles_outlined,
-                            value: state.options.embedSubtitles,
-                            onChanged: (_) => notifier.toggleEmbedSubtitles(),
-                          ),
-                          Divider(color: AppColors.stroke, height: 16),
-                          _buildToggleTile(
-                            title: 'Save Media Server Metadata',
-                            subtitle: 'Generate Plex / Jellyfin compatible .NFO & poster',
-                            icon: Icons.art_track_rounded,
-                            value: state.options.saveMetadata,
-                            onChanged: (_) => notifier.toggleSaveMetadata(),
-                          ),
-                        ],
-                      ),
-                    ),
-                    crossFadeState: _isPreProcessingExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-                    duration: const Duration(milliseconds: 220),
-                  ),
-                ],
-              ),
-            ),
             const SizedBox(height: 20),
 
             // Primary Download Action Button
@@ -1309,53 +1170,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildToggleTile({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: Row(
-            children: [
-              Icon(icon, size: 20, color: AppColors.outline),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(fontSize: 11, color: AppColors.outline),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        Switch(
-          value: value,
-          onChanged: onChanged,
-        ),
-      ],
     );
   }
 }

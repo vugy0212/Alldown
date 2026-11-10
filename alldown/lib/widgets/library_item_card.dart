@@ -70,7 +70,7 @@ class LibraryItemCard extends StatelessWidget {
                   ListTile(
                     leading: Icon(Icons.content_cut_rounded, color: AppColors.secondary),
                     title: const Text('Trim, Crop & Make GIF'),
-                    subtitle: const Text('Izreži isječak, prilagodi kadar ili izradi GIF'),
+                    subtitle: const Text('Trim video, crop frame, or generate GIF'),
                     onTap: () {
                       Navigator.pop(ctx);
                       VideoEditorModal.show(context, item);
