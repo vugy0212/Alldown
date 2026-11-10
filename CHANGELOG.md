@@ -2,6 +2,13 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.0.1] - 2026-11-11
+
+### Added & Improved
+- **Audio Codec Synchronization:** Home screen format selector and quality cards now dynamically reflect the audio codec chosen in Settings (`M4A / AAC`, `MP3`, or `Opus`).
+- **GPL-3.0 License Compliance:** Added explicit attribution and acknowledgment for the upstream [Seal](https://github.com/JunkFood02/Seal) project and author [JunkFood02](https://github.com/JunkFood02).
+- **In-App Update Engine:** Live verification against GitHub Releases API (`v1.0.1`).
+
 ## [1.0.0] - 2026-11-10
 
 ### Added
