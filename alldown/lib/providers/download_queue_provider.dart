@@ -151,6 +151,7 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
       final ytId = MetadataFetcherService.extractYouTubeId(task.url);
       final twitterId = MetadataFetcherService.extractTwitterStatusId(task.url);
       final isTikTok = MetadataFetcherService.isTikTokUrl(task.url);
+      final isFacebook = MetadataFetcherService.isFacebookUrl(task.url);
 
       Stream<List<int>> byteStream;
       int totalBytes = 0;
@@ -285,6 +286,43 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
         final client = http.Client();
         job.httpClient = client;
         final req = http.Request('GET', Uri.parse(resolved.streamUrl));
+        final resp = await client.send(req);
+        if (resp.statusCode >= 400) {
+          throw Exception('HTTP ${resp.statusCode}');
+        }
+        totalBytes = resp.contentLength ?? 0;
+        byteStream = resp.stream;
+      } else if (isFacebook) {
+        _updateTask(
+          task.id,
+          (t) => t.copyWith(
+            speed: "Extracting Facebook video...",
+            eta: "Resolving MP4...",
+            progress: 0.03,
+          ),
+        );
+
+        final resolved = await MetadataFetcherService.resolveFacebookStream(
+          task.url,
+          preferredResolution: task.resolution,
+        );
+        if (resolved == null) {
+          throw Exception('Could not extract direct MP4 from this Facebook video.');
+        }
+
+        realTitle = resolved.title;
+        realChannel = resolved.author;
+        realDuration = resolved.duration;
+        if (resolved.thumbnailUrl.isNotEmpty) {
+          realThumb = resolved.thumbnailUrl;
+        }
+        actualResolution = resolved.resolutionLabel;
+        realPlatform = 'Facebook';
+
+        final client = http.Client();
+        job.httpClient = client;
+        final req = http.Request('GET', Uri.parse(resolved.streamUrl));
+        req.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
         final resp = await client.send(req);
         if (resp.statusCode >= 400) {
           throw Exception('HTTP ${resp.statusCode}');

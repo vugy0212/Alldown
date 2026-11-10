@@ -6,6 +6,7 @@ import '../models/app_settings.dart';
 import '../models/media_item.dart';
 import '../providers/media_library_provider.dart';
 import '../providers/settings_provider.dart';
+import '../services/app_update_service.dart';
 import '../theme/app_colors.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -922,14 +923,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   const SizedBox(height: 14),
 
-                  // Engine Update Trigger Button
+                  // App & Engine Update Trigger Button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.surfaceContainer,
                         foregroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 11),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -937,12 +938,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       onPressed: () async {
                         final messenger = ScaffoldMessenger.of(context);
                         setState(() => _isCheckingUpdate = true);
-                        await Future.delayed(const Duration(milliseconds: 1200));
+                        final info = await AppUpdateService.checkForUpdate();
                         if (!mounted) return;
                         setState(() => _isCheckingUpdate = false);
-                        messenger.showSnackBar(
-                          const SnackBar(content: Text('Extractor and Media3 engine are at latest versions!')),
-                        );
+                        if (info != null) {
+                          if (context.mounted) {
+                            AppUpdateService.showUpdateModal(context, info);
+                          }
+                        } else {
+                          messenger.showSnackBar(
+                            const SnackBar(content: Text('Aplikacija i moduli za preuzimanje su ažurni!')),
+                          );
+                        }
                       },
                       icon: _isCheckingUpdate
                           ? const SizedBox(
@@ -952,7 +959,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             )
                           : const Icon(Icons.sync_rounded, size: 18),
                       label: Text(
-                        _isCheckingUpdate ? 'Checking releases...' : 'Check for Engine Updates',
+                        _isCheckingUpdate ? 'Provjera novih verzija...' : 'Provjeri ažuriranja (GitHub)',
                         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                       ),
                     ),

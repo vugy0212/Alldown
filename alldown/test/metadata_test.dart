@@ -34,4 +34,19 @@ void main() {
     expect(resolved480.streamUrl.contains('.mp4'), isTrue);
     expect(resolved480.resolutionLabel, '480p SD');
   });
+
+  test('extract Facebook video and resolve direct MP4 stream', () async {
+    const fbUrl = 'https://www.facebook.com/watch/?v=10153231379946729';
+    expect(MetadataFetcherService.isFacebookUrl(fbUrl), isTrue);
+
+    final resolved = await MetadataFetcherService.resolveFacebookStream(fbUrl);
+    expect(resolved, isNotNull);
+    // ignore: avoid_print
+    print('FB Title: ${resolved!.title}, Thumb: ${resolved.thumbnailUrl}');
+    // ignore: avoid_print
+    print('FB Stream URL: ${resolved.streamUrl.substring(0, 80)}...');
+    expect(resolved.streamUrl.contains('fbcdn.net'), isTrue);
+    expect(resolved.streamUrl.contains('.mp4'), isTrue);
+    expect(resolved.platform, 'Facebook');
+  });
 }

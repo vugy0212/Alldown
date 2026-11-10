@@ -82,6 +82,11 @@ class MetadataFetcherService {
     return lower.contains('tiktok.com/');
   }
 
+  static bool isFacebookUrl(String input) {
+    final lower = input.toLowerCase();
+    return lower.contains('facebook.com') || lower.contains('fb.watch') || lower.contains('fb.com');
+  }
+
   static String formatDuration(Duration? d) {
     if (d == null || d.inSeconds <= 0) return '00:30';
     final hours = d.inHours;
@@ -234,6 +239,156 @@ class MetadataFetcherService {
     }
   }
 
+  /// Resolves direct MP4 stream and metadata from Facebook (Reels, Watch, Videos)
+  static Future<ResolvedDirectStream?> resolveFacebookStream(
+    String rawUrl, {
+    String preferredResolution = '1080p',
+  }) async {
+    try {
+      var targetUrl = rawUrl.trim();
+      if (!targetUrl.startsWith('http')) {
+        targetUrl = 'https://$targetUrl';
+      }
+
+      // Convert reel URL to watch URL if needed
+      final reelMatch = RegExp(r'facebook\.com\/reel\/(\d+)', caseSensitive: false).firstMatch(targetUrl);
+      if (reelMatch != null) {
+        targetUrl = 'https://www.facebook.com/watch/?v=${reelMatch.group(1)}';
+      }
+
+      final client = http.Client();
+      final request = http.Request('GET', Uri.parse(targetUrl));
+      request.headers.addAll({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+      });
+      request.followRedirects = true;
+      request.maxRedirects = 6;
+
+      final streamedResponse = await client.send(request).timeout(const Duration(seconds: 10));
+      final responseBody = await streamedResponse.stream.bytesToString();
+      client.close();
+
+      if (responseBody.isEmpty) return null;
+
+      String cleanStreamUrl(String u) {
+        var res = u.replaceAll(r'\/', '/');
+        res = res.replaceAll(r'\u0026', '&');
+        res = res.replaceAll(r'\u0025', '%');
+        res = res.replaceAll('&amp;', '&');
+        return res.trim();
+      }
+
+      // 1. Search for HD MP4
+      String? hdUrl;
+      final hdPatterns = [
+        RegExp(r'"browser_native_hd_url":\s*"([^"]+)"'),
+        RegExp(r'"playable_url_quality_hd":\s*"([^"]+)"'),
+        RegExp(r'"hd_src":\s*"([^"]+)"'),
+        RegExp(r'"hd_src_no_ratelimit":\s*"([^"]+)"'),
+      ];
+      for (final p in hdPatterns) {
+        final m = p.firstMatch(responseBody);
+        if (m != null && m.group(1) != null) {
+          hdUrl = cleanStreamUrl(m.group(1)!);
+          break;
+        }
+      }
+
+      // 2. Search for SD MP4
+      String? sdUrl;
+      final sdPatterns = [
+        RegExp(r'"browser_native_sd_url":\s*"([^"]+)"'),
+        RegExp(r'"playable_url":\s*"([^"]+)"'),
+        RegExp(r'"sd_src":\s*"([^"]+)"'),
+        RegExp(r'"sd_src_no_ratelimit":\s*"([^"]+)"'),
+      ];
+      for (final p in sdPatterns) {
+        final m = p.firstMatch(responseBody);
+        if (m != null && m.group(1) != null) {
+          sdUrl = cleanStreamUrl(m.group(1)!);
+          break;
+        }
+      }
+
+      // 3. Fallback: search for any direct fbcdn .mp4 URL
+      if (hdUrl == null && sdUrl == null) {
+        final fallbackRegex = RegExp(r'(https?:[^\s"<>]+\.mp4[^\s"<>]*)');
+        final allMatches = fallbackRegex.allMatches(responseBody);
+        for (final match in allMatches) {
+          final cand = cleanStreamUrl(match.group(1) ?? '');
+          if (cand.contains('fbcdn.net')) {
+            sdUrl = cand;
+            break;
+          }
+        }
+      }
+
+      if (hdUrl == null && sdUrl == null) {
+        return null;
+      }
+
+      // Title
+      String title = 'Facebook Video';
+      final ogTitleMatch = RegExp(r'<meta property="og:title" content="([^"]+)"', caseSensitive: false).firstMatch(responseBody);
+      if (ogTitleMatch != null && ogTitleMatch.group(1) != null) {
+        title = ogTitleMatch.group(1)!.trim();
+      } else {
+        final titleTagMatch = RegExp(r'<title>([^<]+)<\/title>', caseSensitive: false).firstMatch(responseBody);
+        if (titleTagMatch != null && titleTagMatch.group(1) != null) {
+          title = titleTagMatch.group(1)!.trim();
+        }
+      }
+      title = title.replaceAll(RegExp(r'\s*\|\s*Facebook$', caseSensitive: false), '').trim();
+      title = title
+          .replaceAll('&#xb7;', '·')
+          .replaceAll('&middot;', '·')
+          .replaceAll('&quot;', '"')
+          .replaceAll('&apos;', "'")
+          .replaceAll('&#039;', "'")
+          .replaceAll('&amp;', '&')
+          .replaceAll('&lt;', '<')
+          .replaceAll('&gt;', '>');
+      if (title.isEmpty) title = 'Facebook Video';
+
+      // Thumbnail
+      String thumb = '';
+      final ogImgMatch = RegExp(r'<meta property="og:image" content="([^"]+)"', caseSensitive: false).firstMatch(responseBody);
+      if (ogImgMatch != null && ogImgMatch.group(1) != null) {
+        thumb = cleanStreamUrl(ogImgMatch.group(1)!);
+      }
+
+      // Preferred resolution selection
+      final pref = preferredResolution.toLowerCase();
+      String chosenUrl;
+      String chosenLabel;
+      if (pref.contains('480')) {
+        chosenUrl = sdUrl ?? hdUrl!;
+        chosenLabel = '480p SD';
+      } else {
+        chosenUrl = hdUrl ?? sdUrl!;
+        chosenLabel = hdUrl != null ? 'HD 1080p' : 'SD 480p';
+      }
+
+      return ResolvedDirectStream(
+        streamUrl: chosenUrl,
+        title: title,
+        author: 'Facebook Video',
+        duration: '02:00',
+        thumbnailUrl: thumb,
+        resolutionLabel: chosenLabel,
+        platform: 'Facebook',
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Fetches real metadata for any media URL
   static Future<DetectedMedia> fetchMediaInfo(String url) async {
     final trimmed = url.trim();
@@ -376,7 +531,27 @@ class MetadataFetcherService {
       }
     }
 
-    // 4. Generic NoEmbed for Vimeo, SoundCloud, Reddit, etc.
+    // 4. Check Facebook URL
+    if (isFacebookUrl(trimmed)) {
+      final fb = await resolveFacebookStream(trimmed);
+      if (fb != null) {
+        return DetectedMedia(
+          title: fb.title,
+          channel: fb.author,
+          subscribers: 'Facebook Creator',
+          duration: fb.duration,
+          durationSeconds: 120,
+          uploadTime: 'Facebook Video',
+          viewCount: 'Direct Stream',
+          license: 'Direct MP4 Stream',
+          thumbnailUrl: fb.thumbnailUrl,
+          platform: 'Facebook',
+          badgeText: fb.resolutionLabel,
+        );
+      }
+    }
+
+    // 5. Generic NoEmbed for Vimeo, SoundCloud, Reddit, etc.
     try {
       final noembedUri = Uri.parse('https://noembed.com/embed?url=${Uri.encodeComponent(trimmed)}');
       final response = await http.get(noembedUri).timeout(const Duration(seconds: 5));

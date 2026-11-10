@@ -130,6 +130,8 @@ class QuickDownloadNotifier extends StateNotifier<QuickDownloadState> {
         MetadataFetcherService.extractYouTubeId(trimmed) != null ||
         trimmed.contains('youtu') ||
         trimmed.contains('tiktok') ||
+        trimmed.contains('facebook') ||
+        trimmed.contains('fb.watch') ||
         trimmed.contains('vimeo')) {
       fetchMetadata();
     }
