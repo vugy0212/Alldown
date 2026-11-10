@@ -103,6 +103,18 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
         return;
       }
 
+      // Animated GIFs are rendered as image sequences in Flutter Image widget, not ExoPlayer
+      if (item.format == 'GIF' || item.localPath.toLowerCase().endsWith('.gif')) {
+        state = state.copyWith(
+          isInitialized: true,
+          isPlaying: true,
+          duration: const Duration(seconds: 1),
+          position: Duration.zero,
+          clearError: true,
+        );
+        return;
+      }
+
       final ctrl = VideoPlayerController.file(file);
       _controller = ctrl;
 

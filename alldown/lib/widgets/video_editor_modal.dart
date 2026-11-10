@@ -413,16 +413,20 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                                     final videoH = _controller!.value.size.height > 0 ? _controller!.value.size.height : 9.0;
                                     final videoAspect = videoW / videoH;
 
-                                    // Calculate how video fills this box with BoxFit.cover + zoom
-                                    final double renderedW;
-                                    final double renderedH;
+                                    // 1. Base dimensions to cover the box according to aspect ratios
+                                    final double baseW;
+                                    final double baseH;
                                     if (videoAspect > previewAspect) {
-                                      renderedH = boxH * _zoom;
-                                      renderedW = boxH * videoAspect * _zoom;
+                                      baseH = boxH;
+                                      baseW = boxH * videoAspect;
                                     } else {
-                                      renderedW = boxW * _zoom;
-                                      renderedH = (boxW / videoAspect) * _zoom;
+                                      baseW = boxW;
+                                      baseH = boxW / videoAspect;
                                     }
+
+                                    // 2. Rendered dimensions with zoom
+                                    final renderedW = baseW * _zoom;
+                                    final renderedH = baseH * _zoom;
 
                                     final maxDx = math.max(0.0, (renderedW - boxW) / 2);
                                     final maxDy = math.max(0.0, (renderedH - boxH) / 2);
@@ -444,12 +448,24 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                                                 }
                                               });
                                             },
-                                      child: Transform.translate(
-                                        offset: Offset(pixelX, pixelY),
-                                        child: SizedBox(
-                                          width: renderedW,
-                                          height: renderedH,
-                                          child: VideoPlayer(_controller!),
+                                      child: Center(
+                                        child: Transform.translate(
+                                          offset: Offset(pixelX, pixelY),
+                                          child: Transform.scale(
+                                            scale: _zoom,
+                                            child: SizedBox(
+                                              width: baseW,
+                                              height: baseH,
+                                              child: FittedBox(
+                                                fit: BoxFit.cover,
+                                                child: SizedBox(
+                                                  width: videoW,
+                                                  height: videoH,
+                                                  child: VideoPlayer(_controller!),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     );

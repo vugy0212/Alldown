@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
@@ -29,7 +30,10 @@ class VideoPlayerModal extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    final aspectRatio = (controller != null &&
+    final isGif = item.format == 'GIF' || item.localPath.toLowerCase().endsWith('.gif');
+
+    final aspectRatio = (!isGif &&
+            controller != null &&
             controller.value.isInitialized &&
             controller.value.aspectRatio > 0)
         ? controller.value.aspectRatio
@@ -58,24 +62,34 @@ class VideoPlayerModal extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.primaryContainer.withValues(alpha: 0.3),
+                          color: isGif
+                              ? AppColors.secondary.withValues(alpha: 0.2)
+                              : AppColors.primaryContainer.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              item.isAudio ? Icons.headphones_rounded : Icons.smart_display_rounded,
-                              size: 14,
-                              color: AppColors.primary,
+                              isGif
+                                  ? Icons.gif_rounded
+                                  : item.isAudio
+                                      ? Icons.headphones_rounded
+                                      : Icons.smart_display_rounded,
+                              size: isGif ? 18 : 14,
+                              color: isGif ? AppColors.secondary : AppColors.primary,
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              item.isAudio ? 'Audio Player' : 'Video Player (${item.resolution})',
-                              style: const TextStyle(
+                              isGif
+                                  ? 'Animated GIF Player'
+                                  : item.isAudio
+                                      ? 'Audio Player'
+                                      : 'Video Player (${item.resolution})',
+                              style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
+                                color: isGif ? AppColors.secondary : AppColors.primary,
                               ),
                             ),
                           ],
@@ -85,7 +99,7 @@ class VideoPlayerModal extends ConsumerWidget {
                   ),
                   Row(
                     children: [
-                      if (!item.isAudio)
+                      if (!item.isAudio && !isGif)
                         IconButton(
                           tooltip: 'Trim, Crop & GIF Editor',
                           icon: const Icon(Icons.content_cut_rounded, size: 20),
@@ -96,13 +110,13 @@ class VideoPlayerModal extends ConsumerWidget {
                           },
                         ),
                       IconButton(
-                        tooltip: 'Minimize to Mini Player',
+                        tooltip: 'Minimize',
                         icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 24),
                         color: AppColors.onSurfaceVariant,
                         onPressed: () => Navigator.pop(context),
                       ),
                       IconButton(
-                        tooltip: 'Stop & Close',
+                        tooltip: 'Close',
                         icon: const Icon(Icons.close_rounded, size: 20),
                         color: AppColors.errorAccent,
                         onPressed: () {
@@ -116,7 +130,7 @@ class VideoPlayerModal extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
 
-              // Video / Audio Viewport
+              // Viewport: Animated GIF vs Video vs Audio
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
@@ -125,58 +139,74 @@ class VideoPlayerModal extends ConsumerWidget {
                     maxHeight: MediaQuery.of(context).size.height * 0.45,
                   ),
                   color: Colors.black,
-                  child: playerState.errorMessage != null
-                      ? Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.error_outline_rounded, color: AppColors.errorAccent, size: 42),
-                              const SizedBox(height: 10),
-                              Text(
-                                playerState.errorMessage!,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12),
+                  child: isGif
+                      ? Container(
+                          constraints: const BoxConstraints(minHeight: 180, maxHeight: 300),
+                          alignment: Alignment.center,
+                          padding: const EdgeInsets.all(8),
+                          child: Image.file(
+                            File(item.localPath),
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, err, _) => Center(
+                              child: Text(
+                                'Greška učitavanja GIF-a: $err',
+                                style: const TextStyle(color: Colors.white70, fontSize: 12),
                               ),
-                            ],
+                            ),
                           ),
                         )
-                      : !playerState.isInitialized || controller == null
-                          ? const SizedBox(
-                              height: 200,
-                              child: Center(
-                                child: CircularProgressIndicator(color: AppColors.primaryAccent),
+                      : playerState.errorMessage != null
+                          ? Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.error_outline_rounded, color: AppColors.errorAccent, size: 42),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    playerState.errorMessage!,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12),
+                                  ),
+                                ],
                               ),
                             )
-                          : item.isAudio
-                              ? SizedBox(
-                                  height: 180,
-                                  child: Stack(
-                                    fit: StackFit.expand,
-                                    children: [
-                                      if (item.thumbnailUrl.isNotEmpty)
-                                        Image.network(
-                                          item.thumbnailUrl,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                                        ),
-                                      Container(color: Colors.black.withValues(alpha: 0.55)),
-                                      const Center(
-                                        child: Icon(
-                                          Icons.graphic_eq_rounded,
-                                          size: 64,
-                                          color: AppColors.secondary,
-                                        ),
-                                      ),
-                                    ],
+                          : !playerState.isInitialized || controller == null
+                              ? const SizedBox(
+                                  height: 200,
+                                  child: Center(
+                                    child: CircularProgressIndicator(color: AppColors.primaryAccent),
                                   ),
                                 )
-                              : Center(
-                                  child: AspectRatio(
-                                    aspectRatio: aspectRatio,
-                                    child: VideoPlayer(controller),
-                                  ),
-                                ),
+                              : item.isAudio
+                                  ? SizedBox(
+                                      height: 180,
+                                      child: Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          if (item.thumbnailUrl.isNotEmpty)
+                                            Image.network(
+                                              item.thumbnailUrl,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                                            ),
+                                          Container(color: Colors.black.withValues(alpha: 0.55)),
+                                          const Center(
+                                            child: Icon(
+                                              Icons.graphic_eq_rounded,
+                                              size: 64,
+                                              color: AppColors.secondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : Center(
+                                      child: AspectRatio(
+                                        aspectRatio: aspectRatio,
+                                        child: VideoPlayer(controller),
+                                      ),
+                                    ),
                 ),
               ),
               const SizedBox(height: 14),
@@ -200,86 +230,114 @@ class VideoPlayerModal extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
 
-              // Interactive Seekbar
-              SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  trackHeight: 4,
-                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
-                  activeTrackColor: AppColors.primaryAccent,
-                  inactiveTrackColor: AppColors.surfaceContainerHighest,
-                  thumbColor: AppColors.secondary,
+              // If GIF: show animated loop badge. If Video/Audio: show Seekbar & Transport Controls
+              if (isGif) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainerHighest.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.stroke),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.all_inclusive_rounded, size: 18, color: AppColors.secondary),
+                      SizedBox(width: 8),
+                      Text(
+                        'Beskonačna GIF animacija (Loop)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.secondary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Slider(
-                  value: playerState.progressFraction,
-                  onChanged: (val) => notifier.seekTo(val),
+                const SizedBox(height: 14),
+              ] else ...[
+                // Interactive Seekbar
+                SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    trackHeight: 4,
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+                    activeTrackColor: AppColors.primaryAccent,
+                    inactiveTrackColor: AppColors.surfaceContainerHighest,
+                    thumbColor: AppColors.secondary,
+                  ),
+                  child: Slider(
+                    value: playerState.progressFraction,
+                    onChanged: (val) => notifier.seekTo(val),
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        playerState.positionFormatted,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                      Text(
+                        playerState.durationFormatted,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Transport Controls Row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    Text(
-                      playerState.positionFormatted,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontFamily: 'monospace',
-                        color: AppColors.onSurfaceVariant,
+                    IconButton(
+                      icon: const Icon(Icons.replay_10_rounded, size: 28),
+                      color: AppColors.onSurface,
+                      onPressed: notifier.skipBackward,
+                    ),
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        gradient: AppColors.primaryGradient,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primaryAccent.withValues(alpha: 0.4),
+                            blurRadius: 12,
+                          ),
+                        ],
+                      ),
+                      child: IconButton(
+                        icon: Icon(
+                          playerState.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                          size: 32,
+                          color: Colors.white,
+                        ),
+                        onPressed: notifier.togglePlayPause,
                       ),
                     ),
-                    Text(
-                      playerState.durationFormatted,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontFamily: 'monospace',
-                        color: AppColors.onSurfaceVariant,
-                      ),
+                    IconButton(
+                      icon: const Icon(Icons.forward_10_rounded, size: 28),
+                      color: AppColors.onSurface,
+                      onPressed: notifier.skipForward,
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 8),
-
-              // Transport Controls Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.replay_10_rounded, size: 28),
-                    color: AppColors.onSurface,
-                    onPressed: notifier.skipBackward,
-                  ),
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      gradient: AppColors.primaryGradient,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primaryAccent.withValues(alpha: 0.4),
-                          blurRadius: 12,
-                        ),
-                      ],
-                    ),
-                    child: IconButton(
-                      icon: Icon(
-                        playerState.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                        size: 32,
-                        color: Colors.white,
-                      ),
-                      onPressed: notifier.togglePlayPause,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.forward_10_rounded, size: 28),
-                    color: AppColors.onSurface,
-                    onPressed: notifier.skipForward,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
+                const SizedBox(height: 14),
+              ],
 
               // Share / Open Externally Button
               SizedBox(
@@ -300,7 +358,7 @@ class VideoPlayerModal extends ConsumerWidget {
                     );
                   },
                   icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                  label: const Text('Share / Open in External Video Player'),
+                  label: Text(isGif ? 'Podijeli / Pošalji GIF' : 'Share / Open in External Video Player'),
                 ),
               ),
             ],
@@ -310,4 +368,3 @@ class VideoPlayerModal extends ConsumerWidget {
     );
   }
 }
-
