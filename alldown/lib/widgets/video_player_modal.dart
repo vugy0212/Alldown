@@ -4,6 +4,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 import '../providers/player_provider.dart';
 import '../theme/app_colors.dart';
+import 'video_editor_modal.dart';
 
 class VideoPlayerModal extends ConsumerWidget {
   const VideoPlayerModal({super.key});
@@ -84,6 +85,16 @@ class VideoPlayerModal extends ConsumerWidget {
                   ),
                   Row(
                     children: [
+                      if (!item.isAudio)
+                        IconButton(
+                          tooltip: 'Trim, Crop & GIF Editor',
+                          icon: const Icon(Icons.content_cut_rounded, size: 20),
+                          color: AppColors.secondary,
+                          onPressed: () {
+                            notifier.pause();
+                            VideoEditorModal.show(context, item);
+                          },
+                        ),
                       IconButton(
                         tooltip: 'Minimize to Mini Player',
                         icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 24),

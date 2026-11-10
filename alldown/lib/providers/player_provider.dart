@@ -139,6 +139,14 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     );
   }
 
+  Future<void> pause() async {
+    final ctrl = _controller;
+    if (ctrl == null || !ctrl.value.isInitialized) return;
+    if (ctrl.value.isPlaying) {
+      await ctrl.pause();
+    }
+  }
+
   Future<void> togglePlayPause() async {
     final ctrl = _controller;
     if (ctrl == null || !ctrl.value.isInitialized) return;

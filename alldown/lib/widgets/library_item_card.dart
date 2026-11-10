@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/media_item.dart';
 import '../theme/app_colors.dart';
+import 'video_editor_modal.dart';
 
 class LibraryItemCard extends StatelessWidget {
   final MediaItem item;
@@ -50,6 +51,16 @@ class LibraryItemCard extends StatelessWidget {
                   onPlay();
                 },
               ),
+              if (!item.isAudio)
+                ListTile(
+                  leading: const Icon(Icons.content_cut_rounded, color: AppColors.secondary),
+                  title: const Text('Trim, Crop & Make GIF'),
+                  subtitle: const Text('Izreži isječak, prilagodi kadar ili izradi GIF'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    VideoEditorModal.show(context, item);
+                  },
+                ),
               ListTile(
                 leading: const Icon(Icons.share_outlined, color: AppColors.outline),
                 title: const Text('Share / Open Externally'),

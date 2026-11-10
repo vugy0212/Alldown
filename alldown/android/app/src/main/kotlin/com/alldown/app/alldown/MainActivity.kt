@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.core.content.FileProvider
 import com.alldown.app.alldown.service.DownloadForegroundService
+import com.alldown.app.alldown.video.VideoEditorHelper
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -86,6 +87,59 @@ class MainActivity : FlutterActivity() {
                             result.success(true)
                         } else {
                             result.error("INVALID_PATH", "Path is required", null)
+                        }
+                    }
+                    "trimVideo" -> {
+                        val input = call.argument<String>("inputPath")
+                        val output = call.argument<String>("outputPath")
+                        val startMs = (call.argument<Number>("startMs"))?.toLong() ?: 0L
+                        val endMs = (call.argument<Number>("endMs"))?.toLong() ?: 0L
+                        if (input != null && output != null) {
+                            Thread {
+                                val ok = VideoEditorHelper.trimVideo(input, output, startMs, endMs)
+                                runOnUiThread {
+                                    if (ok) result.success(true) else result.error("TRIM_ERROR", "Failed to trim video", null)
+                                }
+                            }.start()
+                        } else {
+                            result.error("INVALID_ARGS", "Missing paths", null)
+                        }
+                    }
+                    "cropVideo" -> {
+                        val input = call.argument<String>("inputPath")
+                        val output = call.argument<String>("outputPath")
+                        val startMs = (call.argument<Number>("startMs"))?.toLong() ?: 0L
+                        val endMs = (call.argument<Number>("endMs"))?.toLong() ?: 0L
+                        val ratio = call.argument<String>("cropRatio") ?: "original"
+                        if (input != null && output != null) {
+                            VideoEditorHelper.cropAndTrimVideo(applicationContext, input, output, startMs, endMs, ratio) { success, error ->
+                                if (success) {
+                                    result.success(true)
+                                } else {
+                                    result.error("CROP_ERROR", error ?: "Crop failed", null)
+                                }
+                            }
+                        } else {
+                            result.error("INVALID_ARGS", "Missing paths", null)
+                        }
+                    }
+                    "createGif" -> {
+                        val input = call.argument<String>("inputPath")
+                        val output = call.argument<String>("outputPath")
+                        val startMs = (call.argument<Number>("startMs"))?.toLong() ?: 0L
+                        val endMs = (call.argument<Number>("endMs"))?.toLong() ?: 0L
+                        val ratio = call.argument<String>("cropRatio") ?: "original"
+                        val fps = call.argument<Int>("fps") ?: 10
+                        if (input != null && output != null) {
+                            VideoEditorHelper.createGif(input, output, startMs, endMs, ratio, fps) { success, error ->
+                                if (success) {
+                                    result.success(true)
+                                } else {
+                                    result.error("GIF_ERROR", error ?: "GIF creation failed", null)
+                                }
+                            }
+                        } else {
+                            result.error("INVALID_ARGS", "Missing paths", null)
                         }
                     }
                     else -> result.notImplemented()
