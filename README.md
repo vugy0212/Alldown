@@ -160,6 +160,12 @@ To sign a production release APK with your own Android keystore:
 
 ---
 
+## 🙏 Credits & Acknowledgements
+
+AllDown is developed as an independent, modernized Flutter media application built upon the architectural foundations, concepts, and heritage of [Seal](https://github.com/JunkFood02/Seal) by [JunkFood02](https://github.com/JunkFood02). We express our sincere gratitude to JunkFood02 and the open-source multimedia community (`yt-dlp`, FFmpeg, Media3) for their invaluable pioneer work and inspiration.
+
+---
+
 ## 📄 License
 
 This project is open-source software licensed under the [GNU General Public License v3.0 (GPLv3)](LICENSE).
