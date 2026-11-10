@@ -460,9 +460,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             const SizedBox(height: 18),
 
-            // SECTION: INTERACTIVE SETTINGS ACCORDIONS / OPENING MENUS
+            // SECTION: DOWNLOAD & MEDIA SETTINGS
             const Text(
-              'POSTAVKE PREUZIMANJA I SERVISA',
+              'POSTAVKE PREUZIMANJA I MEDIJA',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
@@ -471,110 +471,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 8),
-
-            // MENU 1: Podržani Servisi i Ekstraktori (Expandable Menu)
-            _buildExpandableCard(
-              icon: Icons.hub_rounded,
-              iconColor: AppColors.primary,
-              title: 'Podržani Servisi i Ekstraktori',
-              subtitle: 'Pregled 12+ aktivnih modula za preuzimanje',
-              badge: '12+ Servisa',
-              badgeColor: AppColors.primary,
-              initiallyExpanded: false,
-              children: [
-                const Text(
-                  'Svi navedeni servisi su provjereni i aktivni za izravno preuzimanje videa, glazbe ili zvuka:',
-                  style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant, height: 1.4),
-                ),
-                const SizedBox(height: 10),
-                const Divider(color: AppColors.stroke, height: 1),
-                const SizedBox(height: 8),
-                _buildServiceRow(
-                  icon: Icons.play_circle_fill_rounded,
-                  iconColor: Colors.redAccent,
-                  name: 'YouTube & YouTube Shorts',
-                  description: 'Puna podrška za 4K, 1080p, 720p i M4A audio',
-                  badge: 'AKTIVAN',
-                ),
-                _buildServiceRow(
-                  icon: Icons.tag_rounded,
-                  iconColor: Colors.white,
-                  name: 'X (Twitter)',
-                  description: 'Automatska ekstrakcija HD MP4 videozapisa',
-                  badge: 'AKTIVAN',
-                ),
-                _buildServiceRow(
-                  icon: Icons.music_note_rounded,
-                  iconColor: Colors.cyanAccent,
-                  name: 'TikTok',
-                  description: 'Preuzimanje bez vodenog žiga u punoj rezoluciji',
-                  badge: 'AKTIVAN',
-                ),
-                _buildServiceRow(
-                  icon: Icons.facebook_rounded,
-                  iconColor: Colors.blueAccent,
-                  name: 'Facebook Watch & Reels',
-                  description: 'Izravno dekodiranje 1080p HD i 480p SD streamova',
-                  badge: 'AKTIVAN',
-                ),
-                _buildServiceRow(
-                  icon: Icons.stream_rounded,
-                  iconColor: Colors.indigoAccent,
-                  name: 'Streamable',
-                  description: 'Izravna integracija API-ja za brzi MP4 download',
-                  badge: 'AKTIVAN',
-                ),
-                _buildServiceRow(
-                  icon: Icons.account_balance_rounded,
-                  iconColor: Colors.amberAccent,
-                  name: 'Archive.org',
-                  description: 'Javna arhiva filmova, knjiga i audio zapisa',
-                  badge: 'AKTIVAN',
-                ),
-                _buildServiceRow(
-                  icon: Icons.public_rounded,
-                  iconColor: Colors.tealAccent,
-                  name: 'Wikimedia Commons',
-                  description: 'Slobodni multimedijski video/audio repozitorij',
-                  badge: 'AKTIVAN',
-                ),
-                _buildServiceRow(
-                  icon: Icons.cloud_download_rounded,
-                  iconColor: Colors.orangeAccent,
-                  name: 'Test-Videos & Global CDNs',
-                  description: 'Visokobrzinski H.264 / AAC video i audio serveri',
-                  badge: 'AKTIVAN',
-                ),
-                _buildServiceRow(
-                  icon: Icons.html_rounded,
-                  iconColor: Colors.deepOrangeAccent,
-                  name: 'W3Schools & HTML5 Portali',
-                  description: 'HTML5 video i audio izvori',
-                  badge: 'AKTIVAN',
-                ),
-                _buildServiceRow(
-                  icon: Icons.code_rounded,
-                  iconColor: Colors.purpleAccent,
-                  name: 'GitHub Raw & Release Assets',
-                  description: 'Repozitoriji s izravnim medijskim datotekama',
-                  badge: 'AKTIVAN',
-                ),
-                _buildServiceRow(
-                  icon: Icons.video_library_rounded,
-                  iconColor: Colors.blueGrey,
-                  name: 'Dailymotion & Vimeo',
-                  description: 'Automatski web video parser',
-                  badge: 'AKTIVAN',
-                ),
-                _buildServiceRow(
-                  icon: Icons.link_rounded,
-                  iconColor: AppColors.secondary,
-                  name: 'Univerzalni Direktni Mediji',
-                  description: 'Bilo koji izravni .mp4, .webm, .m4a, .mp3, .wav URL',
-                  badge: 'AKTIVAN',
-                ),
-              ],
-            ),
 
             // MENU 2: Video i Format Kontejner (Expandable Menu with Dropdowns)
             _buildExpandableCard(
@@ -950,11 +846,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 18),
 
-            // Engine & Core Runtime Section
+            // SECTION: HELP, SYSTEM & ABOUT
             const Text(
-              'ENGINE & CORE RUNTIME',
+              'INFORMACIJE, POMOĆ I SUSTAV',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
@@ -963,337 +859,494 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.stroke, width: 1),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceContainerLowest,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(Icons.terminal_rounded, size: 18, color: AppColors.primary),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Stream Extractor Engine',
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
-                                  ),
-                                  Text(
-                                    settings.ytDlpVersion,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.tertiaryContainer.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.check_rounded, size: 12, color: AppColors.tertiary),
-                            SizedBox(width: 3),
-                            Text(
-                              'Up to date',
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.tertiary),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
 
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceContainerLowest,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(Icons.hardware_rounded, size: 18, color: AppColors.secondary),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Media3 ExoPlayer & Remux',
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
-                                  ),
-                                  Text(
-                                    settings.ffmpegVersion,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceContainerLowest,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text(
-                          'HW Accel',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.secondary),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-
-                  // App & Engine Update Trigger Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.surfaceContainer,
-                        foregroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      onPressed: () async {
-                        final messenger = ScaffoldMessenger.of(context);
-                        setState(() => _isCheckingUpdate = true);
-                        final info = await AppUpdateService.checkForUpdate();
-                        if (!mounted) return;
-                        setState(() => _isCheckingUpdate = false);
-                        if (info != null) {
-                          if (context.mounted) {
-                            AppUpdateService.showUpdateModal(context, info);
-                          }
-                        } else {
-                          messenger.showSnackBar(
-                            const SnackBar(content: Text('Aplikacija i moduli za preuzimanje su ažurni!')),
-                          );
-                        }
-                      },
-                      icon: _isCheckingUpdate
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-                            )
-                          : const Icon(Icons.sync_rounded, size: 18),
-                      label: Text(
-                        _isCheckingUpdate ? 'Provjera novih verzija...' : 'Provjeri ažuriranja (GitHub)',
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Repo & License Link
-                  TextButton.icon(
-                    onPressed: () => launchUrl(Uri.parse('https://github.com/yt-dlp/yt-dlp')),
-                    icon: const Icon(Icons.code_rounded, size: 16, color: AppColors.outline),
-                    label: const Text(
-                      'Open Source Licenses & GitHub Repository',
-                      style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
-                    ),
-                  ),
-                ],
-              ),
+            // DRAWER: Pomoć i Upute za Korištenje (Help & Guide)
+            _buildExpandableCard(
+              icon: Icons.help_outline_rounded,
+              iconColor: AppColors.tertiary,
+              title: 'Pomoć i Upute za Korištenje',
+              subtitle: 'Vodič za preuzimanje, Video Studio i izradu GIF-a',
+              badge: 'Pomoć',
+              badgeColor: AppColors.tertiary,
+              initiallyExpanded: false,
+              children: [
+                _buildHelpStep(
+                  icon: Icons.download_rounded,
+                  iconColor: AppColors.primary,
+                  title: '1. Kako preuzeti video ili glazbu',
+                  description:
+                      'Kopirajte poveznicu željenog videa (YouTube, TikTok, X, Facebook, Streamable...) i zalijepite je u polje na početnom ekranu, ili unutar druge aplikacije kliknite "Dijeli" (Share) i odaberite AllDown.',
+                ),
+                const Divider(color: AppColors.stroke, height: 16),
+                _buildHelpStep(
+                  icon: Icons.content_cut_rounded,
+                  iconColor: AppColors.secondary,
+                  title: '2. Korištenje Video Studija (Trimmer & Cropper)',
+                  description:
+                      'Nakon preuzimanja otvorite video u kartici "Biblioteka", kliknite na opcije (...) i odaberite "Izreži / Uredi video". Možete precizno odrediti početak i kraj, promijeniti omjer (16:9, 9:16 Shorts/Reels, 1:1 Kvadrat, 4:5, 21:9) te prstom po ekranu pomicati i zumirati kadar.',
+                ),
+                const Divider(color: AppColors.stroke, height: 16),
+                _buildHelpStep(
+                  icon: Icons.gif_box_rounded,
+                  iconColor: AppColors.tertiary,
+                  title: '3. Izrada HD Animirani GIF-ova',
+                  description:
+                      'U Video Studiju kliknite na "Izradi GIF". Aplikacija koristi napredni Median-Cut 256-bojni algoritam s Floyd-Steinberg ditheringom za oštru sliku. GIF se automatski sprema u sistemsku Galeriju u album Pictures/AllDown.',
+                ),
+                const Divider(color: AppColors.stroke, height: 16),
+                _buildHelpStep(
+                  icon: Icons.audiotrack_rounded,
+                  iconColor: Colors.pinkAccent,
+                  title: '4. Ekstrakcija zvuka (Audio)',
+                  description:
+                      'Prilikom preuzimanja odaberite karticu "Zvuk (Audio)" kako biste preuzeli čisti MP3 (do 320 kbps), M4A ili Opus zapis bez video toka.',
+                ),
+                const Divider(color: AppColors.stroke, height: 16),
+                _buildHelpStep(
+                  icon: Icons.vpn_key_rounded,
+                  iconColor: Colors.amberAccent,
+                  title: '5. Preuzimanje 18+ i zaštićenih videozapisa',
+                  description:
+                      'Uvezite "cookies.txt" datoteku iz vašeg web preglednika unutar kartice "Browser Cookies & Auth" kako biste preuzimali sadržaj koji zahtijeva prijavu ili dobnu potvrdu.',
+                ),
+                const Divider(color: AppColors.stroke, height: 16),
+                _buildHelpStep(
+                  icon: Icons.folder_special_rounded,
+                  iconColor: Colors.tealAccent,
+                  title: '6. Gdje se nalaze spremljene datoteke',
+                  description:
+                      'Preuzeti videozapisi nalaze se u mapi Download/AllDown, obrađeni isječci u Movies/AllDown, a animirani GIF-ovi u Pictures/AllDown. Sve datoteke se trenutačno pojavljuju u Samsung Galeriji.',
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
 
-            // SECTION 5: O APLIKACIJI / ABOUT
-            const Text(
-              'O APLIKACIJI',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.stroke, width: 1),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  // App Icon and Title Header
-                  Row(
-                    children: [
-                      Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primaryAccent.withValues(alpha: 0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
+            // DRAWER: Engine & Jezgra Sustava (Engine & Core Runtime)
+            _buildExpandableCard(
+              icon: Icons.terminal_rounded,
+              iconColor: AppColors.secondary,
+              title: 'Engine & Jezgra Sustava',
+              subtitle: '${settings.ytDlpVersion} • ${settings.ffmpegVersion}',
+              badge: 'Media3',
+              badgeColor: AppColors.secondary,
+              initiallyExpanded: false,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceContainerLowest,
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: Image.asset(
-                            'assets/images/app_logo.png',
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Container(
-                              color: AppColors.primaryContainer,
-                              child: const Icon(Icons.download_rounded, size: 30, color: AppColors.primary),
-                            ),
+                            child: const Icon(Icons.terminal_rounded, size: 18, color: AppColors.primary),
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
-                                  'AllDown',
-                                  style: TextStyle(
-                                    fontSize: 19,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.onSurface,
-                                    letterSpacing: 0.4,
-                                  ),
+                                  'Stream Extractor Engine',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
                                 ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primaryContainer.withValues(alpha: 0.5),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: const Text(
-                                    'v1.0.0',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
+                                Text(
+                                  settings.ytDlpVersion,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Media Downloader & Video Studio',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const Divider(color: AppColors.stroke, height: 1),
-                  const SizedBox(height: 14),
-
-                  // App Details Rows
-                  _buildAboutRow(
-                    icon: Icons.verified_rounded,
-                    iconColor: AppColors.secondary,
-                    label: 'Verzija',
-                    value: '1.0 (Build 1.0.0)',
-                  ),
-                  const SizedBox(height: 10),
-                  _buildAboutRow(
-                    icon: Icons.person_rounded,
-                    iconColor: AppColors.primary,
-                    label: 'Autor',
-                    value: 'Allen',
-                  ),
-                  const SizedBox(height: 10),
-                  _buildAboutRow(
-                    icon: Icons.code_rounded,
-                    iconColor: AppColors.tertiary,
-                    label: 'Licenca',
-                    value: 'Open Source (GPLv3 / MIT)',
-                  ),
-                  const SizedBox(height: 16),
-
-                  // GitHub Repo Link Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.onSurface,
-                        side: const BorderSide(color: AppColors.stroke, width: 1.2),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: () => launchUrl(
-                        Uri.parse('https://github.com/vugy0212/Alldown'),
-                        mode: LaunchMode.externalApplication,
-                      ),
-                      icon: const Icon(Icons.open_in_browser_rounded, size: 18, color: AppColors.primary),
-                      label: const Text(
-                        'Posjeti GitHub Repozitorij',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.tertiaryContainer.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check_rounded, size: 12, color: AppColors.tertiary),
+                          SizedBox(width: 3),
+                          Text(
+                            'Up to date',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.tertiary),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceContainerLowest,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.hardware_rounded, size: 18, color: AppColors.secondary),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Media3 ExoPlayer & Remux',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                                ),
+                                Text(
+                                  settings.ffmpegVersion,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceContainerLowest,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'HW Accel',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.secondary),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // App & Engine Update Trigger Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.surfaceContainer,
+                      foregroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      setState(() => _isCheckingUpdate = true);
+                      final info = await AppUpdateService.checkForUpdate();
+                      if (!mounted) return;
+                      setState(() => _isCheckingUpdate = false);
+                      if (info != null) {
+                        if (context.mounted) {
+                          AppUpdateService.showUpdateModal(context, info);
+                        }
+                      } else {
+                        messenger.showSnackBar(
+                          const SnackBar(content: Text('Aplikacija i moduli za preuzimanje su ažurni!')),
+                        );
+                      }
+                    },
+                    icon: _isCheckingUpdate
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                          )
+                        : const Icon(Icons.sync_rounded, size: 18),
+                    label: Text(
+                      _isCheckingUpdate ? 'Provjera novih verzija...' : 'Provjeri ažuriranja (GitHub)',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 10),
+
+                // Repo & License Link
+                TextButton.icon(
+                  onPressed: () => launchUrl(Uri.parse('https://github.com/yt-dlp/yt-dlp')),
+                  icon: const Icon(Icons.code_rounded, size: 16, color: AppColors.outline),
+                  label: const Text(
+                    'Open Source Licenses & GitHub Repository',
+                    style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                  ),
+                ),
+              ],
+            ),
+
+            // DRAWER: O Aplikaciji (About AllDown) - S ugniježđenom opcijom Podržani Servisi
+            _buildExpandableCard(
+              icon: Icons.info_outline_rounded,
+              iconColor: AppColors.primary,
+              title: 'O Aplikaciji (AllDown)',
+              subtitle: 'Verzija 1.0 (v1.0.0) • Autor: Allen',
+              badge: 'v1.0.0',
+              badgeColor: AppColors.primary,
+              initiallyExpanded: false,
+              children: [
+                // App Logo Header
+                Row(
+                  children: [
+                    Container(
+                      width: 58,
+                      height: 58,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primaryAccent.withValues(alpha: 0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.asset(
+                          'assets/images/app_logo.png',
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            color: AppColors.primaryContainer,
+                            child: const Icon(Icons.download_rounded, size: 30, color: AppColors.primary),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Text(
+                                'AllDown',
+                                style: TextStyle(
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.onSurface,
+                                  letterSpacing: 0.4,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryContainer.withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  'v1.0.0',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Media Downloader & Video Studio',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Divider(color: AppColors.stroke, height: 1),
+                const SizedBox(height: 14),
+
+                // App Details Rows
+                _buildAboutRow(
+                  icon: Icons.verified_rounded,
+                  iconColor: AppColors.secondary,
+                  label: 'Verzija',
+                  value: '1.0 (Build 1.0.0)',
+                ),
+                const SizedBox(height: 10),
+                _buildAboutRow(
+                  icon: Icons.person_rounded,
+                  iconColor: AppColors.primary,
+                  label: 'Autor',
+                  value: 'Allen',
+                ),
+                const SizedBox(height: 10),
+                _buildAboutRow(
+                  icon: Icons.code_rounded,
+                  iconColor: AppColors.tertiary,
+                  label: 'Licenca',
+                  value: 'Open Source (GPLv3 / MIT)',
+                ),
+                const SizedBox(height: 16),
+
+                // Ugniježđena ladica za Podržane Servise unutar About-a
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainerLowest,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.stroke, width: 0.8),
+                  ),
+                  child: Theme(
+                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                      childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                      leading: const Icon(Icons.hub_rounded, size: 20, color: AppColors.primary),
+                      title: const Text(
+                        'Podržani Servisi i Ekstraktori',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                      ),
+                      subtitle: const Text(
+                        '12+ testiranih servisa i univerzalni parser',
+                        style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                      ),
+                      children: [
+                        const Divider(color: AppColors.stroke, height: 1),
+                        const SizedBox(height: 8),
+                        _buildServiceRow(
+                          icon: Icons.play_circle_fill_rounded,
+                          iconColor: Colors.redAccent,
+                          name: 'YouTube & YouTube Shorts',
+                          description: '4K, 1080p, 720p i M4A audio',
+                          badge: 'AKTIVAN',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.tag_rounded,
+                          iconColor: Colors.white,
+                          name: 'X (Twitter)',
+                          description: 'HD MP4 videozapisi izravno iz postova',
+                          badge: 'AKTIVAN',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.music_note_rounded,
+                          iconColor: Colors.cyanAccent,
+                          name: 'TikTok',
+                          description: 'Preuzimanje bez vodenog žiga',
+                          badge: 'AKTIVAN',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.facebook_rounded,
+                          iconColor: Colors.blueAccent,
+                          name: 'Facebook Watch & Reels',
+                          description: '1080p HD i 480p SD streamovi',
+                          badge: 'AKTIVAN',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.stream_rounded,
+                          iconColor: Colors.indigoAccent,
+                          name: 'Streamable',
+                          description: 'API integracija za MP4 download',
+                          badge: 'AKTIVAN',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.account_balance_rounded,
+                          iconColor: Colors.amberAccent,
+                          name: 'Archive.org',
+                          description: 'Javna arhiva filmova i audio zapisa',
+                          badge: 'AKTIVAN',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.public_rounded,
+                          iconColor: Colors.tealAccent,
+                          name: 'Wikimedia Commons',
+                          description: 'Slobodni multimedijski repozitorij',
+                          badge: 'AKTIVAN',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.cloud_download_rounded,
+                          iconColor: Colors.orangeAccent,
+                          name: 'Test-Videos & Global CDNs',
+                          description: 'Visokobrzinski medijski poslužitelji',
+                          badge: 'AKTIVAN',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.html_rounded,
+                          iconColor: Colors.deepOrangeAccent,
+                          name: 'W3Schools & HTML5 Portali',
+                          description: 'HTML5 video i audio izvori',
+                          badge: 'AKTIVAN',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.code_rounded,
+                          iconColor: Colors.purpleAccent,
+                          name: 'GitHub Raw & Assets',
+                          description: 'Medijski repozitoriji datoteka',
+                          badge: 'AKTIVAN',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.video_library_rounded,
+                          iconColor: Colors.blueGrey,
+                          name: 'Dailymotion & Vimeo',
+                          description: 'OpenGraph web media scraper',
+                          badge: 'AKTIVAN',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.link_rounded,
+                          iconColor: AppColors.secondary,
+                          name: 'Univerzalni Direktni Mediji',
+                          description: '.mp4, .webm, .m4a, .mp3, .wav',
+                          badge: 'AKTIVAN',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // GitHub Repo Link Button
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.onSurface,
+                      side: const BorderSide(color: AppColors.stroke, width: 1.2),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () => launchUrl(
+                      Uri.parse('https://github.com/vugy0212/Alldown'),
+                      mode: LaunchMode.externalApplication,
+                    ),
+                    icon: const Icon(Icons.open_in_browser_rounded, size: 18, color: AppColors.primary),
+                    label: const Text(
+                      'Posjeti GitHub Repozitorij',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 32),
           ],
@@ -1619,6 +1672,57 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Text(
               badge,
               style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.tertiary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHelpStep({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String description,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 2),
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 16, color: iconColor),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.onSurfaceVariant,
+                    height: 1.35,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
