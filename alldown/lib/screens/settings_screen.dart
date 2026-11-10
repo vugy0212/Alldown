@@ -1159,7 +1159,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  'v1.0.0',
+                                  'v${AppUpdateService.currentVersion}',
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
@@ -1191,7 +1191,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   icon: Icons.verified_rounded,
                   iconColor: AppColors.secondary,
                   label: 'Version',
-                  value: '1.0 (Build 1.0.0)',
+                  value: '${AppUpdateService.currentVersion} (Build ${AppUpdateService.currentVersion})',
                 ),
                 const SizedBox(height: 10),
                 _buildAboutRow(
