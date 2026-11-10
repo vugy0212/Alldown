@@ -9,8 +9,9 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Standard Animated GIF Encoder (GIF89a)
- * Supports frame delay, infinite looping, adaptive color quantization, and LZW compression.
+ * Standard Animated GIF Encoder (GIF89a compliant)
+ * Correctly emits Logical Screen Descriptor, Netscape Application Extension (looping),
+ * Graphic Control Extensions, Local Color Tables, and LZW image data.
  */
 class AnimatedGifEncoder {
     private var width = 0
@@ -19,15 +20,15 @@ class AnimatedGifEncoder {
     private var repeat = 0  // 0 = infinite loop
     private var out: OutputStream? = null
     private var isStarted = false
+    private var isFirstFrame = true
     private var pixels: ByteArray? = null
     private var indexedPixels: ByteArray? = null
     private var colorDepth = 8
     private var colorTab: ByteArray? = null
     private var usedEntry = BooleanArray(256)
-    private var palSize = 7
 
     fun setDelay(ms: Int) {
-        delay = ms
+        delay = ms.coerceAtLeast(20)
     }
 
     fun setRepeat(iter: Int) {
@@ -36,48 +37,65 @@ class AnimatedGifEncoder {
 
     fun start(os: OutputStream): Boolean {
         out = os
-        var ok = true
-        try {
-            writeString("GIF89a")
-            isStarted = true
-        } catch (_: IOException) {
-            ok = false
-        }
-        return ok
+        isStarted = true
+        isFirstFrame = true
+        return true
     }
 
     fun addFrame(im: Bitmap): Boolean {
         if (!isStarted || out == null) return false
-        var ok = true
         try {
             width = im.width
             height = im.height
+
+            if (isFirstFrame) {
+                // 1. Header: GIF89a
+                writeString("GIF89a")
+                // 2. Logical Screen Descriptor (7 bytes)
+                writeLogicalScreenDesc()
+                // 3. Netscape 2.0 Loop Extension (written ONCE at start)
+                if (repeat >= 0) {
+                    writeNetscapeExt()
+                }
+                isFirstFrame = false
+            }
+
             getImagePixels(im)
             analyzePixels()
-            if (repeat >= 0) {
-                writeNetscapeExt()
-            }
+
+            // 4. Graphic Control Extension (frame timing)
             writeGraphicCtrlExt()
+            // 5. Image Descriptor
             writeImageDesc()
+            // 6. Local Color Table (256 colors = 768 bytes)
             writePalette()
+            // 7. LZW Encoded Pixels
             writePixels()
+            return true
         } catch (_: IOException) {
-            ok = false
+            return false
         }
-        return ok
     }
 
     fun finish(): Boolean {
         if (!isStarted) return false
-        var ok = true
         isStarted = false
         try {
             out?.write(0x3b) // GIF trailer
             out?.flush()
+            return true
         } catch (_: IOException) {
-            ok = false
+            return false
         }
-        return ok
+    }
+
+    private fun writeLogicalScreenDesc() {
+        writeShort(width)
+        writeShort(height)
+        // Packed fields: 0x70 = No global color table, 8-bit color resolution
+        out?.write(0x70)
+        out?.write(0) // Background color index
+        out?.write(0) // Pixel aspect ratio
     }
 
     private fun getImagePixels(image: Bitmap) {
@@ -103,24 +121,22 @@ class AnimatedGifEncoder {
 
         var k = 0
         for (i in 0 until nPix) {
-            val index = nq.map(
-                pixels!![k++].toInt() and 0xff,
-                pixels!![k++].toInt() and 0xff,
-                pixels!![k++].toInt() and 0xff
-            )
+            val r = pixels!![k++].toInt() and 0xff
+            val g = pixels!![k++].toInt() and 0xff
+            val b = pixels!![k++].toInt() and 0xff
+            val index = nq.map(r, g, b)
             usedEntry[index] = true
             indexedPixels!![i] = index.toByte()
         }
         pixels = null
         colorDepth = 8
-        palSize = 7
     }
 
     private fun writeGraphicCtrlExt() {
         out?.write(0x21) // Extension introducer
         out?.write(0xf9) // GCE label
         out?.write(4)    // Block size
-        out?.write(0)    // Packed fields (no disposal, no transparency)
+        out?.write(0x04) // Packed fields: Disposal method = 1 (do not dispose, keep graphic), user input = 0, transparency = 0
         writeShort(delay / 10) // Delay time in 100ths of a second
         out?.write(0)    // Transparent color index
         out?.write(0)    // Block terminator
@@ -132,7 +148,8 @@ class AnimatedGifEncoder {
         writeShort(0)    // Image top
         writeShort(width)
         writeShort(height)
-        out?.write(0x80 or 0x07) // Local Color Table flag + depth
+        // Packed: 0x87 = Local Color Table present (bit 7) + 256 colors (bits 0-2 = 7)
+        out?.write(0x87)
     }
 
     private fun writePalette() {
@@ -183,6 +200,7 @@ private class NeuQuant(private val thepicture: ByteArray, private val lengthcoun
 
     init {
         for (i in 0 until 256) {
+            // network[i][0] = Blue, network[i][1] = Green, network[i][2] = Red
             network[i][0] = (i shl 4).toDouble()
             network[i][1] = (i shl 4).toDouble()
             network[i][2] = (i shl 4).toDouble()
@@ -198,14 +216,15 @@ private class NeuQuant(private val thepicture: ByteArray, private val lengthcoun
         val colorTab = ByteArray(256 * 3)
         var k = 0
         for (i in 0 until 256) {
-            colorTab[k++] = network[i][0].toInt().coerceIn(0, 255).toByte()
-            colorTab[k++] = network[i][1].toInt().coerceIn(0, 255).toByte()
-            colorTab[k++] = network[i][2].toInt().coerceIn(0, 255).toByte()
+            // RGB order in GIF color table
+            colorTab[k++] = network[i][2].toInt().coerceIn(0, 255).toByte() // Red
+            colorTab[k++] = network[i][1].toInt().coerceIn(0, 255).toByte() // Green
+            colorTab[k++] = network[i][0].toInt().coerceIn(0, 255).toByte() // Blue
         }
         return colorTab
     }
 
-    fun map(b: Int, g: Int, r: Int): Int {
+    fun map(r: Int, g: Int, b: Int): Int {
         var bestd = 1000
         var best = -1
         val i = netindex[g]
@@ -213,58 +232,116 @@ private class NeuQuant(private val thepicture: ByteArray, private val lengthcoun
 
         var dist: Int
         var a: Int
-        while (j >= 0 || i < 256) {
-            if (i < 256) {
-                a = network[i][1].toInt() - g
-                if (a >= bestd) break
-                dist = abs(a) + abs(network[i][0].toInt() - b) + abs(network[i][2].toInt() - r)
-                if (dist < bestd) {
-                    bestd = dist
-                    best = network[i][3].toInt()
+        var p = i
+        while (j >= 0 || p < 256) {
+            if (p < 256) {
+                a = network[p][1].toInt() - g
+                if (a >= bestd) p = 256
+                else {
+                    p++
+                    if (a < 0) a = -a
+                    dist = a + abs(network[p - 1][0].toInt() - b) + abs(network[p - 1][2].toInt() - r)
+                    if (dist < bestd) {
+                        bestd = dist
+                        best = p - 1
+                    }
                 }
             }
             if (j >= 0) {
-                a = g - network[j][1].toInt()
-                if (a >= bestd) break
-                dist = abs(a) + abs(network[j][0].toInt() - b) + abs(network[j][2].toInt() - r)
-                if (dist < bestd) {
-                    bestd = dist
-                    best = network[j][3].toInt()
+                a = network[j][1].toInt() - g
+                if (a <= -bestd) j = -1
+                else {
+                    j--
+                    if (a < 0) a = -a
+                    dist = a + abs(network[j + 1][0].toInt() - b) + abs(network[j + 1][2].toInt() - r)
+                    if (dist < bestd) {
+                        bestd = dist
+                        best = j + 1
+                    }
                 }
-                j--
             }
         }
         return if (best >= 0) best else 0
     }
 
-    private fun inxbuild() {
+    private fun unbiasnet() {
         for (i in 0 until 256) {
+            network[i][0] = network[i][0] / 256.0
+            network[i][1] = network[i][1] / 256.0
+            network[i][2] = network[i][2] / 256.0
             network[i][3] = i.toDouble()
-        }
-        for (i in 0 until 256) {
-            netindex[network[i][1].toInt().coerceIn(0, 255)] = i
         }
     }
 
-    private fun unbiasnet() {
+    private fun inxbuild() {
+        var previouscol = 0
+        var startpos = 0
         for (i in 0 until 256) {
-            network[i][0] = network[i][0].coerceIn(0.0, 255.0)
-            network[i][1] = network[i][1].coerceIn(0.0, 255.0)
-            network[i][2] = network[i][2].coerceIn(0.0, 255.0)
+            var smallpos = i
+            var smallval = network[i][1]
+            for (j in i + 1 until 256) {
+                if (network[j][1] < smallval) {
+                    smallpos = j
+                    smallval = network[j][1]
+                }
+            }
+            val q = network[i]
+            network[i] = network[smallpos]
+            network[smallpos] = q
+
+            if (smallval.toInt() != previouscol) {
+                netindex[previouscol] = (startpos + i) shr 1
+                for (j in previouscol + 1 until smallval.toInt().coerceAtMost(256)) {
+                    netindex[j] = i
+                }
+                previouscol = smallval.toInt().coerceAtMost(255)
+                startpos = i
+            }
+        }
+        netindex[previouscol] = (startpos + 255) shr 1
+        for (j in previouscol + 1 until 256) {
+            netindex[j] = 255
         }
     }
 
     private fun learn() {
-        val step = max(1, lengthcount / (3 * 100))
+        if (lengthcount < 3) return
+        val lengthcountFixed = lengthcount
+        val samplepixels = lengthcountFixed / (3 * samplefac)
+        var delta = samplepixels / 100
+        if (delta == 0) delta = 1
+        val alpha = 1.0 / 30.0
+
+        var rad = 32
+        val radstep = rad / 8
+        if (radstep == 0) rad = 0
+        for (i in 0 until rad) {
+            radpower[i] = alpha * (((rad * rad - i * i) * 256.0) / (rad * rad))
+        }
+
+        var step = 499
+        if (lengthcountFixed % 499 == 0) step = 491
+        if (lengthcountFixed % 491 == 0) step = 487
+        if (lengthcountFixed % 487 == 0) step = 503
+
         var pix = 0
-        val lim = lengthcount
-        while (pix < lim) {
-            val b = (thepicture[pix].toInt() and 0xff).toDouble()
-            val g = (thepicture[pix + 1].toInt() and 0xff).toDouble()
-            val r = (thepicture[pix + 2].toInt() and 0xff).toDouble()
-            val j = contest(b, g, r)
-            altersingle(1.0 / 64.0, j, b, g, r)
-            pix += 3 * step
+        var i = 0
+        while (i < samplepixels) {
+            val b = (thepicture[pix + 2].toInt() and 0xff) shl 4
+            val g = (thepicture[pix + 1].toInt() and 0xff) shl 4
+            val r = (thepicture[pix].toInt() and 0xff) shl 4
+            var j = contest(b.toDouble(), g.toDouble(), r.toDouble())
+
+            altersingle(alpha, j, b.toDouble(), g.toDouble(), r.toDouble())
+            if (rad != 0) alterneigh(rad, j, b.toDouble(), g.toDouble(), r.toDouble())
+
+            pix += step * 3
+            if (pix >= lengthcountFixed) pix -= lengthcountFixed
+
+            i++
+            if (i % delta == 0) {
+                rad = max(0, rad - radstep)
+            }
         }
     }
 
@@ -274,25 +351,57 @@ private class NeuQuant(private val thepicture: ByteArray, private val lengthcoun
         network[i][2] -= alpha * (network[i][2] - r)
     }
 
+    private fun alterneigh(rad: Int, i: Int, b: Double, g: Double, r: Double) {
+        var lo = i - rad
+        if (lo < -1) lo = -1
+        var hi = i + rad
+        if (hi > 256) hi = 256
+
+        var j = i + 1
+        var k = i - 1
+        var q = 1
+        while (j < hi || k > lo) {
+            val a = radpower[q++] / 256.0
+            if (j < hi) {
+                val p = network[j++]
+                p[0] -= a * (p[0] - b)
+                p[1] -= a * (p[1] - g)
+                p[2] -= a * (p[2] - r)
+            }
+            if (k > lo) {
+                val p = network[k--]
+                p[0] -= a * (p[0] - b)
+                p[1] -= a * (p[1] - g)
+                p[2] -= a * (p[2] - r)
+            }
+        }
+    }
+
     private fun contest(b: Double, g: Double, r: Double): Int {
         var bestd = Double.MAX_VALUE
         var bestbiasd = bestd
-        var best = -1
         var bestpos = -1
+        var bestbiaspos = bestpos
 
         for (i in 0 until 256) {
-            val dist = abs(network[i][0] - b) + abs(network[i][1] - g) + abs(network[i][2] - r)
+            val n = network[i]
+            val dist = abs(n[0] - b) + abs(n[1] - g) + abs(n[2] - r)
             if (dist < bestd) {
                 bestd = dist
-                best = i
-            }
-            val biasdist = dist - (bias[i] / (1 shl 16))
-            if (biasdist < bestbiasd) {
-                bestbiasd = biasdist
                 bestpos = i
             }
+            val biasdist = dist - ((bias[i]) / (1 shl 16))
+            if (biasdist < bestbiasd) {
+                bestbiasd = biasdist
+                bestbiaspos = i
+            }
+            val betafreq = freq[i] / 1024.0
+            freq[i] -= betafreq
+            bias[i] += betafreq * 65536.0
         }
-        return if (bestpos >= 0) bestpos else best
+        freq[bestpos] += 1.0 / 1024.0
+        bias[bestpos] -= 65536.0 / 1024.0
+        return if (bestbiaspos >= 0) bestbiaspos else bestpos
     }
 }
 
@@ -435,4 +544,3 @@ private class LZWEncoder(
         }
     }
 }
-

@@ -164,7 +164,6 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
     });
 
     try {
-      // 1. Always write to safe internal storage first to avoid EACCES Android Scoped Storage errors
       final appDocDir = await getApplicationDocumentsDirectory();
       final targetFolder = Directory('${appDocDir.path}/AllDown/Videos');
       if (!targetFolder.existsSync()) {
@@ -194,14 +193,14 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
         final durSeconds = ((endMs - startMs) / 1000).round();
         final durStr = '${(durSeconds ~/ 60).toString().padLeft(2, '0')}:${(durSeconds % 60).toString().padLeft(2, '0')}';
 
-        // 2. Optionally copy to public Downloads folder for external gallery apps
+        // Copy to public Downloads/AllDown/Videos
         try {
           final pubDir = Directory('/storage/emulated/0/Download/AllDown/Videos');
           if (!pubDir.existsSync()) pubDir.createSync(recursive: true);
           File(outPath).copySync('${pubDir.path}/Trimmed_$timeStamp.mp4');
         } catch (_) {}
 
-        // 3. Add to library state
+        // Add to library
         final newItem = MediaItem(
           id: 'trim_$timeStamp',
           title: '${widget.item.title} (Trimmed)',
@@ -229,7 +228,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Greška prilikom izrezivanja videa. Provjerite format.')),
+          const SnackBar(content: Text('Greška prilikom izrezivanja videa.')),
         );
       }
     } catch (e) {
@@ -255,7 +254,6 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
     });
 
     try {
-      // 1. Write to safe internal storage
       final appDocDir = await getApplicationDocumentsDirectory();
       final targetFolder = Directory('${appDocDir.path}/AllDown/GIFs');
       if (!targetFolder.existsSync()) {
@@ -286,14 +284,14 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
         final durSeconds = ((endMs - startMs) / 1000).round();
         final durStr = '${(durSeconds ~/ 60).toString().padLeft(2, '0')}:${(durSeconds % 60).toString().padLeft(2, '0')}';
 
-        // 2. Copy to public Downloads/AllDown/GIFs
+        // Copy to public Downloads/AllDown/GIFs
         try {
           final pubDir = Directory('/storage/emulated/0/Download/AllDown/GIFs');
           if (!pubDir.existsSync()) pubDir.createSync(recursive: true);
           File(outPath).copySync('${pubDir.path}/Clip_$timeStamp.gif');
         } catch (_) {}
 
-        // 3. Add to library
+        // Add to library
         final newItem = MediaItem(
           id: 'gif_$timeStamp',
           title: '${widget.item.title} (GIF)',
@@ -426,11 +424,9 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                                       renderedH = (boxW / videoAspect) * _zoom;
                                     }
 
-                                    // Maximum allowed pixel offsets
                                     final maxDx = math.max(0.0, (renderedW - boxW) / 2);
                                     final maxDy = math.max(0.0, (renderedH - boxH) / 2);
 
-                                    // Pan values: -1.0 to 1.0
                                     final pixelX = -_panX * maxDx;
                                     final pixelY = _panY * maxDy;
 
@@ -564,7 +560,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                                     Icon(Icons.touch_app_rounded, size: 12, color: AppColors.onSurfaceVariant),
                                     SizedBox(width: 4),
                                     Text(
-                                      'Povucite prstom po videu za pomak kadra',
+                                      'Povucite prstom za pomak kadra',
                                       style: TextStyle(fontSize: 10, color: Colors.white70),
                                     ),
                                   ],
@@ -581,10 +577,14 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Vremenski isječak (Trim)',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                      const Expanded(
+                        child: Text(
+                          'Vremenski isječak (Trim)',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
@@ -652,19 +652,24 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Row(
-                              children: [
-                                Icon(Icons.zoom_in_rounded, size: 16, color: AppColors.secondary),
-                                SizedBox(width: 6),
-                                Text(
-                                  'Ručno podešavanje kadra (Zoom & Pozicija)',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.onSurface,
+                            const Expanded(
+                              child: Row(
+                                children: [
+                                  Icon(Icons.zoom_in_rounded, size: 16, color: AppColors.secondary),
+                                  SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      'Ručno podešavanje kadra',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.onSurface,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                             if (_zoom > 1.05 || _panX.abs() > 0.05 || _panY.abs() > 0.05)
                               InkWell(
@@ -685,7 +690,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                         ),
                         const SizedBox(height: 10),
 
-                        // Zoom Slider
+                        // Zoom Slider Row
                         Row(
                           children: [
                             IconButton(
@@ -718,11 +723,11 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                                   ? () => setState(() => _zoom = (_zoom + 0.2).clamp(1.0, 3.0))
                                   : null,
                             ),
-                            Container(
-                              width: 44,
-                              alignment: Alignment.centerRight,
+                            SizedBox(
+                              width: 42,
                               child: Text(
                                 '${_zoom.toStringAsFixed(1)}x',
+                                textAlign: TextAlign.right,
                                 style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
@@ -734,40 +739,63 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                           ],
                         ),
 
-                        // Pan Directional Fine-tuning Controls
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            const Icon(Icons.open_with_rounded, size: 14, color: AppColors.onSurfaceVariant),
-                            const SizedBox(width: 6),
-                            const Text(
-                              'Fino podešavanje pozicije kadra:',
-                              style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
-                            ),
-                            const Spacer(),
-                            // Quick D-Pad Buttons
-                            IconButton(
-                              visualDensity: VisualDensity.compact,
-                              icon: const Icon(Icons.arrow_left_rounded, size: 24),
-                              onPressed: () => setState(() => _panX = (_panX - 0.15).clamp(-1.0, 1.0)),
-                            ),
-                            IconButton(
-                              visualDensity: VisualDensity.compact,
-                              icon: const Icon(Icons.arrow_right_rounded, size: 24),
-                              onPressed: () => setState(() => _panX = (_panX + 0.15).clamp(-1.0, 1.0)),
-                            ),
-                            IconButton(
-                              visualDensity: VisualDensity.compact,
-                              icon: const Icon(Icons.arrow_upward_rounded, size: 18),
-                              onPressed: () => setState(() => _panY = (_panY + 0.15).clamp(-1.0, 1.0)),
-                            ),
-                            IconButton(
-                              visualDensity: VisualDensity.compact,
-                              icon: const Icon(Icons.arrow_downward_rounded, size: 18),
-                              onPressed: () => setState(() => _panY = (_panY - 0.15).clamp(-1.0, 1.0)),
-                            ),
-                          ],
-                        ),
+                        // Pan Controls: Horizontal & Vertical Sliders with zero overflow risk
+                        if (_zoom > 1.05 || _selectedCrop != 'original') ...[
+                          const SizedBox(height: 8),
+                          const Row(
+                            children: [
+                              Icon(Icons.open_with_rounded, size: 14, color: AppColors.onSurfaceVariant),
+                              SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'Pozicija kadra (povucite prstom po videu ili klizačima):',
+                                  style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const SizedBox(
+                                width: 20,
+                                child: Text('X:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.onSurfaceVariant)),
+                              ),
+                              Expanded(
+                                child: Slider(
+                                  value: _panX,
+                                  min: -1.0,
+                                  max: 1.0,
+                                  divisions: 20,
+                                  activeColor: AppColors.primary,
+                                  inactiveColor: AppColors.surfaceContainerHighest,
+                                  onChanged: _isProcessing
+                                      ? null
+                                      : (val) => setState(() => _panX = val),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const SizedBox(
+                                width: 20,
+                                child: Text('Y:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.onSurfaceVariant)),
+                              ),
+                              Expanded(
+                                child: Slider(
+                                  value: _panY,
+                                  min: -1.0,
+                                  max: 1.0,
+                                  divisions: 20,
+                                  activeColor: AppColors.primary,
+                                  inactiveColor: AppColors.surfaceContainerHighest,
+                                  onChanged: _isProcessing
+                                      ? null
+                                      : (val) => setState(() => _panY = val),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),

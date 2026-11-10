@@ -295,8 +295,8 @@ object VideoEditorHelper {
 
         bmp = Bitmap.createBitmap(src, startX, startY, cropW, cropH)
 
-        // Scale down for optimal GIF size (max width 420px)
-        val maxWidth = 420
+        // Scale down for optimal GIF size and smooth encoding (max width 360px)
+        val maxWidth = 360
         if (bmp.width > maxWidth) {
             val scale = maxWidth.toFloat() / bmp.width.toFloat()
             val targetH = (bmp.height * scale).toInt().coerceAtLeast(1)
