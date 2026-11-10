@@ -79,18 +79,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             Container(
                               width: 36,
                               height: 36,
-                              decoration: const BoxDecoration(
+                              decoration: BoxDecoration(
                                 color: AppColors.surfaceContainerLowest,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.pie_chart_rounded,
                                 size: 20,
                                 color: AppColors.secondary,
                               ),
                             ),
                             const SizedBox(width: 10),
-                            const Expanded(
+                            Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -123,7 +123,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                         child: Text(
                           '${_formatBytes(totalBytes)} Total',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                             color: AppColors.primary,
@@ -174,29 +174,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           const SizedBox(width: 4),
                           Text(
                             'Videos (${_formatBytes(videoBytes)})',
-                            style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                            style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                           ),
                         ],
                       ),
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.circle, size: 7, color: AppColors.secondary),
+                          Icon(Icons.circle, size: 7, color: AppColors.secondary),
                           const SizedBox(width: 4),
                           Text(
                             'Audio (${_formatBytes(audioBytes)})',
-                            style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                            style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                           ),
                         ],
                       ),
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.circle, size: 7, color: AppColors.tertiary),
+                          Icon(Icons.circle, size: 7, color: AppColors.tertiary),
                           const SizedBox(width: 4),
                           Text(
                             'Cache (${_cacheCleared ? "0.0 MB" : "Temp"})',
-                            style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                            style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -222,7 +222,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Expanded(
+                          Expanded(
                             child: Row(
                               children: [
                                 Icon(Icons.delete_sweep_rounded, size: 18, color: AppColors.tertiary),
@@ -249,7 +249,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ),
                             child: Text(
                               _cacheCleared ? '0.0 MB' : 'Clean',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.tertiary,
@@ -291,14 +291,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           color: AppColors.primaryContainer.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.vpn_key_rounded,
                           size: 22,
                           color: AppColors.primary,
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -361,7 +361,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  const Text(
+                  Text(
                     'Bypass 18+ age restrictions, private member-only channels, and login walls safely without re-authenticating repeatedly.',
                     style: TextStyle(
                       fontSize: 13,
@@ -378,7 +378,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         child: OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             backgroundColor: AppColors.surfaceContainerLowest,
-                            side: const BorderSide(color: AppColors.stroke),
+                            side: BorderSide(color: AppColors.stroke),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
@@ -398,8 +398,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               ),
                             );
                           },
-                          icon: const Icon(Icons.folder_open_rounded, size: 18, color: AppColors.primary),
-                          label: const Text(
+                          icon: Icon(Icons.folder_open_rounded, size: 18, color: AppColors.primary),
+                          label: Text(
                             'Import cookies.txt',
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
@@ -441,7 +441,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       color: AppColors.surfaceContainerLowest.withValues(alpha: 0.8),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Row(
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Icon(Icons.verified_user_rounded, size: 16, color: AppColors.secondary),
@@ -461,7 +461,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const SizedBox(height: 18),
 
             // SECTION: DOWNLOAD & MEDIA SETTINGS
-            const Text(
+            Text(
               'POSTAVKE PREUZIMANJA I MEDIJA',
               style: TextStyle(
                 fontSize: 11,
@@ -495,7 +495,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     if (val != null) notifier.setVideoContainer(val);
                   },
                 ),
-                const Divider(color: AppColors.stroke, height: 16),
+                Divider(color: AppColors.stroke, height: 16),
                 _buildDropdownRow<MaxResolution>(
                   title: 'Maksimalna Rezolucija',
                   subtitle: 'Automatski limit za preuzimanje videa',
@@ -511,14 +511,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     if (val != null) notifier.setMaxResolution(val);
                   },
                 ),
-                const Divider(color: AppColors.stroke, height: 16),
+                Divider(color: AppColors.stroke, height: 16),
                 _buildSettingSwitch(
                   title: 'Automatski remux u MP4',
                   subtitle: 'Osigurava kompatibilnost sa svim Android playerima',
                   value: settings.autoRemuxToMp4,
                   onChanged: (_) => notifier.toggleAutoRemux(),
                 ),
-                const Divider(color: AppColors.stroke, height: 16),
+                Divider(color: AppColors.stroke, height: 16),
                 _buildSettingSwitch(
                   title: 'SponsorBlock Filtar',
                   subtitle: 'Automatski izreži sponzorirane segmente i uvode',
@@ -539,7 +539,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               badgeColor: AppColors.tertiary,
               initiallyExpanded: false,
               children: [
-                const Text(
+                Text(
                   'Format Zvuka (Kodek)',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
                 ),
@@ -570,7 +570,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ],
                   ),
                 ),
-                const Divider(color: AppColors.stroke, height: 16),
+                Divider(color: AppColors.stroke, height: 16),
                 _buildDropdownRow<String>(
                   title: 'Kvaliteta Zvuka (Bitrate)',
                   subtitle: 'Ciljana brzina prijenosa za audio',
@@ -612,7 +612,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     if (val != null) notifier.setUserAgent(val);
                   },
                 ),
-                const Divider(color: AppColors.stroke, height: 16),
+                Divider(color: AppColors.stroke, height: 16),
                 _buildDropdownRow<int>(
                   title: 'Vrijeme Čekanja Veze (Timeout)',
                   subtitle: 'Maksimalno vrijeme odziva poslužitelja',
@@ -627,11 +627,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     if (val != null) notifier.setConnectionTimeout(val);
                   },
                 ),
-                const Divider(color: AppColors.stroke, height: 16),
+                Divider(color: AppColors.stroke, height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -654,7 +654,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                       child: Text(
                         '${settings.maxConcurrentDownloads} Zadataka',
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.onPrimary),
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.onPrimary),
                       ),
                     ),
                   ],
@@ -669,14 +669,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   label: '${settings.maxConcurrentDownloads}',
                   onChanged: (val) => notifier.setConcurrentDownloads(val.toInt()),
                 ),
-                const Divider(color: AppColors.stroke, height: 16),
+                Divider(color: AppColors.stroke, height: 16),
                 _buildSettingSwitch(
                   title: 'Preuzimanje samo preko Wi-Fi mreže',
                   subtitle: 'Zaustavi zadatke na mobilnim podatcima za uštedu prometa',
                   value: settings.wifiOnly,
                   onChanged: (_) => notifier.toggleWifiOnly(),
                 ),
-                const Divider(color: AppColors.stroke, height: 16),
+                Divider(color: AppColors.stroke, height: 16),
                 _buildSettingSwitch(
                   title: 'Automatski ponovni pokušaj (Auto-retry)',
                   subtitle: '3 pokušaja s eksponencijalnim odgodama pri prekidu',
@@ -699,7 +699,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'Zadana Mapa Preuzimanja',
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
@@ -725,7 +725,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               color: AppColors.primaryContainer.withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(6),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.drive_file_move_rounded, size: 13, color: AppColors.primary),
@@ -753,7 +753,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               color: AppColors.surfaceContainerLowest,
                               borderRadius: BorderRadius.circular(6),
                             ),
-                            child: const Text(
+                            child: Text(
                               'Reset',
                               style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.secondary),
                             ),
@@ -774,12 +774,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.folder_rounded, size: 16, color: AppColors.primary),
+                      Icon(Icons.folder_rounded, size: 16, color: AppColors.primary),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           settings.downloadDirectory,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             color: AppColors.onSurface,
                             fontFamily: 'monospace',
@@ -791,14 +791,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Divider(color: AppColors.stroke, height: 1),
+                Divider(color: AppColors.stroke, height: 1),
                 const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.secondary,
-                      side: const BorderSide(color: AppColors.stroke),
+                      side: BorderSide(color: AppColors.stroke),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
@@ -831,8 +831,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   value: settings.notifyOnComplete,
                   onChanged: (_) => notifier.toggleNotifyOnComplete(),
                 ),
-                const Divider(color: AppColors.stroke, height: 16),
-                const Row(
+                Divider(color: AppColors.stroke, height: 16),
+                Row(
                   children: [
                     Icon(Icons.shield_outlined, size: 18, color: AppColors.tertiary),
                     SizedBox(width: 8),
@@ -849,7 +849,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const SizedBox(height: 18),
 
             // SECTION: HELP, SYSTEM & ABOUT
-            const Text(
+            Text(
               'INFORMACIJE, POMOĆ I SUSTAV',
               style: TextStyle(
                 fontSize: 11,
@@ -877,7 +877,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   description:
                       'Kopirajte poveznicu željenog videa (YouTube, TikTok, X, Facebook, Streamable...) i zalijepite je u polje na početnom ekranu, ili unutar druge aplikacije kliknite "Dijeli" (Share) i odaberite AllDown.',
                 ),
-                const Divider(color: AppColors.stroke, height: 16),
+                Divider(color: AppColors.stroke, height: 16),
                 _buildHelpStep(
                   icon: Icons.content_cut_rounded,
                   iconColor: AppColors.secondary,
@@ -885,7 +885,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   description:
                       'Nakon preuzimanja otvorite video u kartici "Biblioteka", kliknite na opcije (...) i odaberite "Izreži / Uredi video". Možete precizno odrediti početak i kraj, promijeniti omjer (16:9, 9:16 Shorts/Reels, 1:1 Kvadrat, 4:5, 21:9) te prstom po ekranu pomicati i zumirati kadar.',
                 ),
-                const Divider(color: AppColors.stroke, height: 16),
+                Divider(color: AppColors.stroke, height: 16),
                 _buildHelpStep(
                   icon: Icons.gif_box_rounded,
                   iconColor: AppColors.tertiary,
@@ -893,7 +893,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   description:
                       'U Video Studiju kliknite na "Izradi GIF". Aplikacija koristi napredni Median-Cut 256-bojni algoritam s Floyd-Steinberg ditheringom za oštru sliku. GIF se automatski sprema u sistemsku Galeriju u album Pictures/AllDown.',
                 ),
-                const Divider(color: AppColors.stroke, height: 16),
+                Divider(color: AppColors.stroke, height: 16),
                 _buildHelpStep(
                   icon: Icons.audiotrack_rounded,
                   iconColor: Colors.pinkAccent,
@@ -901,7 +901,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   description:
                       'Prilikom preuzimanja odaberite karticu "Zvuk (Audio)" kako biste preuzeli čisti MP3 (do 320 kbps), M4A ili Opus zapis bez video toka.',
                 ),
-                const Divider(color: AppColors.stroke, height: 16),
+                Divider(color: AppColors.stroke, height: 16),
                 _buildHelpStep(
                   icon: Icons.vpn_key_rounded,
                   iconColor: Colors.amberAccent,
@@ -909,7 +909,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   description:
                       'Uvezite "cookies.txt" datoteku iz vašeg web preglednika unutar kartice "Browser Cookies & Auth" kako biste preuzimali sadržaj koji zahtijeva prijavu ili dobnu potvrdu.',
                 ),
-                const Divider(color: AppColors.stroke, height: 16),
+                Divider(color: AppColors.stroke, height: 16),
                 _buildHelpStep(
                   icon: Icons.folder_special_rounded,
                   iconColor: Colors.tealAccent,
@@ -943,14 +943,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               color: AppColors.surfaceContainerLowest,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Icon(Icons.terminal_rounded, size: 18, color: AppColors.primary),
+                            child: Icon(Icons.terminal_rounded, size: 18, color: AppColors.primary),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
+                                Text(
                                   'Stream Extractor Engine',
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
@@ -958,7 +958,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 Text(
                                   settings.ytDlpVersion,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                                  style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                                 ),
                               ],
                             ),
@@ -973,7 +973,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         color: AppColors.tertiaryContainer.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.check_rounded, size: 12, color: AppColors.tertiary),
@@ -1001,14 +1001,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               color: AppColors.surfaceContainerLowest,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Icon(Icons.hardware_rounded, size: 18, color: AppColors.secondary),
+                            child: Icon(Icons.hardware_rounded, size: 18, color: AppColors.secondary),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
+                                Text(
                                   'Media3 ExoPlayer & Remux',
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
@@ -1016,7 +1016,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 Text(
                                   settings.ffmpegVersion,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                                  style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                                 ),
                               ],
                             ),
@@ -1031,7 +1031,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         color: AppColors.surfaceContainerLowest,
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Text(
+                      child: Text(
                         'HW Accel',
                         style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.secondary),
                       ),
@@ -1069,7 +1069,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       }
                     },
                     icon: _isCheckingUpdate
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
@@ -1086,8 +1086,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 // Repo & License Link
                 TextButton.icon(
                   onPressed: () => launchUrl(Uri.parse('https://github.com/yt-dlp/yt-dlp')),
-                  icon: const Icon(Icons.code_rounded, size: 16, color: AppColors.outline),
-                  label: const Text(
+                  icon: Icon(Icons.code_rounded, size: 16, color: AppColors.outline),
+                  label: Text(
                     'Open Source Licenses & GitHub Repository',
                     style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                   ),
@@ -1099,10 +1099,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _buildExpandableCard(
               icon: Icons.info_outline_rounded,
               iconColor: AppColors.primary,
-              title: 'O Aplikaciji (AllDown)',
-              subtitle: 'Verzija 1.0 (v1.0.0) • Autor: Allen',
-              badge: 'v1.0.0',
-              badgeColor: AppColors.primary,
+              title: 'O Aplikaciji',
+              subtitle: 'Informacije o projektu i podržani servisi',
               initiallyExpanded: false,
               children: [
                 // App Logo Header
@@ -1128,7 +1126,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) => Container(
                             color: AppColors.primaryContainer,
-                            child: const Icon(Icons.download_rounded, size: 30, color: AppColors.primary),
+                            child: Icon(Icons.download_rounded, size: 30, color: AppColors.primary),
                           ),
                         ),
                       ),
@@ -1140,7 +1138,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         children: [
                           Row(
                             children: [
-                              const Text(
+                              Text(
                                 'AllDown',
                                 style: TextStyle(
                                   fontSize: 19,
@@ -1156,7 +1154,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   color: AppColors.primaryContainer.withValues(alpha: 0.5),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: const Text(
+                                child: Text(
                                   'v1.0.0',
                                   style: TextStyle(
                                     fontSize: 10,
@@ -1168,7 +1166,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ],
                           ),
                           const SizedBox(height: 4),
-                          const Text(
+                          Text(
                             'Media Downloader & Video Studio',
                             style: TextStyle(
                               fontSize: 12,
@@ -1181,7 +1179,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                const Divider(color: AppColors.stroke, height: 1),
+                Divider(color: AppColors.stroke, height: 1),
                 const SizedBox(height: 14),
 
                 // App Details Rows
@@ -1203,7 +1201,56 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   icon: Icons.code_rounded,
                   iconColor: AppColors.tertiary,
                   label: 'Licenca',
-                  value: 'Open Source (GPLv3 / MIT)',
+                  value: 'GNU GPL v3.0 (Open Source)',
+                ),
+                const SizedBox(height: 14),
+
+                // Open Source Licenses viewer (official Flutter LicensePage)
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: AppColors.stroke),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () {
+                      showLicensePage(
+                        context: context,
+                        applicationName: 'AllDown',
+                        applicationVersion: '1.0.0',
+                        applicationLegalese: 'Copyright © 2026 Allen\nLicencirano pod GNU General Public License v3.0.',
+                        applicationIcon: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.asset('assets/images/app_logo.png', width: 48, height: 48),
+                          ),
+                        ),
+                      );
+                    },
+                    icon: Icon(Icons.description_outlined, size: 16, color: AppColors.primary),
+                    label: Text(
+                      'Pregled svih licenci (Open Source)',
+                      style: TextStyle(fontSize: 12, color: AppColors.onSurface),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+
+                // GitHub Repository Link
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () => launchUrl(
+                      Uri.parse('https://github.com/vugy0212/Alldown'),
+                      mode: LaunchMode.externalApplication,
+                    ),
+                    icon: Icon(Icons.code_rounded, size: 15, color: AppColors.outline),
+                    label: Text(
+                      'GitHub Repozitorij (vugy0212/Alldown)',
+                      style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
 
@@ -1221,17 +1268,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
                       childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                      leading: const Icon(Icons.hub_rounded, size: 20, color: AppColors.primary),
-                      title: const Text(
+                      leading: Icon(Icons.hub_rounded, size: 20, color: AppColors.primary),
+                      title: Text(
                         'Podržani Servisi i Ekstraktori',
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
                       ),
-                      subtitle: const Text(
+                      subtitle: Text(
                         '12+ testiranih servisa i univerzalni parser',
                         style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                       ),
                       children: [
-                        const Divider(color: AppColors.stroke, height: 1),
+                        Divider(color: AppColors.stroke, height: 1),
                         const SizedBox(height: 8),
                         _buildServiceRow(
                           icon: Icons.play_circle_fill_rounded,
@@ -1329,7 +1376,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.onSurface,
-                      side: const BorderSide(color: AppColors.stroke, width: 1.2),
+                      side: BorderSide(color: AppColors.stroke, width: 1.2),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -1339,7 +1386,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       Uri.parse('https://github.com/vugy0212/Alldown'),
                       mode: LaunchMode.externalApplication,
                     ),
-                    icon: const Icon(Icons.open_in_browser_rounded, size: 18, color: AppColors.primary),
+                    icon: Icon(Icons.open_in_browser_rounded, size: 18, color: AppColors.primary),
                     label: const Text(
                       'Posjeti GitHub Repozitorij',
                       style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
@@ -1367,7 +1414,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         const SizedBox(width: 10),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             color: AppColors.onSurfaceVariant,
           ),
@@ -1375,7 +1422,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         const Spacer(),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.bold,
             color: AppColors.onSurface,
@@ -1405,7 +1452,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: AppColors.onSurface,
@@ -1420,7 +1467,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                       child: Text(
                         badge,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
                           color: AppColors.tertiary,
@@ -1432,7 +1479,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
               ),
             ],
           ),
@@ -1527,7 +1574,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                     color: AppColors.onSurface,
@@ -1561,7 +1608,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           subtitle: Text(
             subtitle,
-            style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+            style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
             overflow: TextOverflow.ellipsis,
           ),
           iconColor: iconColor,
@@ -1588,12 +1635,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             children: [
               Text(
                 title,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
                 overflow: TextOverflow.ellipsis,
               ),
               Text(
                 subtitle,
-                style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                 overflow: TextOverflow.ellipsis,
               ),
             ],
@@ -1612,8 +1659,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             isDense: true,
             dropdownColor: AppColors.surfaceContainerHigh,
             underline: const SizedBox.shrink(),
-            icon: const Icon(Icons.expand_more_rounded, size: 16, color: AppColors.secondary),
-            style: const TextStyle(
+            icon: Icon(Icons.expand_more_rounded, size: 16, color: AppColors.secondary),
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
               color: AppColors.secondary,
@@ -1653,11 +1700,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               children: [
                 Text(
                   name,
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.onSurface),
                 ),
                 Text(
                   description,
-                  style: const TextStyle(fontSize: 10, color: AppColors.onSurfaceVariant),
+                  style: TextStyle(fontSize: 10, color: AppColors.onSurfaceVariant),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -1671,7 +1718,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             child: Text(
               badge,
-              style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.tertiary),
+              style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.tertiary),
             ),
           ),
         ],
@@ -1707,7 +1754,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                     color: AppColors.onSurface,
@@ -1716,7 +1763,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 const SizedBox(height: 2),
                 Text(
                   description,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     color: AppColors.onSurfaceVariant,
                     height: 1.35,

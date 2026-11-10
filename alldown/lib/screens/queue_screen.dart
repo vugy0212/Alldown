@@ -136,7 +136,7 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 4),
-                                const Icon(
+                                Icon(
                                   Icons.south_rounded,
                                   size: 18,
                                   color: AppColors.secondary,
@@ -150,7 +150,7 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
                               color: AppColors.surfaceContainerHigh,
                               borderRadius: BorderRadius.circular(14),
                             ),
-                            child: const Row(
+                            child: Row(
                               children: [
                                 Icon(Icons.wifi_rounded, size: 13, color: AppColors.secondary),
                                 SizedBox(width: 4),
@@ -175,13 +175,13 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
                             child: Text(
                               '$activeCount Active • ${queueNotifier.queuedCount} Queued',
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+                              style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Text(
                             activeCount > 0 ? 'Engine: Active' : 'Status: Idle',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: AppColors.secondary,
@@ -216,7 +216,7 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
                             color: AppColors.surfaceContainerHigh,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Text(
+                          child: Text(
                             'High Priority',
                             style: TextStyle(
                               fontSize: 10,
@@ -229,11 +229,11 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
                     ),
                     TextButton.icon(
                       onPressed: () {},
-                      icon: const Text(
+                      icon: Text(
                         'Auto-Order',
                         style: TextStyle(fontSize: 12, color: AppColors.secondary),
                       ),
-                      label: const Icon(
+                      label: Icon(
                         Icons.swap_vert_rounded,
                         size: 16,
                         color: AppColors.secondary,
@@ -256,7 +256,7 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
                       children: [
                         Icon(Icons.inbox_rounded, size: 48, color: AppColors.outline.withValues(alpha: 0.5)),
                         const SizedBox(height: 12),
-                        const Text(
+                        Text(
                           'No tasks in this category',
                           style: TextStyle(color: AppColors.outline),
                         ),
@@ -357,7 +357,7 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: IconButton(
-                          icon: const Icon(Icons.tune_rounded, size: 20, color: AppColors.onPrimaryContainer),
+                          icon: Icon(Icons.tune_rounded, size: 20, color: AppColors.onPrimaryContainer),
                           padding: EdgeInsets.zero,
                           onPressed: () {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -372,11 +372,11 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.check_circle_rounded, size: 12, color: AppColors.tertiary),
+                      Icon(Icons.check_circle_rounded, size: 12, color: AppColors.tertiary),
                       const SizedBox(width: 4),
                       Text(
                         'Concurrency Limit: Max ${settings.maxConcurrentDownloads} Parallel Tasks Enabled',
-                        style: const TextStyle(fontSize: 10, color: AppColors.onSurfaceVariant),
+                        style: TextStyle(fontSize: 10, color: AppColors.onSurfaceVariant),
                       ),
                     ],
                   ),

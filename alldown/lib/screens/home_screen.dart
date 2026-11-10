@@ -173,7 +173,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Row(
+                      Row(
                         children: [
                           Icon(Icons.link_rounded, size: 18, color: AppColors.secondary),
                           SizedBox(width: 6),
@@ -196,7 +196,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             color: AppColors.surfaceContainerHigh,
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.content_paste_rounded, size: 13, color: AppColors.primary),
@@ -227,7 +227,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Row(
                       children: [
-                        const Icon(Icons.search_rounded, color: AppColors.outline, size: 20),
+                        Icon(Icons.search_rounded, color: AppColors.outline, size: 20),
                         const SizedBox(width: 8),
                         Expanded(
                           child: TextField(
@@ -237,11 +237,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               notifier.setUrl(val);
                               notifier.fetchMetadata();
                             },
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppColors.onSurface,
                               fontSize: 13,
                             ),
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               hintText: 'Paste link from YouTube, Vimeo, TikTok, Bilibili...',
                               hintStyle: TextStyle(color: AppColors.outline, fontSize: 13),
                               border: InputBorder.none,
@@ -294,7 +294,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             if (state.isAnalyzing) ...[
-                              const SizedBox(
+                              SizedBox(
                                 width: 18,
                                 height: 18,
                                 child: CircularProgressIndicator(
@@ -304,7 +304,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               ),
                               const SizedBox(width: 8),
                             ] else ...[
-                              const Icon(
+                              Icon(
                                 Icons.auto_awesome_rounded,
                                 size: 18,
                                 color: AppColors.onPrimaryContainer,
@@ -315,7 +315,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               child: Text(
                                 state.analyzeButtonText,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.onPrimaryContainer,
@@ -364,7 +364,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         state.url.isNotEmpty ? state.url : 'Connecting to stream...',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           color: AppColors.secondary,
                           fontFamily: 'monospace',
@@ -393,14 +393,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         shape: BoxShape.circle,
                         border: Border.all(color: AppColors.primaryAccent.withValues(alpha: 0.3)),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.smart_display_outlined,
                         size: 28,
                         color: AppColors.primary,
                       ),
                     ),
                     const SizedBox(height: 12),
-                    const Text(
+                    Text(
                       'No media link detected',
                       style: TextStyle(
                         fontSize: 15,
@@ -409,7 +409,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
+                    Text(
                       'Paste a YouTube, Shorts, TikTok, or video link above to view metadata, format options, and start downloading.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
@@ -422,7 +422,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.primary,
-                        side: const BorderSide(color: AppColors.primary),
+                        side: BorderSide(color: AppColors.primary),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                       onPressed: _onPaste,
@@ -456,7 +456,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               child: Image.network(
                                 media.thumbnailUrl,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, _, _) => const Center(
+                                errorBuilder: (_, _, _) => Center(
                                   child: Icon(Icons.movie_rounded, color: AppColors.outline, size: 40),
                                 ),
                               ),
@@ -476,11 +476,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   ),
                                   child: Row(
                                     children: [
-                                      const Icon(Icons.high_quality_rounded, size: 13, color: AppColors.secondary),
+                                      Icon(Icons.high_quality_rounded, size: 13, color: AppColors.secondary),
                                       const SizedBox(width: 3),
                                       Text(
                                         media.badgeText,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 10,
                                           fontWeight: FontWeight.bold,
                                           color: AppColors.secondary,
@@ -524,7 +524,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 color: AppColors.surfaceContainerLowest.withValues(alpha: 0.9),
                                 borderRadius: BorderRadius.circular(6),
                               ),
-                              child: const Row(
+                              child: Row(
                                 children: [
                                   Icon(Icons.circle, size: 6, color: AppColors.tertiary),
                                   SizedBox(width: 4),
@@ -583,7 +583,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           child: Text(
                             media.channel,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                               color: AppColors.onSurface,
@@ -591,11 +591,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        const Text('•', style: TextStyle(color: AppColors.outline)),
+                        Text('•', style: TextStyle(color: AppColors.outline)),
                         const SizedBox(width: 6),
                         Text(
                           media.subscribers,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                             color: AppColors.secondary,
@@ -611,17 +611,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       children: [
                         Text(
                           media.uploadTime,
-                          style: const TextStyle(fontSize: 12, color: AppColors.outline),
+                          style: TextStyle(fontSize: 12, color: AppColors.outline),
                         ),
-                        const Text('•', style: TextStyle(color: AppColors.outline)),
+                        Text('•', style: TextStyle(color: AppColors.outline)),
                         Text(
                           media.viewCount,
-                          style: const TextStyle(fontSize: 12, color: AppColors.outline),
+                          style: TextStyle(fontSize: 12, color: AppColors.outline),
                         ),
-                        const Text('•', style: TextStyle(color: AppColors.outline)),
+                        Text('•', style: TextStyle(color: AppColors.outline)),
                         Text(
                           media.license,
-                          style: const TextStyle(fontSize: 12, color: AppColors.tertiary),
+                          style: TextStyle(fontSize: 12, color: AppColors.tertiary),
                         ),
                       ],
                     ),
@@ -640,7 +640,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                 ),
-                const Row(
+                Row(
                   children: [
                     Icon(Icons.tune_rounded, size: 14, color: AppColors.secondary),
                     SizedBox(width: 4),
@@ -737,7 +737,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   state.options.format == TargetFormat.audioMp3
                                       ? 'Audio Bitrate & Quality'
                                       : 'Resolution & Stream Quality',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,
                                     color: AppColors.onSurface,
@@ -746,7 +746,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 const SizedBox(height: 2),
                                 Text(
                                   _selectedQualitySubtitle(state.options),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 11,
                                     color: AppColors.onSurfaceVariant,
                                   ),
@@ -762,7 +762,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             child: Text(
                               _selectedQualityBadge(state.options),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.primary,
@@ -773,7 +773,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           AnimatedRotation(
                             turns: _isQualityExpanded ? 0.5 : 0.0,
                             duration: const Duration(milliseconds: 200),
-                            child: const Icon(
+                            child: Icon(
                               Icons.keyboard_arrow_down_rounded,
                               color: AppColors.outline,
                               size: 20,
@@ -789,7 +789,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                       child: Column(
                         children: [
-                          const Divider(color: AppColors.stroke, height: 12),
+                          Divider(color: AppColors.stroke, height: 12),
                           if (state.options.format == TargetFormat.audioMp3) ...[
                             _buildQualityCard(
                               title: '320 kbps (High Quality)',
@@ -876,7 +876,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 color: AppColors.surfaceContainerHighest,
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: const Row(
+                              child: Row(
                                 children: [
                                   Icon(Icons.terminal_rounded, size: 20, color: AppColors.secondary),
                                   SizedBox(width: 10),
@@ -931,14 +931,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               color: AppColors.surfaceContainerHigh,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.settings_suggest_rounded,
                               size: 18,
                               color: AppColors.secondary,
                             ),
                           ),
                           const SizedBox(width: 12),
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -969,7 +969,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             child: Text(
                               _preProcessingBadge(state.options),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.secondary,
@@ -980,7 +980,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           AnimatedRotation(
                             turns: _isPreProcessingExpanded ? 0.5 : 0.0,
                             duration: const Duration(milliseconds: 200),
-                            child: const Icon(
+                            child: Icon(
                               Icons.keyboard_arrow_down_rounded,
                               color: AppColors.outline,
                               size: 20,
@@ -996,7 +996,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
                       child: Column(
                         children: [
-                          const Divider(color: AppColors.stroke, height: 12),
+                          Divider(color: AppColors.stroke, height: 12),
                           _buildToggleTile(
                             title: 'Create subfolder with title',
                             subtitle: 'Organizes media by artist and stream name',
@@ -1004,7 +1004,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             value: state.options.createSubfolder,
                             onChanged: (_) => notifier.toggleSubfolder(),
                           ),
-                          const Divider(color: AppColors.stroke, height: 16),
+                          Divider(color: AppColors.stroke, height: 16),
                           _buildToggleTile(
                             title: 'Embed Subtitles',
                             subtitle: 'Auto-detect CC: hr, sr, bs, en',
@@ -1012,7 +1012,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             value: state.options.embedSubtitles,
                             onChanged: (_) => notifier.toggleEmbedSubtitles(),
                           ),
-                          const Divider(color: AppColors.stroke, height: 16),
+                          Divider(color: AppColors.stroke, height: 16),
                           _buildToggleTile(
                             title: 'Save Media Server Metadata',
                             subtitle: 'Generate Plex / Jellyfin compatible .NFO & poster',
@@ -1091,7 +1091,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               ? 'Added to Transfer Queue'
                               : 'Start Download (${_selectedActionLabel(state.options)})',
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: AppColors.onPrimaryContainer,
@@ -1234,7 +1234,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                           child: Text(
                             tag,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.bold,
                               color: AppColors.secondary,
@@ -1253,11 +1253,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.thumb_up_rounded, size: 10, color: AppColors.onTertiaryContainer),
+                              Icon(Icons.thumb_up_rounded, size: 10, color: AppColors.onTertiaryContainer),
                               const SizedBox(width: 3),
                               Text(
                                 badge,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.onTertiaryContainer,
@@ -1272,7 +1272,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                    style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -1299,7 +1299,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     color: selected ? AppColors.primary : AppColors.surfaceContainerHighest,
                   ),
                   child: selected
-                      ? const Center(
+                      ? Center(
                           child: Icon(Icons.check, size: 14, color: AppColors.onPrimary),
                         )
                       : null,
@@ -1333,7 +1333,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: AppColors.onSurface,
@@ -1342,7 +1342,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: const TextStyle(fontSize: 11, color: AppColors.outline),
+                      style: TextStyle(fontSize: 11, color: AppColors.outline),
                     ),
                   ],
                 ),

@@ -117,6 +117,17 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     _storage.saveSettings(state);
   }
 
+  void toggleTheme() {
+    final next = !state.isDarkMode;
+    state = state.copyWith(isDarkMode: next);
+    _storage.saveSettings(state);
+  }
+
+  void setDarkMode(bool isDark) {
+    state = state.copyWith(isDarkMode: isDark);
+    _storage.saveSettings(state);
+  }
+
   void resetAllSettings() {
     state = const AppSettings();
     _storage.saveSettings(state);

@@ -351,7 +351,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.94,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surfaceContainer,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -371,10 +371,10 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                         color: AppColors.primaryContainer,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(Icons.content_cut_rounded, size: 16, color: AppColors.onPrimaryContainer),
+                      child: Icon(Icons.content_cut_rounded, size: 16, color: AppColors.onPrimaryContainer),
                     ),
                     const SizedBox(width: 8),
-                    const Text(
+                    Text(
                       'Video Studio • Trim, Crop & GIF',
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.onSurface),
                     ),
@@ -388,7 +388,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
               ],
             ),
           ),
-          const Divider(color: AppColors.stroke, height: 1),
+          Divider(color: AppColors.stroke, height: 1),
 
           // Scrollable Editor Controls
           Expanded(
@@ -482,7 +482,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                               ),
                             )
                           else
-                            const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+                            Center(child: CircularProgressIndicator(color: AppColors.primary)),
 
                           // Play / Pause Overlay Button
                           if (_isInitialized && _controller != null)
@@ -524,7 +524,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.crop_rounded, size: 12, color: AppColors.secondary),
+                                  Icon(Icons.crop_rounded, size: 12, color: AppColors.secondary),
                                   const SizedBox(width: 4),
                                   Text(
                                     '${_selectedCrop == 'original' ? 'Original' : _selectedCrop} • ${_zoom.toStringAsFixed(1)}x',
@@ -578,7 +578,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                                   color: Colors.black.withValues(alpha: 0.65),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: const Row(
+                                child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(Icons.touch_app_rounded, size: 12, color: AppColors.onSurfaceVariant),
@@ -601,7 +601,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Vremenski isječak (Trim)',
                           style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
@@ -617,7 +617,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                         ),
                         child: Text(
                           '$startFormatted - $endFormatted (${clipDurationSec}s)',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                             color: AppColors.primary,
@@ -639,7 +639,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                   const SizedBox(height: 14),
 
                   // 2. Crop Aspect Ratio Section
-                  const Text(
+                  Text(
                     'Omjer kadra (Aspect Ratio)',
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
                   ),
@@ -676,7 +676,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Expanded(
+                            Expanded(
                               child: Row(
                                 children: [
                                   Icon(Icons.zoom_in_rounded, size: 16, color: AppColors.secondary),
@@ -704,7 +704,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                                     color: AppColors.surfaceContainerHighest,
                                     borderRadius: BorderRadius.circular(6),
                                   ),
-                                  child: const Text(
+                                  child: Text(
                                     'Resetiraj',
                                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.secondary),
                                   ),
@@ -752,7 +752,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                               child: Text(
                                 '${_zoom.toStringAsFixed(1)}x',
                                 textAlign: TextAlign.right,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.secondary,
@@ -766,7 +766,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                         // Pan Controls: Horizontal & Vertical Sliders with zero overflow risk
                         if (_zoom > 1.05 || _selectedCrop != 'original') ...[
                           const SizedBox(height: 8),
-                          const Row(
+                          Row(
                             children: [
                               Icon(Icons.open_with_rounded, size: 14, color: AppColors.onSurfaceVariant),
                               SizedBox(width: 6),
@@ -782,7 +782,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                           const SizedBox(height: 6),
                           Row(
                             children: [
-                              const SizedBox(
+                              SizedBox(
                                 width: 20,
                                 child: Text('X:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.onSurfaceVariant)),
                               ),
@@ -800,7 +800,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              const SizedBox(
+                              SizedBox(
                                 width: 20,
                                 child: Text('Y:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.onSurfaceVariant)),
                               ),
@@ -837,7 +837,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                       ),
                       child: Column(
                         children: [
-                          const SizedBox(
+                          SizedBox(
                             width: 24,
                             height: 24,
                             child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.primary),
@@ -845,7 +845,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                           const SizedBox(height: 12),
                           Text(
                             _processingMessage,
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
                           ),
                         ],
                       ),
@@ -860,7 +860,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
           // FIXED BOTTOM ACTION BAR - Never overlaps with system navigation buttons
           Container(
             padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottomNavPadding),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: AppColors.surfaceContainerLow,
               border: Border(top: BorderSide(color: AppColors.stroke, width: 1)),
             ),
@@ -888,8 +888,8 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                       onPressed: _isProcessing ? null : _exportVideo,
-                      icon: const Icon(Icons.content_cut_rounded, size: 18, color: AppColors.onPrimaryContainer),
-                      label: const Text(
+                      icon: Icon(Icons.content_cut_rounded, size: 18, color: AppColors.onPrimaryContainer),
+                      label: Text(
                         'Spremi Video',
                         style: TextStyle(
                           fontSize: 13,
@@ -918,8 +918,8 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                       onPressed: _isProcessing ? null : _exportGif,
-                      icon: const Icon(Icons.gif_rounded, size: 22, color: AppColors.secondary),
-                      label: const Text(
+                      icon: Icon(Icons.gif_rounded, size: 22, color: AppColors.secondary),
+                      label: Text(
                         'Izradi GIF',
                         style: TextStyle(
                           fontSize: 13,

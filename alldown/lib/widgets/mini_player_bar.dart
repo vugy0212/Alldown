@@ -48,11 +48,11 @@ class MiniPlayerBar extends ConsumerWidget {
                         ? Image.network(
                             item.thumbnailUrl,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => const Center(
+                            errorBuilder: (_, _, _) => Center(
                               child: Icon(Icons.play_circle_fill_rounded, color: AppColors.secondary, size: 20),
                             ),
                           )
-                        : const Center(
+                        : Center(
                             child: Icon(Icons.play_circle_fill_rounded, color: AppColors.secondary, size: 20),
                           ),
                   ),
@@ -134,7 +134,7 @@ class MiniPlayerBar extends ConsumerWidget {
               children: [
                 Text(
                   player.positionFormatted,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
                     fontFamily: 'monospace',
                     color: AppColors.onSurfaceVariant,
@@ -158,7 +158,7 @@ class MiniPlayerBar extends ConsumerWidget {
                         child: LinearProgressIndicator(
                           value: player.progressFraction,
                           backgroundColor: AppColors.surfaceContainerLowest,
-                          valueColor: const AlwaysStoppedAnimation<Color>(AppColors.secondary),
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
                         ),
                       ),
                     ),
@@ -167,7 +167,7 @@ class MiniPlayerBar extends ConsumerWidget {
                 const SizedBox(width: 8),
                 Text(
                   player.durationFormatted,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
                     fontFamily: 'monospace',
                     color: AppColors.onSurfaceVariant,

@@ -108,16 +108,16 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Row(
                 children: [
-                  const Icon(Icons.search_rounded, color: AppColors.outline, size: 20),
+                  Icon(Icons.search_rounded, color: AppColors.outline, size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: TextField(
                       controller: _searchController,
                       onChanged: libraryNotifier.setSearchQuery,
-                      style: const TextStyle(color: AppColors.onSurface, fontSize: 13),
+                      style: TextStyle(color: AppColors.onSurface, fontSize: 13),
                       decoration: InputDecoration(
                         hintText: 'Search ${libraryState.items.length} downloaded media files...',
-                        hintStyle: const TextStyle(color: AppColors.outline, fontSize: 13),
+                        hintStyle: TextStyle(color: AppColors.outline, fontSize: 13),
                         border: InputBorder.none,
                         isDense: true,
                       ),
@@ -191,20 +191,20 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.storage_rounded, size: 18, color: AppColors.secondary),
+                            Icon(Icons.storage_rounded, size: 18, color: AppColors.secondary),
                             const SizedBox(width: 8),
                             Flexible(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
+                                  Text(
                                     'Local Storage Used',
                                     style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                                   ),
                                   Text(
                                     _calculateRealStorageUsed(libraryState.items),
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
                                       color: AppColors.onSurface,
@@ -282,9 +282,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                                 children: [
                                   Text(
                                     _sortLabel(libraryState.sort),
-                                    style: const TextStyle(fontSize: 11, color: AppColors.onSurface),
+                                    style: TextStyle(fontSize: 11, color: AppColors.onSurface),
                                   ),
-                                  const Icon(Icons.arrow_drop_down_rounded, size: 16, color: AppColors.outline),
+                                  Icon(Icons.arrow_drop_down_rounded, size: 16, color: AppColors.outline),
                                 ],
                               ),
                             ),
@@ -340,7 +340,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   children: [
                     Icon(Icons.video_library_outlined, size: 48, color: AppColors.outline.withValues(alpha: 0.6)),
                     const SizedBox(height: 12),
-                    const Text(
+                    Text(
                       'No downloaded media files yet',
                       style: TextStyle(
                         fontSize: 15,
@@ -349,7 +349,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
+                    Text(
                       'Videos and audio tracks you download will appear here and can be played directly inside AllDown.',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 12, color: AppColors.outline),

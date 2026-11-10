@@ -68,7 +68,7 @@ class LibraryItemCard extends StatelessWidget {
                 ),
                 if (!item.isAudio && !isGif)
                   ListTile(
-                    leading: const Icon(Icons.content_cut_rounded, color: AppColors.secondary),
+                    leading: Icon(Icons.content_cut_rounded, color: AppColors.secondary),
                     title: const Text('Trim, Crop & Make GIF'),
                     subtitle: const Text('Izreži isječak, prilagodi kadar ili izradi GIF'),
                     onTap: () {
@@ -77,7 +77,7 @@ class LibraryItemCard extends StatelessWidget {
                     },
                   ),
                 ListTile(
-                  leading: const Icon(Icons.share_outlined, color: AppColors.outline),
+                  leading: Icon(Icons.share_outlined, color: AppColors.outline),
                   title: const Text('Share / Open Externally'),
                   onTap: () {
                     Navigator.pop(ctx);
@@ -90,7 +90,7 @@ class LibraryItemCard extends StatelessWidget {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.folder_open_outlined, color: AppColors.outline),
+                  leading: Icon(Icons.folder_open_outlined, color: AppColors.outline),
                   title: const Text('Show File Path'),
                   onTap: () {
                     Navigator.pop(ctx);
@@ -100,7 +100,7 @@ class LibraryItemCard extends StatelessWidget {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.content_copy_rounded, color: AppColors.outline),
+                  leading: Icon(Icons.content_copy_rounded, color: AppColors.outline),
                   title: const Text('Copy Path'),
                   onTap: () {
                     Clipboard.setData(ClipboardData(text: item.localPath));
@@ -121,7 +121,7 @@ class LibraryItemCard extends StatelessWidget {
                     onToggleFavorite();
                   },
                 ),
-                const Divider(color: AppColors.stroke),
+                Divider(color: AppColors.stroke),
                 ListTile(
                   leading: const Icon(Icons.delete_outline_rounded, color: AppColors.errorAccent),
                   title: const Text('Delete File', style: TextStyle(color: AppColors.errorAccent)),
@@ -277,7 +277,7 @@ class LibraryItemCard extends StatelessWidget {
                         ),
                         child: Text(
                           item.resolution,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                             color: AppColors.secondary,
@@ -292,7 +292,7 @@ class LibraryItemCard extends StatelessWidget {
                         ),
                         child: Text(
                           item.format,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 10,
                             color: AppColors.onSurfaceVariant,
                           ),
@@ -306,7 +306,7 @@ class LibraryItemCard extends StatelessWidget {
                         ),
                         child: Text(
                           item.sizeFormatted,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 10,
                             color: AppColors.onSurfaceVariant,
                           ),
@@ -342,7 +342,7 @@ class LibraryItemCard extends StatelessWidget {
                   // Date completed
                   Row(
                     children: [
-                      const Icon(Icons.check_circle_rounded, size: 12, color: AppColors.tertiary),
+                      Icon(Icons.check_circle_rounded, size: 12, color: AppColors.tertiary),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
@@ -391,11 +391,11 @@ class LibraryItemCard extends StatelessWidget {
                           ? Image.network(
                               item.thumbnailUrl,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => const Center(
+                              errorBuilder: (_, _, _) => Center(
                                 child: Icon(Icons.movie_rounded, color: AppColors.outline),
                               ),
                             )
-                          : const Center(
+                          : Center(
                               child: Icon(Icons.movie_rounded, color: AppColors.outline),
                             ),
                     ),
@@ -452,7 +452,7 @@ class LibraryItemCard extends StatelessWidget {
                         child: Text(
                           item.resolution,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                             color: AppColors.secondary,
@@ -462,7 +462,7 @@ class LibraryItemCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         item.sizeFormatted,
-                        style: const TextStyle(fontSize: 10, color: AppColors.outline),
+                        style: TextStyle(fontSize: 10, color: AppColors.outline),
                       ),
                     ],
                   ),

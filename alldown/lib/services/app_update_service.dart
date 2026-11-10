@@ -105,7 +105,7 @@ class AppUpdateService {
       builder: (ctx) {
         return Container(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: AppColors.surfaceContainer,
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
             border: Border(top: BorderSide(color: AppColors.stroke, width: 1)),
@@ -137,7 +137,7 @@ class AppUpdateService {
                       color: AppColors.primaryContainer,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.system_update_rounded,
                       color: AppColors.onPrimaryContainer,
                       size: 24,
@@ -150,7 +150,7 @@ class AppUpdateService {
                       children: [
                         Text(
                           info.isNewer ? 'Dostupna je nova verzija!' : 'Aplikacija je ažurna',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: AppColors.onSurface,
@@ -159,7 +159,7 @@ class AppUpdateService {
                         const SizedBox(height: 2),
                         Text(
                           'Trenutna: v$currentVersion • Nova: ${info.tagName}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             color: AppColors.secondary,
                             fontWeight: FontWeight.w600,
@@ -203,7 +203,7 @@ class AppUpdateService {
                   children: [
                     Text(
                       info.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
@@ -212,7 +212,7 @@ class AppUpdateService {
                     const SizedBox(height: 8),
                     Text(
                       info.notes,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: AppColors.onSurfaceVariant,
                         height: 1.45,
@@ -230,7 +230,7 @@ class AppUpdateService {
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.onSurfaceVariant,
-                        side: const BorderSide(color: AppColors.stroke),
+                        side: BorderSide(color: AppColors.stroke),
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),

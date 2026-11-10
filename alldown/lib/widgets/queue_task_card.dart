@@ -154,7 +154,7 @@ class QueueTaskCard extends StatelessWidget {
                               color: AppColors.tertiaryContainer.withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 SizedBox(
@@ -186,7 +186,7 @@ class QueueTaskCard extends StatelessWidget {
                             ),
                             child: Text(
                               task.format,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.secondary,
@@ -201,7 +201,7 @@ class QueueTaskCard extends StatelessWidget {
                           ),
                           child: Text(
                             task.subtitleInfo,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 10,
                               color: AppColors.onSurfaceVariant,
                             ),
@@ -294,7 +294,7 @@ class QueueTaskCard extends StatelessWidget {
                 Expanded(
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.timer_outlined,
                         size: 14,
                         color: AppColors.onSurfaceVariant,
@@ -373,7 +373,7 @@ class QueueTaskCard extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Row(
                       children: [
                         Icon(
@@ -408,7 +408,7 @@ class QueueTaskCard extends StatelessWidget {
                             color: AppColors.primaryAccent.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: const Row(
+                          child: Row(
                             children: [
                               Icon(Icons.play_arrow_rounded, size: 14, color: AppColors.primary),
                               SizedBox(width: 2),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
 
 class CustomHeader extends ConsumerWidget implements PreferredSizeWidget {
@@ -17,12 +18,15 @@ class CustomHeader extends ConsumerWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider);
+    final isDark = settings.isDarkMode;
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface.withValues(alpha: 0.95),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
             blurRadius: 8,
             offset: const Offset(0, 1),
           ),
@@ -63,13 +67,66 @@ class CustomHeader extends ConsumerWidget implements PreferredSizeWidget {
               const SizedBox(width: 12),
 
               // Title: AllDown only
-              const Text(
+              Text(
                 'AllDown',
                 style: TextStyle(
                   fontSize: 21,
                   fontWeight: FontWeight.bold,
                   color: AppColors.onSurface,
                   letterSpacing: 0.4,
+                ),
+              ),
+
+              const Spacer(),
+
+              // Theme Switch (Dark / Light) in top right corner
+              GestureDetector(
+                onTap: () => ref.read(settingsProvider.notifier).toggleTheme(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.stroke, width: 0.8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                        size: 15,
+                        color: isDark ? AppColors.secondary : const Color(0xFFF59E0B),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        isDark ? 'Dark' : 'Light',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.onSurface,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      SizedBox(
+                        height: 20,
+                        width: 32,
+                        child: FittedBox(
+                          fit: BoxFit.contain,
+                          child: Switch(
+                            value: isDark,
+                            onChanged: (val) {
+                              ref.read(settingsProvider.notifier).setDarkMode(val);
+                            },
+                            activeThumbColor: AppColors.secondary,
+                            activeTrackColor: AppColors.primaryContainer.withValues(alpha: 0.4),
+                            inactiveThumbColor: const Color(0xFFF59E0B),
+                            inactiveTrackColor: AppColors.surfaceContainerLowest,
+                            trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],

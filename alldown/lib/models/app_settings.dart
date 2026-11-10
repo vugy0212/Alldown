@@ -30,6 +30,7 @@ class AppSettings {
   final String userAgent;
   final int connectionTimeout;
   final bool notifyOnComplete;
+  final bool isDarkMode;
 
   const AppSettings({
     this.downloadDirectory = "/storage/emulated/0/Download/AllDown",
@@ -49,6 +50,7 @@ class AppSettings {
     this.userAgent = "Android Chrome",
     this.connectionTimeout = 15,
     this.notifyOnComplete = true,
+    this.isDarkMode = true,
   });
 
   AppSettings copyWith({
@@ -69,6 +71,7 @@ class AppSettings {
     String? userAgent,
     int? connectionTimeout,
     bool? notifyOnComplete,
+    bool? isDarkMode,
   }) {
     return AppSettings(
       downloadDirectory: downloadDirectory ?? this.downloadDirectory,
@@ -88,6 +91,7 @@ class AppSettings {
       userAgent: userAgent ?? this.userAgent,
       connectionTimeout: connectionTimeout ?? this.connectionTimeout,
       notifyOnComplete: notifyOnComplete ?? this.notifyOnComplete,
+      isDarkMode: isDarkMode ?? this.isDarkMode,
     );
   }
 
@@ -109,6 +113,7 @@ class AppSettings {
     'userAgent': userAgent,
     'connectionTimeout': connectionTimeout,
     'notifyOnComplete': notifyOnComplete,
+    'isDarkMode': isDarkMode,
   };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -136,6 +141,7 @@ class AppSettings {
       userAgent: json['userAgent'] as String? ?? "Android Chrome",
       connectionTimeout: json['connectionTimeout'] as int? ?? 15,
       notifyOnComplete: json['notifyOnComplete'] as bool? ?? true,
+      isDarkMode: json['isDarkMode'] as bool? ?? true,
     );
   }
 }

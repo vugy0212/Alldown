@@ -93,7 +93,7 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
           Container(
             decoration: BoxDecoration(
               color: AppColors.surfaceContainerLow.withValues(alpha: 0.95),
-              border: const Border(
+              border: Border(
                 top: BorderSide(color: AppColors.stroke, width: 1),
               ),
               boxShadow: [
@@ -195,7 +195,7 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
                       ),
                       child: Text(
                         '$badgeCount',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
                           color: AppColors.onSecondaryContainer,

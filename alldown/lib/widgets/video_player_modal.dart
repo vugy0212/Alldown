@@ -40,7 +40,7 @@ class VideoPlayerModal extends ConsumerWidget {
         : 16 / 9;
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surfaceContainerLow,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         border: Border(top: BorderSide(color: AppColors.stroke, width: 1)),
@@ -173,7 +173,7 @@ class VideoPlayerModal extends ConsumerWidget {
                                   Text(
                                     playerState.errorMessage!,
                                     textAlign: TextAlign.center,
-                                    style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12),
+                                    style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12),
                                   ),
                                 ],
                               ),
@@ -198,7 +198,7 @@ class VideoPlayerModal extends ConsumerWidget {
                                               errorBuilder: (_, _, _) => const SizedBox.shrink(),
                                             ),
                                           Container(color: Colors.black.withValues(alpha: 0.55)),
-                                          const Center(
+                                          Center(
                                             child: Icon(
                                               Icons.graphic_eq_rounded,
                                               size: 64,
@@ -233,7 +233,7 @@ class VideoPlayerModal extends ConsumerWidget {
                 '${item.channel} • ${item.format} • ${item.sizeFormatted}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, color: AppColors.secondary),
+                style: TextStyle(fontSize: 12, color: AppColors.secondary),
               ),
               const SizedBox(height: 12),
 
@@ -246,7 +246,7 @@ class VideoPlayerModal extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: AppColors.stroke),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.all_inclusive_rounded, size: 18, color: AppColors.secondary),
@@ -286,7 +286,7 @@ class VideoPlayerModal extends ConsumerWidget {
                     children: [
                       Text(
                         playerState.positionFormatted,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
                           fontFamily: 'monospace',
                           color: AppColors.onSurfaceVariant,
@@ -294,7 +294,7 @@ class VideoPlayerModal extends ConsumerWidget {
                       ),
                       Text(
                         playerState.durationFormatted,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
                           fontFamily: 'monospace',
                           color: AppColors.onSurfaceVariant,
@@ -352,7 +352,7 @@ class VideoPlayerModal extends ConsumerWidget {
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.secondary,
-                    side: const BorderSide(color: AppColors.stroke),
+                    side: BorderSide(color: AppColors.stroke),
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
