@@ -193,23 +193,15 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
         final durSeconds = ((endMs - startMs) / 1000).round();
         final durStr = '${(durSeconds ~/ 60).toString().padLeft(2, '0')}:${(durSeconds % 60).toString().padLeft(2, '0')}';
 
-        // Copy to public gallery folders (Movies and Downloads) so Samsung Gallery sees it immediately
-        String? galleryPath;
+        // Copy to public gallery folder (Movies/AllDown) once so Samsung Gallery displays it without duplication
+        String savedPath = outPath;
         try {
-          final picturesDir = Directory('/storage/emulated/0/Movies/AllDown');
-          if (!picturesDir.existsSync()) picturesDir.createSync(recursive: true);
-          final pubFile = File('${picturesDir.path}/Trimmed_$timeStamp.mp4');
+          final moviesDir = Directory('/storage/emulated/0/Movies/AllDown');
+          if (!moviesDir.existsSync()) moviesDir.createSync(recursive: true);
+          final pubFile = File('${moviesDir.path}/Trimmed_$timeStamp.mp4');
           File(outPath).copySync(pubFile.path);
-          galleryPath = pubFile.path;
-          VideoEditorService.scanMediaFile(path: galleryPath, mimeType: 'video/mp4');
-        } catch (_) {}
-
-        try {
-          final pubDir = Directory('/storage/emulated/0/Download/AllDown/Videos');
-          if (!pubDir.existsSync()) pubDir.createSync(recursive: true);
-          final pubFile = File('${pubDir.path}/Trimmed_$timeStamp.mp4');
-          File(outPath).copySync(pubFile.path);
-          VideoEditorService.scanMediaFile(path: pubFile.path, mimeType: 'video/mp4');
+          savedPath = pubFile.path;
+          VideoEditorService.scanMediaFile(path: savedPath, mimeType: 'video/mp4');
         } catch (_) {}
 
         // Add to library
@@ -223,7 +215,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
           completedDateFormatted: 'Danas',
           duration: durStr,
           thumbnailUrl: widget.item.thumbnailUrl,
-          localPath: outPath,
+          localPath: savedPath,
           isAudio: false,
           isVertical: _selectedCrop == '9:16',
           platform: widget.item.platform,
@@ -296,21 +288,15 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
         final durSeconds = ((endMs - startMs) / 1000).round();
         final durStr = '${(durSeconds ~/ 60).toString().padLeft(2, '0')}:${(durSeconds % 60).toString().padLeft(2, '0')}';
 
-        // Copy to public gallery folders (Pictures and Downloads) so Samsung Gallery displays it instantly
+        // Copy to public gallery folder (Pictures/AllDown) once so Samsung Gallery displays it without duplication
+        String savedPath = outPath;
         try {
           final picturesDir = Directory('/storage/emulated/0/Pictures/AllDown');
           if (!picturesDir.existsSync()) picturesDir.createSync(recursive: true);
           final pubFile = File('${picturesDir.path}/Clip_$timeStamp.gif');
           File(outPath).copySync(pubFile.path);
-          VideoEditorService.scanMediaFile(path: pubFile.path, mimeType: 'image/gif');
-        } catch (_) {}
-
-        try {
-          final pubDir = Directory('/storage/emulated/0/Download/AllDown/GIFs');
-          if (!pubDir.existsSync()) pubDir.createSync(recursive: true);
-          final pubFile = File('${pubDir.path}/Clip_$timeStamp.gif');
-          File(outPath).copySync(pubFile.path);
-          VideoEditorService.scanMediaFile(path: pubFile.path, mimeType: 'image/gif');
+          savedPath = pubFile.path;
+          VideoEditorService.scanMediaFile(path: savedPath, mimeType: 'image/gif');
         } catch (_) {}
 
         // Add to library
@@ -324,7 +310,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
           completedDateFormatted: 'Danas',
           duration: durStr,
           thumbnailUrl: widget.item.thumbnailUrl,
-          localPath: outPath,
+          localPath: savedPath,
           isAudio: false,
           isVertical: _selectedCrop == '9:16',
           platform: widget.item.platform,
