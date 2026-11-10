@@ -2,11 +2,7 @@ package com.alldown.app.alldown.video
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.media.MediaCodec
-import android.media.MediaExtractor
-import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
-import android.media.MediaMuxer
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
@@ -21,98 +17,16 @@ import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
 import java.io.File
 import java.io.FileOutputStream
-import java.nio.ByteBuffer
 import kotlin.math.max
 import kotlin.math.min
 
 object VideoEditorHelper {
 
     /**
-     * Lossless, high-speed video trimming using Android native MediaExtractor + MediaMuxer.
-     * Completes in < 1 second with 0% re-encoding quality degradation.
-     */
-    fun trimVideo(inputPath: String, outputPath: String, startMs: Long, endMs: Long): Boolean {
-        var extractor: MediaExtractor? = null
-        var muxer: MediaMuxer? = null
-
-        try {
-            val inFile = File(inputPath)
-            if (!inFile.exists()) return false
-
-            val outFile = File(outputPath)
-            outFile.parentFile?.mkdirs()
-            if (outFile.exists()) outFile.delete()
-
-            extractor = MediaExtractor()
-            extractor.setDataSource(inputPath)
-
-            muxer = MediaMuxer(outputPath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
-            val trackCount = extractor.trackCount
-            val indexMap = HashMap<Int, Int>(trackCount)
-            var bufferSize = -1
-
-            for (i in 0 until trackCount) {
-                val format = extractor.getTrackFormat(i)
-                val mime = format.getString(MediaFormat.KEY_MIME) ?: ""
-                if (mime.startsWith("audio/") || mime.startsWith("video/")) {
-                    extractor.selectTrack(i)
-                    val dstIndex = muxer.addTrack(format)
-                    indexMap[i] = dstIndex
-                    if (format.containsKey(MediaFormat.KEY_MAX_INPUT_SIZE)) {
-                        val newSize = format.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE)
-                        bufferSize = max(bufferSize, newSize)
-                    }
-                }
-            }
-
-            if (bufferSize < 0) {
-                bufferSize = 2 * 1024 * 1024 // 2MB default buffer
-            }
-
-            val startUs = startMs * 1000L
-            val endUs = endMs * 1000L
-            extractor.seekTo(startUs, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
-
-            muxer.start()
-            val dstBuf = ByteBuffer.allocate(bufferSize)
-            val bufferInfo = MediaCodec.BufferInfo()
-
-            while (true) {
-                bufferInfo.offset = 0
-                bufferInfo.size = extractor.readSampleData(dstBuf, 0)
-                if (bufferInfo.size < 0) break
-
-                val sampleTime = extractor.sampleTime
-                if (sampleTime > endUs) break
-
-                bufferInfo.presentationTimeUs = max(0L, sampleTime - startUs)
-                bufferInfo.flags = extractor.sampleFlags
-                val trackIndex = extractor.sampleTrackIndex
-                val dstTrack = indexMap[trackIndex]
-                if (dstTrack != null && sampleTime >= startUs) {
-                    muxer.writeSampleData(dstTrack, dstBuf, bufferInfo)
-                }
-                extractor.advance()
-            }
-
-            return true
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return false
-        } finally {
-            try {
-                muxer?.stop()
-                muxer?.release()
-            } catch (e: Exception) {}
-            try {
-                extractor?.release()
-            } catch (e: Exception) {}
-        }
-    }
-
-    /**
-     * Hardware-accelerated Video Crop & Trim using Jetpack Media3 Transformer.
+     * Hardware-accelerated Video Crop, Zoom, Pan & Trim using Jetpack Media3 Transformer.
      * Supports aspect ratios: "1:1", "9:16", "16:9", "4:5", "original".
+     * [zoom] range: 1.0f to 3.0f
+     * [panX], [panY] range: -1.0f to +1.0f
      */
     fun cropAndTrimVideo(
         context: Context,
@@ -121,22 +35,20 @@ object VideoEditorHelper {
         startMs: Long,
         endMs: Long,
         cropRatio: String,
+        zoom: Float = 1.0f,
+        panX: Float = 0.0f,
+        panY: Float = 0.0f,
         callback: (Boolean, String?) -> Unit
     ) {
         val mainHandler = Handler(Looper.getMainLooper())
 
-        // If no crop needed, perform instant lossless stream copy
-        if (cropRatio == "original") {
-            Thread {
-                val ok = trimVideo(inputPath, outputPath, startMs, endMs)
-                mainHandler.post {
-                    if (ok) callback(true, null) else callback(false, "Failed to trim video")
-                }
-            }.start()
-            return
-        }
-
         try {
+            val inFile = File(inputPath)
+            if (!inFile.exists()) {
+                mainHandler.post { callback(false, "Input file does not exist") }
+                return
+            }
+
             val outFile = File(outputPath)
             outFile.parentFile?.mkdirs()
             if (outFile.exists()) outFile.delete()
@@ -147,48 +59,64 @@ object VideoEditorHelper {
                 .build()
 
             val mediaItem = MediaItem.Builder()
-                .setUri(Uri.fromFile(File(inputPath)))
+                .setUri(Uri.fromFile(inFile))
                 .setClippingConfiguration(clippingConfiguration)
                 .build()
 
-            // Calculate Crop Effect parameters
             val effectsList = mutableListOf<Effect>()
-            val targetRatio = when (cropRatio) {
-                "1:1" -> 1.0f
-                "9:16" -> 9.0f / 16.0f
-                "16:9" -> 16.0f / 9.0f
-                "4:5" -> 4.0f / 5.0f
-                else -> 1.0f
+            val safeZoom = zoom.coerceIn(1.0f, 4.0f)
+            val safePanX = panX.coerceIn(-1.0f, 1.0f)
+            val safePanY = panY.coerceIn(-1.0f, 1.0f)
+
+            val needsCrop = cropRatio != "original" || safeZoom > 1.01f || safePanX != 0f || safePanY != 0f
+
+            if (needsCrop) {
+                val targetRatio = when (cropRatio) {
+                    "1:1" -> 1.0f
+                    "9:16" -> 9.0f / 16.0f
+                    "16:9" -> 16.0f / 9.0f
+                    "4:5" -> 4.0f / 5.0f
+                    else -> null
+                }
+
+                val retriever = MediaMetadataRetriever()
+                retriever.setDataSource(inputPath)
+                val rawW = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toFloat() ?: 1920f
+                val rawH = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toFloat() ?: 1080f
+                val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toInt() ?: 0
+                val origW = if (rotation == 90 || rotation == 270) rawH else rawW
+                val origH = if (rotation == 90 || rotation == 270) rawW else rawH
+                retriever.release()
+
+                val origRatio = origW / origH
+                var visibleFractionX = 1.0f
+                var visibleFractionY = 1.0f
+
+                if (targetRatio != null) {
+                    if (origRatio > targetRatio) {
+                        visibleFractionX = targetRatio / origRatio
+                    } else if (origRatio < targetRatio) {
+                        visibleFractionY = origRatio / targetRatio
+                    }
+                }
+
+                // Apply Zoom
+                val halfW = (visibleFractionX / safeZoom).coerceIn(0.1f, 1.0f)
+                val halfH = (visibleFractionY / safeZoom).coerceIn(0.1f, 1.0f)
+
+                // Apply Pan (-1.0 to 1.0)
+                val maxPanX = (1.0f - halfW).coerceAtLeast(0f)
+                val maxPanY = (1.0f - halfH).coerceAtLeast(0f)
+                val centerX = (safePanX * maxPanX).coerceIn(-maxPanX, maxPanX)
+                val centerY = (safePanY * maxPanY).coerceIn(-maxPanY, maxPanY)
+
+                val left = (centerX - halfW).coerceIn(-1.0f, 1.0f)
+                val right = (centerX + halfW).coerceIn(-1.0f, 1.0f)
+                val bottom = (centerY - halfH).coerceIn(-1.0f, 1.0f)
+                val top = (centerY + halfH).coerceIn(-1.0f, 1.0f)
+
+                effectsList.add(Crop(left, right, bottom, top))
             }
-
-            val retriever = MediaMetadataRetriever()
-            retriever.setDataSource(inputPath)
-            val rawW = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toFloat() ?: 1920f
-            val rawH = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toFloat() ?: 1080f
-            val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toInt() ?: 0
-            val origW = if (rotation == 90 || rotation == 270) rawH else rawW
-            val origH = if (rotation == 90 || rotation == 270) rawW else rawH
-            retriever.release()
-
-            val origRatio = origW / origH
-            var left = -1.0f
-            var right = 1.0f
-            var bottom = -1.0f
-            var top = 1.0f
-
-            if (origRatio > targetRatio) {
-                // Input is wider than target -> crop left & right
-                val visibleFraction = targetRatio / origRatio
-                left = -visibleFraction
-                right = visibleFraction
-            } else if (origRatio < targetRatio) {
-                // Input is taller than target -> crop top & bottom
-                val visibleFraction = origRatio / targetRatio
-                bottom = -visibleFraction
-                top = visibleFraction
-            }
-
-            effectsList.add(Crop(left, right, bottom, top))
 
             val editedMediaItem = EditedMediaItem.Builder(mediaItem)
                 .setEffects(Effects(emptyList(), effectsList))
@@ -218,7 +146,7 @@ object VideoEditorHelper {
     }
 
     /**
-     * Converts a selected video segment into an animated GIF (.gif) with optional crop.
+     * Converts a selected video segment into an animated GIF (.gif) with optional crop, zoom & pan.
      */
     fun createGif(
         inputPath: String,
@@ -226,6 +154,9 @@ object VideoEditorHelper {
         startMs: Long,
         endMs: Long,
         cropRatio: String,
+        zoom: Float = 1.0f,
+        panX: Float = 0.0f,
+        panY: Float = 0.0f,
         fps: Int = 10,
         callback: (Boolean, String?) -> Unit
     ) {
@@ -235,6 +166,12 @@ object VideoEditorHelper {
             val retriever = MediaMetadataRetriever()
             var fos: FileOutputStream? = null
             try {
+                val inFile = File(inputPath)
+                if (!inFile.exists()) {
+                    mainHandler.post { callback(false, "Input file does not exist") }
+                    return@Thread
+                }
+
                 val outFile = File(outputPath)
                 outFile.parentFile?.mkdirs()
                 if (outFile.exists()) outFile.delete()
@@ -256,7 +193,6 @@ object VideoEditorHelper {
                     else -> null
                 }
 
-                val durationMs = (endMs - startMs).coerceAtLeast(500L)
                 val stepMs = frameDelayMs.toLong()
                 var currentMs = startMs
 
@@ -264,7 +200,7 @@ object VideoEditorHelper {
                     val frameUs = currentMs * 1000L
                     val rawFrame = retriever.getFrameAtTime(frameUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
                     if (rawFrame != null) {
-                        val processed = processFrameForGif(rawFrame, targetRatio)
+                        val processed = processFrameForGif(rawFrame, targetRatio, zoom, panX, panY)
                         encoder.addFrame(processed)
                         if (processed != rawFrame) {
                             processed.recycle()
@@ -290,27 +226,49 @@ object VideoEditorHelper {
         }.start()
     }
 
-    private fun processFrameForGif(src: Bitmap, targetRatio: Float?): Bitmap {
+    private fun processFrameForGif(
+        src: Bitmap,
+        targetRatio: Float?,
+        zoom: Float,
+        panX: Float,
+        panY: Float
+    ): Bitmap {
         var bmp = src
 
-        // 1. Crop to aspect ratio if specified
+        // 1. Calculate crop dimensions with aspect ratio
+        val srcRatio = src.width.toFloat() / src.height.toFloat()
+        var baseW = src.width.toFloat()
+        var baseH = src.height.toFloat()
+
         if (targetRatio != null) {
-            val srcRatio = src.width.toFloat() / src.height.toFloat()
-            val cropW: Int
-            val cropH: Int
             if (srcRatio > targetRatio) {
-                cropH = src.height
-                cropW = (src.height * targetRatio).toInt().coerceIn(1, src.width)
+                baseH = src.height.toFloat()
+                baseW = src.height * targetRatio
             } else {
-                cropW = src.width
-                cropH = (src.width / targetRatio).toInt().coerceIn(1, src.height)
+                baseW = src.width.toFloat()
+                baseH = src.width / targetRatio
             }
-            val startX = ((src.width - cropW) / 2).coerceAtLeast(0)
-            val startY = ((src.height - cropH) / 2).coerceAtLeast(0)
-            bmp = Bitmap.createBitmap(src, startX, startY, cropW, cropH)
         }
 
-        // 2. Scale down for optimal GIF size (max width 420px)
+        // Apply Zoom (1.0f to 4.0f)
+        val safeZoom = zoom.coerceIn(1.0f, 4.0f)
+        val cropW = (baseW / safeZoom).toInt().coerceIn(10, src.width)
+        val cropH = (baseH / safeZoom).toInt().coerceIn(10, src.height)
+
+        // Apply Pan (-1.0f to 1.0f)
+        val maxOffsetX = (src.width - cropW).coerceAtLeast(0)
+        val maxOffsetY = (src.height - cropH).coerceAtLeast(0)
+
+        val safePanX = panX.coerceIn(-1.0f, 1.0f)
+        val safePanY = panY.coerceIn(-1.0f, 1.0f)
+
+        // 0.0 is center, -1.0 is left/bottom, +1.0 is right/top
+        val startX = (((safePanX + 1.0f) / 2.0f) * maxOffsetX).toInt().coerceIn(0, maxOffsetX)
+        val startY = (((1.0f - safePanY) / 2.0f) * maxOffsetY).toInt().coerceIn(0, maxOffsetY)
+
+        bmp = Bitmap.createBitmap(src, startX, startY, cropW, cropH)
+
+        // 2. Scale down for optimal GIF performance and filesize (max width 420px)
         val maxWidth = 420
         if (bmp.width > maxWidth) {
             val scale = maxWidth.toFloat() / bmp.width.toFloat()
@@ -323,4 +281,3 @@ object VideoEditorHelper {
         return bmp
     }
 }
-

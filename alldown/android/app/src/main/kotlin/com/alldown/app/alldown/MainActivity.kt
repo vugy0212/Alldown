@@ -95,12 +95,20 @@ class MainActivity : FlutterActivity() {
                         val startMs = (call.argument<Number>("startMs"))?.toLong() ?: 0L
                         val endMs = (call.argument<Number>("endMs"))?.toLong() ?: 0L
                         if (input != null && output != null) {
-                            Thread {
-                                val ok = VideoEditorHelper.trimVideo(input, output, startMs, endMs)
-                                runOnUiThread {
-                                    if (ok) result.success(true) else result.error("TRIM_ERROR", "Failed to trim video", null)
+                            VideoEditorHelper.cropAndTrimVideo(
+                                context = applicationContext,
+                                inputPath = input,
+                                outputPath = output,
+                                startMs = startMs,
+                                endMs = endMs,
+                                cropRatio = "original"
+                            ) { success, error ->
+                                if (success) {
+                                    result.success(true)
+                                } else {
+                                    result.error("TRIM_ERROR", error ?: "Failed to trim video", null)
                                 }
-                            }.start()
+                            }
                         } else {
                             result.error("INVALID_ARGS", "Missing paths", null)
                         }
@@ -111,8 +119,21 @@ class MainActivity : FlutterActivity() {
                         val startMs = (call.argument<Number>("startMs"))?.toLong() ?: 0L
                         val endMs = (call.argument<Number>("endMs"))?.toLong() ?: 0L
                         val ratio = call.argument<String>("cropRatio") ?: "original"
+                        val zoom = (call.argument<Number>("zoom"))?.toFloat() ?: 1.0f
+                        val panX = (call.argument<Number>("panX"))?.toFloat() ?: 0.0f
+                        val panY = (call.argument<Number>("panY"))?.toFloat() ?: 0.0f
                         if (input != null && output != null) {
-                            VideoEditorHelper.cropAndTrimVideo(applicationContext, input, output, startMs, endMs, ratio) { success, error ->
+                            VideoEditorHelper.cropAndTrimVideo(
+                                context = applicationContext,
+                                inputPath = input,
+                                outputPath = output,
+                                startMs = startMs,
+                                endMs = endMs,
+                                cropRatio = ratio,
+                                zoom = zoom,
+                                panX = panX,
+                                panY = panY
+                            ) { success, error ->
                                 if (success) {
                                     result.success(true)
                                 } else {
@@ -129,9 +150,22 @@ class MainActivity : FlutterActivity() {
                         val startMs = (call.argument<Number>("startMs"))?.toLong() ?: 0L
                         val endMs = (call.argument<Number>("endMs"))?.toLong() ?: 0L
                         val ratio = call.argument<String>("cropRatio") ?: "original"
+                        val zoom = (call.argument<Number>("zoom"))?.toFloat() ?: 1.0f
+                        val panX = (call.argument<Number>("panX"))?.toFloat() ?: 0.0f
+                        val panY = (call.argument<Number>("panY"))?.toFloat() ?: 0.0f
                         val fps = call.argument<Int>("fps") ?: 10
                         if (input != null && output != null) {
-                            VideoEditorHelper.createGif(input, output, startMs, endMs, ratio, fps) { success, error ->
+                            VideoEditorHelper.createGif(
+                                inputPath = input,
+                                outputPath = output,
+                                startMs = startMs,
+                                endMs = endMs,
+                                cropRatio = ratio,
+                                zoom = zoom,
+                                panX = panX,
+                                panY = panY,
+                                fps = fps
+                            ) { success, error ->
                                 if (success) {
                                     result.success(true)
                                 } else {

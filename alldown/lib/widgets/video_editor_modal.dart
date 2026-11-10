@@ -31,7 +31,13 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
   bool _isInitialized = false;
   double _totalDurationSec = 1.0;
   RangeValues _trimRange = const RangeValues(0.0, 1.0);
+
+  // Crop & Manual Zoom / Pan
   String _selectedCrop = 'original'; // original, 1:1, 9:16, 16:9, 4:5
+  double _zoom = 1.0; // 1.0x to 3.0x
+  double _panX = 0.0; // -1.0 to 1.0
+  double _panY = 0.0; // -1.0 to 1.0
+
   bool _isProcessing = false;
   String _processingMessage = '';
 
@@ -49,6 +55,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
     _controller = ctrl;
     try {
       await ctrl.initialize();
+      ctrl.addListener(_onPlayerTick);
       final durSec = ctrl.value.duration.inMilliseconds / 1000.0;
       if (mounted) {
         setState(() {
@@ -60,34 +67,82 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
     } catch (_) {}
   }
 
+  void _onPlayerTick() {
+    if (!mounted || _controller == null || !_controller!.value.isInitialized) return;
+
+    final posMs = _controller!.value.position.inMilliseconds;
+    final startMs = (_trimRange.start * 1000).toInt();
+    final endMs = (_trimRange.end * 1000).toInt();
+
+    // Loop trimmed section: if position reaches or exceeds endMs, jump back to startMs
+    if (_controller!.value.isPlaying && posMs >= endMs) {
+      _controller!.seekTo(Duration(milliseconds: startMs));
+    }
+  }
+
+  void _togglePlayPause() {
+    if (_controller == null || !_isInitialized) return;
+
+    if (_controller!.value.isPlaying) {
+      _controller!.pause();
+      setState(() {});
+    } else {
+      final posMs = _controller!.value.position.inMilliseconds;
+      final startMs = (_trimRange.start * 1000).toInt();
+      final endMs = (_trimRange.end * 1000).toInt();
+
+      // If outside trimmed range, start cleanly from trimmed start
+      if (posMs < startMs || posMs >= endMs) {
+        _controller!.seekTo(Duration(milliseconds: startMs)).then((_) {
+          _controller!.play();
+          setState(() {});
+        });
+      } else {
+        _controller!.play();
+        setState(() {});
+      }
+    }
+  }
+
   @override
   void dispose() {
+    _controller?.removeListener(_onPlayerTick);
     _controller?.dispose();
     super.dispose();
   }
 
   void _onRangeChanged(RangeValues values) {
-    // Minimum 1 second clip
-    if (values.end - values.start < 0.8) return;
+    // Minimum 0.5s clip
+    if (values.end - values.start < 0.5) return;
 
     setState(() {
       _trimRange = values;
     });
 
-    // Seek preview to the adjusted start point
+    // Pause and seek preview immediately to the chosen start point
+    _controller?.pause();
     _controller?.seekTo(Duration(milliseconds: (values.start * 1000).toInt()));
+  }
+
+  void _resetZoomAndPan() {
+    setState(() {
+      _zoom = 1.0;
+      _panX = 0.0;
+      _panY = 0.0;
+    });
   }
 
   Future<void> _exportVideo() async {
     if (_isProcessing) return;
 
+    _controller?.pause();
     final startMs = (_trimRange.start * 1000).toInt();
     final endMs = (_trimRange.end * 1000).toInt();
-    final isCropped = _selectedCrop != 'original';
+    final isCustomFraming = _selectedCrop != 'original' || _zoom > 1.05 || _panX.abs() > 0.05 || _panY.abs() > 0.05;
 
     setState(() {
       _isProcessing = true;
-      _processingMessage = isCropped ? 'Izrezivanje kadra i obrada videa...' : 'Brzo rezanje videa...';
+      _processingMessage = isCustomFraming ? 'Izrezivanje kadra i obrada videa...' : 'Precizno rezanje videa...';
     });
 
     try {
@@ -100,23 +155,16 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
       final timeStamp = DateTime.now().millisecondsSinceEpoch;
       final outPath = '${targetFolder.path}/Trimmed_$timeStamp.mp4';
 
-      bool success = false;
-      if (isCropped) {
-        success = await VideoEditorService.cropVideo(
-          inputPath: widget.item.localPath,
-          outputPath: outPath,
-          startMs: startMs,
-          endMs: endMs,
-          cropRatio: _selectedCrop,
-        );
-      } else {
-        success = await VideoEditorService.trimVideo(
-          inputPath: widget.item.localPath,
-          outputPath: outPath,
-          startMs: startMs,
-          endMs: endMs,
-        );
-      }
+      final success = await VideoEditorService.cropVideo(
+        inputPath: widget.item.localPath,
+        outputPath: outPath,
+        startMs: startMs,
+        endMs: endMs,
+        cropRatio: _selectedCrop,
+        zoom: _zoom,
+        panX: _panX,
+        panY: _panY,
+      );
 
       if (!mounted) return;
       setState(() => _isProcessing = false);
@@ -133,7 +181,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
           title: '${widget.item.title} (Trimmed)',
           channel: widget.item.channel,
           format: 'MP4',
-          resolution: isCropped ? '$_selectedCrop Crop' : widget.item.resolution,
+          resolution: isCustomFraming ? '$_selectedCrop (${_zoom.toStringAsFixed(1)}x)' : widget.item.resolution,
           sizeFormatted: '$sizeMb MB',
           completedDateFormatted: 'Danas',
           duration: durStr,
@@ -171,6 +219,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
   Future<void> _exportGif() async {
     if (_isProcessing) return;
 
+    _controller?.pause();
     final startMs = (_trimRange.start * 1000).toInt();
     final endMs = (_trimRange.end * 1000).toInt();
 
@@ -195,6 +244,9 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
         startMs: startMs,
         endMs: endMs,
         cropRatio: _selectedCrop,
+        zoom: _zoom,
+        panX: _panX,
+        panY: _panY,
         fps: 10,
       );
 
@@ -248,14 +300,36 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
     }
   }
 
+  double _getPreviewAspectRatio() {
+    switch (_selectedCrop) {
+      case '1:1':
+        return 1.0;
+      case '9:16':
+        return 9.0 / 16.0;
+      case '16:9':
+        return 16.0 / 9.0;
+      case '4:5':
+        return 4.0 / 5.0;
+      case 'original':
+      default:
+        if (_controller != null && _controller!.value.isInitialized) {
+          final r = _controller!.value.aspectRatio;
+          return r > 0.2 ? r : (16.0 / 9.0);
+        }
+        return 16.0 / 9.0;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final startFormatted = VideoEditorService.formatMs((_trimRange.start * 1000).toInt());
     final endFormatted = VideoEditorService.formatMs((_trimRange.end * 1000).toInt());
     final clipDurationSec = (_trimRange.end - _trimRange.start).toStringAsFixed(1);
+    final isPlaying = _controller?.value.isPlaying ?? false;
+    final previewAspect = _getPreviewAspectRatio();
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.90,
+      height: MediaQuery.of(context).size.height * 0.92,
       decoration: const BoxDecoration(
         color: AppColors.surfaceContainer,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -302,22 +376,50 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Video Player Preview
+                  // Video Player Preview with live Crop & Zoom framing
                   ClipRRect(
                     borderRadius: BorderRadius.circular(16),
                     child: Container(
                       width: double.infinity,
-                      height: 200,
+                      height: 230,
                       color: Colors.black,
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
                           if (_isInitialized && _controller != null)
+                            // Live Crop Aspect Ratio Box
                             AspectRatio(
-                              aspectRatio: _controller!.value.aspectRatio > 0.2
-                                  ? _controller!.value.aspectRatio
-                                  : 16 / 9,
-                              child: VideoPlayer(_controller!),
+                              aspectRatio: previewAspect,
+                              child: ClipRect(
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    // Live visual translation based on panX and panY
+                                    final maxOffsetX = constraints.maxWidth * (_zoom - 1.0) / 2;
+                                    final maxOffsetY = constraints.maxHeight * (_zoom - 1.0) / 2;
+                                    final dx = -_panX * maxOffsetX;
+                                    final dy = _panY * maxOffsetY;
+
+                                    return Transform.translate(
+                                      offset: Offset(dx, dy),
+                                      child: Transform.scale(
+                                        scale: _zoom,
+                                        child: FittedBox(
+                                          fit: BoxFit.cover,
+                                          child: SizedBox(
+                                            width: _controller!.value.size.width > 0
+                                                ? _controller!.value.size.width
+                                                : 1920,
+                                            height: _controller!.value.size.height > 0
+                                                ? _controller!.value.size.height
+                                                : 1080,
+                                            child: VideoPlayer(_controller!),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
                             )
                           else
                             const Center(child: CircularProgressIndicator(color: AppColors.primary)),
@@ -325,38 +427,38 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                           // Play / Pause Overlay Button
                           if (_isInitialized && _controller != null)
                             Positioned(
-                              bottom: 10,
-                              right: 10,
+                              bottom: 12,
+                              right: 12,
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.black54,
-                                  borderRadius: BorderRadius.circular(20),
+                                  color: Colors.black.withValues(alpha: 0.7),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.4),
+                                      blurRadius: 8,
+                                    ),
+                                  ],
                                 ),
                                 child: IconButton(
                                   icon: Icon(
-                                    _controller!.value.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                    isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
                                     color: Colors.white,
-                                    size: 20,
+                                    size: 24,
                                   ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _controller!.value.isPlaying
-                                          ? _controller!.pause()
-                                          : _controller!.play();
-                                    });
-                                  },
+                                  onPressed: _togglePlayPause,
                                 ),
                               ),
                             ),
 
-                          // Crop Aspect Ratio Visual Indicator Pill
+                          // Crop Aspect Ratio & Zoom Visual Indicator Pill
                           Positioned(
                             top: 10,
                             left: 10,
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.65),
+                                color: Colors.black.withValues(alpha: 0.75),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
@@ -365,7 +467,35 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                                   const Icon(Icons.crop_rounded, size: 12, color: AppColors.secondary),
                                   const SizedBox(width: 4),
                                   Text(
-                                    _selectedCrop == 'original' ? 'Original Aspect' : 'Crop: $_selectedCrop',
+                                    '${_selectedCrop == 'original' ? 'Original' : _selectedCrop} • ${_zoom.toStringAsFixed(1)}x',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          // Playback Trim Loop indicator pill
+                          Positioned(
+                            top: 10,
+                            right: 10,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.85),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.repeat_rounded, size: 12, color: Colors.white),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${clipDurationSec}s Isječak',
                                     style: const TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
@@ -421,7 +551,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
 
                   // 2. Crop Aspect Ratio Section
                   const Text(
-                    'Omjer i izrezivanje kadra (Crop)',
+                    'Omjer kadra (Aspect Ratio)',
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
                   ),
                   const SizedBox(height: 8),
@@ -441,7 +571,160 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
+
+                  // 3. Manual Crop & Zoom Section (Zoom In / Zoom Out + Pan)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.stroke),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.zoom_in_rounded, size: 16, color: AppColors.secondary),
+                                const SizedBox(width: 6),
+                                const Text(
+                                  'Ručno podešavanje kadra (Zoom & Pan)',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.onSurface,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (_zoom > 1.05 || _panX.abs() > 0.05 || _panY.abs() > 0.05)
+                              InkWell(
+                                onTap: _resetZoomAndPan,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Text(
+                                    'Reset',
+                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.secondary),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Zoom Slider
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.remove_circle_outline_rounded, size: 20),
+                              color: AppColors.onSurfaceVariant,
+                              onPressed: _zoom > 1.0
+                                  ? () => setState(() => _zoom = (_zoom - 0.2).clamp(1.0, 3.0))
+                                  : null,
+                            ),
+                            Expanded(
+                              child: Slider(
+                                value: _zoom,
+                                min: 1.0,
+                                max: 3.0,
+                                divisions: 20,
+                                activeColor: AppColors.secondary,
+                                inactiveColor: AppColors.surfaceContainerHighest,
+                                label: '${_zoom.toStringAsFixed(1)}x',
+                                onChanged: _isProcessing
+                                    ? null
+                                    : (val) {
+                                        setState(() => _zoom = val);
+                                      },
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
+                              color: AppColors.onSurfaceVariant,
+                              onPressed: _zoom < 3.0
+                                  ? () => setState(() => _zoom = (_zoom + 0.2).clamp(1.0, 3.0))
+                                  : null,
+                            ),
+                            Container(
+                              width: 44,
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                '${_zoom.toStringAsFixed(1)}x',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.secondary,
+                                  fontFamily: 'monospace',
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Pan Controls (Visible when zoomed or cropped)
+                        if (_zoom > 1.05 || _selectedCrop != 'original') ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              const Icon(Icons.open_with_rounded, size: 14, color: AppColors.onSurfaceVariant),
+                              const SizedBox(width: 6),
+                              const Text(
+                                'Pozicija kadra (Horizontalno / Vertikalno)',
+                                style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const Text('X:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.onSurfaceVariant)),
+                              Expanded(
+                                child: Slider(
+                                  value: _panX,
+                                  min: -1.0,
+                                  max: 1.0,
+                                  divisions: 20,
+                                  activeColor: AppColors.primary,
+                                  inactiveColor: AppColors.surfaceContainerHighest,
+                                  onChanged: _isProcessing
+                                      ? null
+                                      : (val) {
+                                          setState(() => _panX = val);
+                                        },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Text('Y:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.onSurfaceVariant)),
+                              Expanded(
+                                child: Slider(
+                                  value: _panY,
+                                  min: -1.0,
+                                  max: 1.0,
+                                  divisions: 20,
+                                  activeColor: AppColors.primary,
+                                  inactiveColor: AppColors.surfaceContainerHighest,
+                                  onChanged: _isProcessing
+                                      ? null
+                                      : (val) {
+                                          setState(() => _panY = val);
+                                        },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
 
                   // Processing State Overlay
                   if (_isProcessing) ...[
