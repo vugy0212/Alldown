@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import '../models/app_settings.dart';
 import '../services/storage_service.dart';
 
@@ -18,7 +20,8 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   SettingsNotifier(this._storage) : super(_storage.loadSettings());
 
   void updateDirectory(String path) {
-    state = state.copyWith(downloadDirectory: path);
+    final normalized = AppSettings.normalizeDirectoryPath(path);
+    state = state.copyWith(downloadDirectory: normalized);
     _storage.saveSettings(state);
   }
 
@@ -26,9 +29,10 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     try {
       final selectedDirectory = await FilePickerPlatform.instance.getDirectoryPath();
       if (selectedDirectory != null && selectedDirectory.trim().isNotEmpty) {
-        state = state.copyWith(downloadDirectory: selectedDirectory.trim());
+        final normalized = AppSettings.normalizeDirectoryPath(selectedDirectory);
+        state = state.copyWith(downloadDirectory: normalized);
         _storage.saveSettings(state);
-        return selectedDirectory.trim();
+        return normalized;
       }
     } catch (_) {}
     return null;
@@ -81,15 +85,54 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
         allowedExtensions: ['txt'],
       );
       if (result.isNotEmpty) {
-        state = state.copyWith(
-          cookiesActive: true,
-          cookiesCount: 68,
-        );
-        _storage.saveSettings(state);
-        return true;
+        final filePath = result.first.path;
+        if (filePath != null && filePath.isNotEmpty) {
+          final file = File(filePath);
+          if (file.existsSync()) {
+            final lines = await file.readAsLines();
+            final pairs = <String>[];
+            for (final rawLine in lines) {
+              var line = rawLine.trim();
+              if (line.isEmpty) continue;
+              if (line.startsWith('#HttpOnly_')) {
+                line = line.substring('#HttpOnly_'.length);
+              } else if (line.startsWith('#')) {
+                continue;
+              }
+              final parts = line.split('\t');
+              if (parts.length >= 7) {
+                final name = parts[5].trim();
+                final value = parts[6].trim();
+                if (name.isNotEmpty) {
+                  pairs.add('$name=$value');
+                }
+              } else if (line.contains('=') && !line.contains(' ')) {
+                pairs.add(line);
+              }
+            }
+            if (pairs.isNotEmpty) {
+              state = state.copyWith(
+                cookiesActive: true,
+                cookiesCount: pairs.length,
+                cookiesHeader: pairs.join('; '),
+              );
+              _storage.saveSettings(state);
+              return true;
+            }
+          }
+        }
       }
     } catch (_) {}
     return false;
+  }
+
+  void clearCookies() {
+    state = state.copyWith(
+      cookiesActive: false,
+      cookiesCount: 0,
+      cookiesHeader: "",
+    );
+    _storage.saveSettings(state);
   }
 
   void setAudioBitrate(String bitrate) {
@@ -133,8 +176,17 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     _storage.saveSettings(state);
   }
 
-  void clearAppCache() {
-    // Cache clearing action
+  Future<void> clearAppCache() async {
+    try {
+      final tempDir = await getTemporaryDirectory();
+      if (tempDir.existsSync()) {
+        for (final entity in tempDir.listSync()) {
+          try {
+            entity.deleteSync(recursive: true);
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
   }
 }
 

@@ -61,6 +61,35 @@ class NativeDownloaderService {
     } catch (_) {}
   }
 
+  /// Shows a system notification when a download finishes (if enabled in settings)
+  Future<void> showCompletionNotification({required String title}) async {
+    try {
+      await _channel.invokeMethod('showCompletionNotification', {'title': title});
+    } catch (_) {}
+  }
+
+  /// Checks whether the device is connected via Wi-Fi or Ethernet
+  Future<bool> isWifiConnected() async {
+    try {
+      final res = await _channel.invokeMethod<bool>('isWifiConnected');
+      return res ?? true;
+    } on MissingPluginException {
+      return true;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  /// Triggers Android MediaScanner for a newly saved file
+  Future<void> scanMediaFile({required String path, String mimeType = '*/*'}) async {
+    try {
+      await _channel.invokeMethod('scanMediaFile', {
+        'path': path,
+        'mimeType': mimeType,
+      });
+    } catch (_) {}
+  }
+
   /// Opens a video/audio file with external player intent
   Future<void> openFile(String path) async {
     try {

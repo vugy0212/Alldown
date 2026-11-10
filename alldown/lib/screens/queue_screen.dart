@@ -228,7 +228,12 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
                       ],
                     ),
                     TextButton.icon(
-                      onPressed: () {},
+                      onPressed: () {
+                        queueNotifier.autoOrderQueue();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Queue ordered by priority & status')),
+                        );
+                      },
                       icon: Text(
                         'Auto-Order',
                         style: TextStyle(fontSize: 12, color: AppColors.secondary),

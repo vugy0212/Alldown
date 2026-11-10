@@ -73,11 +73,22 @@ void main() {
       const settings = AppSettings();
       expect(settings.downloadDirectory, '/storage/emulated/0/Download/AllDown');
       expect(settings.cookiesActive, isFalse);
+      expect(settings.cookiesCount, 0);
       expect(settings.maxConcurrentDownloads, 3);
       expect(settings.wifiOnly, isTrue);
       expect(settings.autoRemuxToMp4, isTrue);
       expect(settings.audioCodec, AudioCodec.mp3);
       expect(settings.maxResolution, MaxResolution.res1080p);
+
+      final fromEmptyJson = AppSettings.fromJson({});
+      expect(fromEmptyJson.cookiesActive, isFalse);
+      expect(fromEmptyJson.cookiesCount, 0);
+
+      final safNormalized = AppSettings.normalizeDirectoryPath(
+        'content://com.android.externalstorage.documents/tree/primary%3ADownload%2FAllDown',
+      );
+      expect(safNormalized, '/storage/emulated/0/Download/AllDown');
+      expect(settings.resolvedUserAgent, contains('Mozilla/5.0'));
     });
 
     test('AppColors brand guidelines compliance', () {

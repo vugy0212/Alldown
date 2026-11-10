@@ -1,6 +1,9 @@
 package com.alldown.app.alldown
 
+import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Bundle
 import androidx.core.content.FileProvider
@@ -70,6 +73,14 @@ class MainActivity : FlutterActivity() {
                     "stopForegroundService" -> {
                         DownloadForegroundService.stopService(applicationContext)
                         result.success(true)
+                    }
+                    "showCompletionNotification" -> {
+                        val title = call.argument<String>("title") ?: "Media file saved"
+                        DownloadForegroundService.showCompletionNotification(applicationContext, title)
+                        result.success(true)
+                    }
+                    "isWifiConnected" -> {
+                        result.success(isWifiOrEthernetConnected())
                     }
                     "openFile" -> {
                         val path = call.argument<String>("path")
@@ -198,15 +209,35 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private fun isWifiOrEthernetConnected(): Boolean {
+        return try {
+            val cm = applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val network = cm.activeNetwork ?: return false
+            val capabilities = cm.getNetworkCapabilities(network) ?: return false
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+        } catch (_: Exception) {
+            true
+        }
+    }
+
     private fun openFileIntent(path: String) {
         try {
             val file = File(path)
             if (!file.exists()) return
 
-            val uri = Uri.parse(file.absolutePath)
+            val authority = "${applicationContext.packageName}.fileprovider"
+            val uri = FileProvider.getUriForFile(this, authority, file)
+            val lower = path.lowercase()
+            val mimeType = when {
+                lower.endsWith(".mp3") || lower.endsWith(".m4a") || lower.endsWith(".wav") || lower.endsWith(".ogg") -> "audio/*"
+                lower.endsWith(".gif") -> "image/gif"
+                lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") -> "image/*"
+                else -> "video/*"
+            }
             val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, if (path.endsWith(".mp3") || path.endsWith(".m4a")) "audio/*" else "video/*")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                setDataAndType(uri, mimeType)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             startActivity(intent)
         } catch (_: Exception) {}
@@ -214,11 +245,25 @@ class MainActivity : FlutterActivity() {
 
     private fun openFolderIntent(path: String) {
         try {
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(Uri.parse(path), "resource/folder")
+            val folder = File(path)
+            val targetDir = if (folder.isDirectory) folder else folder.parentFile
+            if (targetDir != null && targetDir.exists()) {
+                val authority = "${applicationContext.packageName}.fileprovider"
+                val uri = FileProvider.getUriForFile(this, authority, targetDir)
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, "resource/folder")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                if (intent.resolveActivityInfo(packageManager, 0) != null) {
+                    startActivity(intent)
+                    return
+                }
+            }
+            val fallbackIntent = Intent(Intent.ACTION_VIEW).apply {
+                type = "*/*"
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            startActivity(intent)
+            startActivity(fallbackIntent)
         } catch (_: Exception) {}
     }
 }

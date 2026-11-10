@@ -51,7 +51,7 @@ object VideoEditorHelper {
 
             val inFile = File(inputPath)
             if (!inFile.exists()) {
-                val err = "Ulazna video datoteka ne postoji: $inputPath"
+                val err = "Input video file does not exist: $inputPath"
                 Log.e(TAG, err)
                 mainHandler.post { callback(false, err) }
                 return
@@ -88,13 +88,20 @@ object VideoEditorHelper {
                 }
 
                 val retriever = MediaMetadataRetriever()
-                retriever.setDataSource(inputPath)
-                val rawW = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toFloat() ?: 1920f
-                val rawH = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toFloat() ?: 1080f
-                val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toInt() ?: 0
-                val origW = if (rotation == 90 || rotation == 270) rawH else rawW
-                val origH = if (rotation == 90 || rotation == 270) rawW else rawH
-                retriever.release()
+                var origW = 1920f
+                var origH = 1080f
+                try {
+                    retriever.setDataSource(inputPath)
+                    val rawW = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toFloat() ?: 1920f
+                    val rawH = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toFloat() ?: 1080f
+                    val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toInt() ?: 0
+                    origW = if (rotation == 90 || rotation == 270) rawH else rawW
+                    origH = if (rotation == 90 || rotation == 270) rawW else rawH
+                } finally {
+                    try {
+                        retriever.release()
+                    } catch (_: Exception) {}
+                }
 
                 val origRatio = origW / origH
                 var visibleFracX = 1.0f
@@ -185,7 +192,7 @@ object VideoEditorHelper {
 
                 val inFile = File(inputPath)
                 if (!inFile.exists()) {
-                    val err = "Ulazna video datoteka ne postoji: $inputPath"
+                    val err = "Input video file does not exist: $inputPath"
                     Log.e(TAG, err)
                     mainHandler.post { callback(false, err) }
                     return@Thread

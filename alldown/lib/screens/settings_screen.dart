@@ -206,9 +206,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
                   // Clear App Cache Button
                   InkWell(
-                    onTap: () {
+                    onTap: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      await notifier.clearAppCache();
+                      if (!mounted) return;
                       setState(() => _cacheCleared = true);
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      messenger.showSnackBar(
                         const SnackBar(content: Text('Temporary stream cache cleared')),
                       );
                     },
@@ -418,13 +421,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ),
                           ),
                           onPressed: () {
+                            notifier.clearCookies();
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Browser cookies synchronized!')),
+                              const SnackBar(content: Text('Imported cookies cleared')),
                             );
                           },
-                          icon: const Icon(Icons.sync_rounded, size: 18),
+                          icon: const Icon(Icons.delete_outline_rounded, size: 18),
                           label: const Text(
-                            'Sync Browser',
+                            'Clear Cookies',
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                           ),

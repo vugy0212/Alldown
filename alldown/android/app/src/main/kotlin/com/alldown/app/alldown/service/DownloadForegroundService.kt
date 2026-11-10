@@ -57,6 +57,37 @@ class DownloadForegroundService : Service() {
             }
             context.startService(intent)
         }
+
+        fun showCompletionNotification(context: Context, title: String) {
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(
+                    CHANNEL_ID,
+                    CHANNEL_NAME,
+                    NotificationManager.IMPORTANCE_DEFAULT
+                ).apply {
+                    description = "Shows real-time download and completion status"
+                }
+                manager.createNotificationChannel(channel)
+            }
+            val launchIntent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+            val pendingIntent = PendingIntent.getActivity(
+                context,
+                1,
+                launchIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+            val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+                .setContentTitle("Download Complete")
+                .setContentText(title)
+                .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .build()
+            manager.notify((System.currentTimeMillis() % 10000).toInt() + 2000, notification)
+        }
     }
 
     private var currentTitle: String = "Downloading media..."

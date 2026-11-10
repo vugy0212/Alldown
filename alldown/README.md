@@ -1,14 +1,14 @@
-<div align="center">
+# AllDown (Flutter Application)
 
-<img src="assets/images/app_logo.png" alt="AllDown Logo" width="120" style="border-radius: 24px;" />
+Universal Media Downloader & Built-in Video / HD GIF Studio for Android.
 
-# AllDown
-### Modern Media Downloader & Video Studio for Android
+For full documentation, architecture overview, and build instructions, please see the main [README.md](../README.md) in the repository root.
 
-[![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
-[![Version](https://img.shields.io/badge/Version-1.0.0-6366F1)](https://github.com/vugy0212/Alldown)
-[![Author](https://img.shields.io/badge/Author-Allen-10B981)](https://github.com/vugy0212/Alldown)
+## Quick Commands
 
-</div>
-
-For full documentation and feature overview, please refer to the main repository [README.md](../README.md).
+```bash
+flutter pub get
+flutter analyze
+flutter test test/widget_test.dart
+flutter build apk --release
+```

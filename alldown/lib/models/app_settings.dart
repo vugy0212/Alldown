@@ -16,6 +16,7 @@ class AppSettings {
   final String downloadDirectory;
   final bool cookiesActive;
   final int cookiesCount;
+  final String cookiesHeader;
   final int maxConcurrentDownloads;
   final bool wifiOnly;
   final bool autoRetry;
@@ -36,6 +37,7 @@ class AppSettings {
     this.downloadDirectory = "/storage/emulated/0/Download/AllDown",
     this.cookiesActive = false,
     this.cookiesCount = 0,
+    this.cookiesHeader = "",
     this.maxConcurrentDownloads = 3,
     this.wifiOnly = true,
     this.autoRetry = true,
@@ -53,10 +55,47 @@ class AppSettings {
     this.isDarkMode = true,
   });
 
+  /// Converts Android SAF tree URIs (e.g. content://.../primary%3ADownload...) into standard POSIX paths.
+  static String normalizeDirectoryPath(String rawPath) {
+    final trimmed = rawPath.trim();
+    if (trimmed.isEmpty) {
+      return "/storage/emulated/0/Download/AllDown";
+    }
+    if (trimmed.startsWith('content://')) {
+      final decoded = Uri.decodeFull(trimmed);
+      final primaryIdx = decoded.indexOf('primary:');
+      if (primaryIdx != -1) {
+        final subPath = decoded.substring(primaryIdx + 'primary:'.length).trim();
+        if (subPath.isEmpty) {
+          return "/storage/emulated/0";
+        }
+        return "/storage/emulated/0/$subPath";
+      }
+      return "/storage/emulated/0/Download/AllDown";
+    }
+    return trimmed;
+  }
+
+  /// Resolves the friendly User-Agent preset name into a full HTTP User-Agent string.
+  String get resolvedUserAgent {
+    switch (userAgent) {
+      case 'Desktop Firefox':
+        return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0';
+      case 'Safari iOS':
+        return 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1';
+      case 'Googlebot':
+        return 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
+      case 'Android Chrome':
+      default:
+        return 'Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36';
+    }
+  }
+
   AppSettings copyWith({
     String? downloadDirectory,
     bool? cookiesActive,
     int? cookiesCount,
+    String? cookiesHeader,
     int? maxConcurrentDownloads,
     bool? wifiOnly,
     bool? autoRetry,
@@ -77,6 +116,7 @@ class AppSettings {
       downloadDirectory: downloadDirectory ?? this.downloadDirectory,
       cookiesActive: cookiesActive ?? this.cookiesActive,
       cookiesCount: cookiesCount ?? this.cookiesCount,
+      cookiesHeader: cookiesHeader ?? this.cookiesHeader,
       maxConcurrentDownloads: maxConcurrentDownloads ?? this.maxConcurrentDownloads,
       wifiOnly: wifiOnly ?? this.wifiOnly,
       autoRetry: autoRetry ?? this.autoRetry,
@@ -99,6 +139,7 @@ class AppSettings {
     'downloadDirectory': downloadDirectory,
     'cookiesActive': cookiesActive,
     'cookiesCount': cookiesCount,
+    'cookiesHeader': cookiesHeader,
     'maxConcurrentDownloads': maxConcurrentDownloads,
     'wifiOnly': wifiOnly,
     'autoRetry': autoRetry,
@@ -118,9 +159,12 @@ class AppSettings {
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
     return AppSettings(
-      downloadDirectory: json['downloadDirectory'] as String? ?? "/storage/emulated/0/Download/AllDown",
-      cookiesActive: json['cookiesActive'] as bool? ?? true,
-      cookiesCount: json['cookiesCount'] as int? ?? 42,
+      downloadDirectory: normalizeDirectoryPath(
+        json['downloadDirectory'] as String? ?? "/storage/emulated/0/Download/AllDown",
+      ),
+      cookiesActive: json['cookiesActive'] as bool? ?? false,
+      cookiesCount: json['cookiesCount'] as int? ?? 0,
+      cookiesHeader: json['cookiesHeader'] as String? ?? "",
       maxConcurrentDownloads: json['maxConcurrentDownloads'] as int? ?? 3,
       wifiOnly: json['wifiOnly'] as bool? ?? true,
       autoRetry: json['autoRetry'] as bool? ?? true,

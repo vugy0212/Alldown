@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
+import '../models/app_settings.dart';
 import '../models/download_task.dart';
 import '../models/media_item.dart';
 import '../services/metadata_fetcher_service.dart';
 import '../services/native_downloader_service.dart';
+import '../services/storage_service.dart';
 import 'settings_provider.dart';
 import 'media_library_provider.dart';
 
@@ -46,10 +48,11 @@ class _ActiveDownloadJob {
 }
 
 class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
-  final dynamic _storage;
+  final StorageService _storage;
   final NativeDownloaderService _nativeService;
   final Ref _ref;
   final Map<String, _ActiveDownloadJob> _activeJobs = {};
+  final Map<String, int> _retryCounts = {};
 
   DownloadQueueNotifier(this._storage, this._nativeService, this._ref)
       : super(_storage.loadQueue());
@@ -112,8 +115,44 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
     }
   }
 
+  Future<http.StreamedResponse> _sendConfiguredRequest(
+    http.Client client,
+    String url,
+    AppSettings settings,
+  ) {
+    final req = http.Request('GET', Uri.parse(url));
+    req.headers['User-Agent'] = settings.resolvedUserAgent;
+    if (settings.cookiesActive && settings.cookiesHeader.isNotEmpty) {
+      req.headers['Cookie'] = settings.cookiesHeader;
+    }
+    return client
+        .send(req)
+        .timeout(Duration(seconds: settings.connectionTimeout.clamp(5, 120)));
+  }
+
   Future<void> _startRealDownload(DownloadTask task) async {
     await _activeJobs.remove(task.id)?.cancelAndClean();
+
+    final settings = _ref.read(settingsProvider);
+
+    // Enforce Wi-Fi Only setting
+    if (settings.wifiOnly) {
+      final onWifi = await _nativeService.isWifiConnected();
+      if (!onWifi) {
+        _updateTask(
+          task.id,
+          (t) => t.copyWith(
+            status: DownloadStatus.paused,
+            speed: "0.0 MB/s",
+            eta: "Waiting for Wi-Fi connection",
+          ),
+        );
+        if (activeCount == 0) {
+          _nativeService.stopForegroundService();
+        }
+        return;
+      }
+    }
 
     final job = _ActiveDownloadJob();
     _activeJobs[task.id] = job;
@@ -122,7 +161,7 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
 
     try {
       final subFolder = task.isAudio ? 'Music' : 'Videos';
-      final configuredDir = _ref.read(settingsProvider).downloadDirectory.trim();
+      final configuredDir = AppSettings.normalizeDirectoryPath(settings.downloadDirectory);
       Directory targetDir;
       bool isCustom = false;
 
@@ -192,32 +231,45 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
 
         StreamInfo streamInfo;
         if (task.isAudio && manifest.audioOnly.isNotEmpty) {
-          streamInfo = manifest.audioOnly.withHighestBitrate();
+          final audioList = manifest.audioOnly.toList()
+            ..sort((a, b) => a.bitrate.bitsPerSecond.compareTo(b.bitrate.bitsPerSecond));
+          final preferWebm = settings.audioCodec == AudioCodec.opus;
+          final codecFiltered = audioList.where((s) =>
+              preferWebm ? s.container.name.toLowerCase().contains('webm') : !s.container.name.toLowerCase().contains('webm')).toList();
+          final candidates = codecFiltered.isNotEmpty ? codecFiltered : audioList;
+          if (settings.audioBitrate.startsWith('128')) {
+            streamInfo = candidates.first;
+          } else if (settings.audioBitrate.startsWith('192') && candidates.length > 1) {
+            streamInfo = candidates[candidates.length ~/ 2];
+          } else {
+            streamInfo = candidates.last;
+          }
           actualResolution = '${(streamInfo.bitrate.kiloBitsPerSecond).toStringAsFixed(0)} kbps';
           actualFormat = streamInfo.container.name.toUpperCase();
           ext = streamInfo.container.name.toLowerCase();
         } else if (manifest.muxed.isNotEmpty) {
-          // Select muxed stream matching user's chosen resolution if multiple exist
+          // Select muxed stream matching user's chosen resolution & global maxResolution cap
           final muxedList = manifest.muxed.toList()
             ..sort((a, b) => a.bitrate.bitsPerSecond.compareTo(b.bitrate.bitsPerSecond));
           final targetRes = task.resolution.toLowerCase();
+          final cap720 = settings.maxResolution == MaxResolution.res720p;
           if (targetRes.contains('480')) {
             final m480 = muxedList.where((s) => s.qualityLabel.contains('480') || s.qualityLabel.contains('360')).toList();
             streamInfo = m480.isNotEmpty ? m480.last : muxedList.first;
-          } else if (targetRes.contains('720')) {
-            final m720 = muxedList.where((s) => s.qualityLabel.contains('720')).toList();
+          } else if (targetRes.contains('720') || cap720) {
+            final m720 = muxedList.where((s) => s.qualityLabel.contains('720') || s.qualityLabel.contains('480')).toList();
             streamInfo = m720.isNotEmpty ? m720.last : muxedList.last;
           } else {
             streamInfo = muxedList.last;
           }
           actualResolution = '${task.resolution} (${streamInfo.qualityLabel})';
-          actualFormat = 'MP4';
-          ext = 'mp4';
+          actualFormat = settings.autoRemuxToMp4 ? 'MP4' : settings.videoContainer.toUpperCase();
+          ext = actualFormat.toLowerCase();
         } else if (manifest.videoOnly.isNotEmpty) {
           streamInfo = manifest.videoOnly.withHighestBitrate();
           actualResolution = streamInfo.qualityLabel;
-          actualFormat = 'MP4';
-          ext = 'mp4';
+          actualFormat = settings.autoRemuxToMp4 ? 'MP4' : settings.videoContainer.toUpperCase();
+          ext = actualFormat.toLowerCase();
         } else {
           throw Exception('No downloadable streams found for this YouTube video.');
         }
@@ -254,8 +306,7 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
 
         final client = http.Client();
         job.httpClient = client;
-        final req = http.Request('GET', Uri.parse(resolved.streamUrl));
-        final resp = await client.send(req);
+        final resp = await _sendConfiguredRequest(client, resolved.streamUrl, settings);
         if (resp.statusCode >= 400) {
           throw Exception('HTTP ${resp.statusCode}');
         }
@@ -287,8 +338,7 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
 
         final client = http.Client();
         job.httpClient = client;
-        final req = http.Request('GET', Uri.parse(resolved.streamUrl));
-        final resp = await client.send(req);
+        final resp = await _sendConfiguredRequest(client, resolved.streamUrl, settings);
         if (resp.statusCode >= 400) {
           throw Exception('HTTP ${resp.statusCode}');
         }
@@ -323,9 +373,7 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
 
         final client = http.Client();
         job.httpClient = client;
-        final req = http.Request('GET', Uri.parse(resolved.streamUrl));
-        req.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
-        final resp = await client.send(req);
+        final resp = await _sendConfiguredRequest(client, resolved.streamUrl, settings);
         if (resp.statusCode >= 400) {
           throw Exception('HTTP ${resp.statusCode}');
         }
@@ -357,9 +405,7 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
 
         final client = http.Client();
         job.httpClient = client;
-        final req = http.Request('GET', Uri.parse(resolved.streamUrl));
-        req.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
-        final resp = await client.send(req);
+        final resp = await _sendConfiguredRequest(client, resolved.streamUrl, settings);
         if (resp.statusCode >= 400) {
           throw Exception('HTTP ${resp.statusCode}');
         }
@@ -393,9 +439,7 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
 
         final client = http.Client();
         job.httpClient = client;
-        final req = http.Request('GET', Uri.parse(targetDownloadUrl));
-        req.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
-        final resp = await client.send(req);
+        final resp = await _sendConfiguredRequest(client, targetDownloadUrl, settings);
         if (resp.statusCode >= 400) {
           throw Exception('HTTP ${resp.statusCode}');
         }
@@ -548,6 +592,12 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
             ),
           );
 
+          _retryCounts.remove(task.id);
+
+          if (settings.notifyOnComplete) {
+            _nativeService.showCompletionNotification(title: realTitle);
+          }
+
           if (activeCount == 0) {
             _nativeService.stopForegroundService();
           } else {
@@ -557,34 +607,52 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
         onError: (e) async {
           await job.cancelAndClean(deleteFile: true);
           _activeJobs.remove(task.id);
-          _updateTask(
-            task.id,
-            (t) => t.copyWith(
-              status: DownloadStatus.paused,
-              speed: "0.0 MB/s",
-              eta: "Download Error - Tap Resume",
-            ),
-          );
-          if (activeCount == 0) {
-            _nativeService.stopForegroundService();
-          }
+          await _handleFailureOrRetry(task, settings, "Download Error - Tap Resume");
         },
         cancelOnError: true,
       );
     } catch (e) {
       await job.cancelAndClean(deleteFile: true);
       _activeJobs.remove(task.id);
+      await _handleFailureOrRetry(task, settings, "Stream error - Tap Resume");
+    }
+  }
+
+  Future<void> _handleFailureOrRetry(
+    DownloadTask task,
+    AppSettings settings,
+    String fallbackMessage,
+  ) async {
+    final currentRetries = _retryCounts[task.id] ?? 0;
+    if (settings.autoRetry && currentRetries < 2) {
+      final nextRetry = currentRetries + 1;
+      _retryCounts[task.id] = nextRetry;
       _updateTask(
         task.id,
         (t) => t.copyWith(
-          status: DownloadStatus.paused,
-          speed: "0.0 MB/s",
-          eta: "Stream error - Tap Resume",
+          status: DownloadStatus.active,
+          speed: "Auto-Retrying...",
+          eta: "Retry attempt $nextRetry/2...",
         ),
       );
-      if (activeCount == 0) {
-        _nativeService.stopForegroundService();
+      await Future.delayed(const Duration(seconds: 2));
+      if (mounted) {
+        _startRealDownload(task);
       }
+      return;
+    }
+
+    _retryCounts.remove(task.id);
+    _updateTask(
+      task.id,
+      (t) => t.copyWith(
+        status: DownloadStatus.paused,
+        speed: "0.0 MB/s",
+        eta: fallbackMessage,
+      ),
+    );
+    if (activeCount == 0) {
+      _nativeService.stopForegroundService();
     }
   }
 
@@ -657,6 +725,32 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
 
   void boostPriority(String id) {
     _updateTask(id, (t) => t.copyWith(priority: 1));
+    autoOrderQueue();
+  }
+
+  void autoOrderQueue() {
+    int statusWeight(DownloadStatus s) {
+      switch (s) {
+        case DownloadStatus.active:
+        case DownloadStatus.converting:
+          return 0;
+        case DownloadStatus.queued:
+          return 1;
+        case DownloadStatus.paused:
+        case DownloadStatus.failed:
+          return 2;
+        case DownloadStatus.completed:
+          return 3;
+      }
+    }
+
+    final sorted = [...state]..sort((a, b) {
+      final wCmp = statusWeight(a.status).compareTo(statusWeight(b.status));
+      if (wCmp != 0) return wCmp;
+      return b.priority.compareTo(a.priority);
+    });
+    state = sorted;
+    _storage.saveQueue(state);
   }
 
   void pauseAll() {
