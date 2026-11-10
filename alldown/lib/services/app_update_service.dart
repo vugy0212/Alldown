@@ -103,11 +103,14 @@ class AppUpdateService {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (ctx) {
+        final maxHeight = MediaQuery.of(ctx).size.height * 0.85;
+
         return Container(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
           decoration: BoxDecoration(
             color: AppColors.surfaceContainer,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             border: Border(top: BorderSide(color: AppColors.stroke, width: 1)),
           ),
           child: Column(
@@ -158,7 +161,7 @@ class AppUpdateService {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Trenutna: v$currentVersion • Nova: ${info.tagName}',
+                          'Current: v$currentVersion • Latest: ${info.tagName}',
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.secondary,
@@ -177,7 +180,7 @@ class AppUpdateService {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      info.isNewer ? 'NOVO' : 'LATEST',
+                      info.isNewer ? 'NEW' : 'LATEST',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -189,41 +192,45 @@ class AppUpdateService {
               ),
               const SizedBox(height: 16),
 
-              // Release Notes Box
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.stroke, width: 1),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      info.title,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
+              // Scrollable Release Notes Box (prevents overflow so buttons are ALWAYS visible)
+              Flexible(
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.stroke, width: 1),
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          info.title,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          info.notes,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.onSurfaceVariant,
+                            height: 1.45,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      info.notes,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.onSurfaceVariant,
-                        height: 1.45,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // Action Buttons
+              // Action Buttons (Sticky at bottom, always clickable)
               Row(
                 children: [
                   Expanded(
