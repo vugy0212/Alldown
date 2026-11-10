@@ -31,10 +31,25 @@ class DetectedMedia {
     required this.badgeText,
   });
 
-  String estimateSizeForQuality(VideoQuality quality, bool isAudio) {
+  String estimateSizeForQuality(VideoQuality quality, bool isAudio, [AudioQuality audioQuality = AudioQuality.kbps320]) {
     final mins = (durationSeconds / 60.0).clamp(0.5, 300.0);
     if (isAudio) {
-      final mb = (mins * 2.4).clamp(1.0, 500.0);
+      double rate = 2.4;
+      switch (audioQuality) {
+        case AudioQuality.kbps320:
+          rate = 2.4;
+          break;
+        case AudioQuality.kbps256:
+          rate = 1.9;
+          break;
+        case AudioQuality.kbps192:
+          rate = 1.4;
+          break;
+        case AudioQuality.kbps128:
+          rate = 1.0;
+          break;
+      }
+      final mb = (mins * rate).clamp(0.8, 500.0);
       return '${mb.toStringAsFixed(1)} MB';
     }
     switch (quality) {
@@ -167,6 +182,10 @@ class QuickDownloadNotifier extends StateNotifier<QuickDownloadState> {
     state = state.copyWith(options: state.options.copyWith(quality: quality));
   }
 
+  void setAudioQuality(AudioQuality quality) {
+    state = state.copyWith(options: state.options.copyWith(audioQuality: quality));
+  }
+
   void toggleSubfolder() {
     state = state.copyWith(
       options: state.options.copyWith(createSubfolder: !state.options.createSubfolder),
@@ -193,27 +212,40 @@ class QuickDownloadNotifier extends StateNotifier<QuickDownloadState> {
     final isAudio = state.options.format == TargetFormat.audioMp3;
 
     String resolution = "1080p Full HD";
-    switch (state.options.quality) {
-      case VideoQuality.res4k:
-        resolution = "4K (2160p)";
-        break;
-      case VideoQuality.res1080p:
-        resolution = "1080p Full HD";
-        break;
-      case VideoQuality.res720p:
-        resolution = "720p HD";
-        break;
-      case VideoQuality.res480p:
-        resolution = "480p SD";
-        break;
-    }
-
     if (isAudio) {
-      resolution = "Audio M4A/MP3";
+      switch (state.options.audioQuality) {
+        case AudioQuality.kbps320:
+          resolution = "Audio 320 kbps (HQ)";
+          break;
+        case AudioQuality.kbps256:
+          resolution = "Audio 256 kbps";
+          break;
+        case AudioQuality.kbps192:
+          resolution = "Audio 192 kbps";
+          break;
+        case AudioQuality.kbps128:
+          resolution = "Audio 128 kbps";
+          break;
+      }
+    } else {
+      switch (state.options.quality) {
+        case VideoQuality.res4k:
+          resolution = "4K (2160p)";
+          break;
+        case VideoQuality.res1080p:
+          resolution = "1080p Full HD";
+          break;
+        case VideoQuality.res720p:
+          resolution = "720p HD";
+          break;
+        case VideoQuality.res480p:
+          resolution = "480p SD";
+          break;
+      }
     }
 
     final estimatedSize = media != null
-        ? media.estimateSizeForQuality(state.options.quality, isAudio)
+        ? media.estimateSizeForQuality(state.options.quality, isAudio, state.options.audioQuality)
         : "Auto";
 
     final ytId = MetadataFetcherService.extractYouTubeId(currentUrl);

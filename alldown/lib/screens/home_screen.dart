@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/download_options.dart';
 import '../providers/quick_download_provider.dart';
-import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -15,6 +14,8 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   late TextEditingController _urlController;
+  bool _isQualityExpanded = false;
+  bool _isPreProcessingExpanded = false;
 
   @override
   void initState() {
@@ -46,7 +47,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   String _selectedActionLabel(DownloadOptions options) {
     if (options.format == TargetFormat.audioMp3) {
-      return 'Audio MP3';
+      switch (options.audioQuality) {
+        case AudioQuality.kbps320:
+          return '320 kbps';
+        case AudioQuality.kbps256:
+          return '256 kbps';
+        case AudioQuality.kbps192:
+          return '192 kbps';
+        case AudioQuality.kbps128:
+          return '128 kbps';
+      }
     }
     if (options.format == TargetFormat.customRaw) {
       return 'Custom Raw';
@@ -61,6 +71,64 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       case VideoQuality.res480p:
         return '480p SD';
     }
+  }
+
+  String _selectedQualityBadge(DownloadOptions options) {
+    if (options.format == TargetFormat.audioMp3) {
+      switch (options.audioQuality) {
+        case AudioQuality.kbps320:
+          return '320k HQ';
+        case AudioQuality.kbps256:
+          return '256k';
+        case AudioQuality.kbps192:
+          return '192k';
+        case AudioQuality.kbps128:
+          return '128k';
+      }
+    }
+    switch (options.quality) {
+      case VideoQuality.res4k:
+        return '4K 2160p';
+      case VideoQuality.res1080p:
+        return '1080p FHD';
+      case VideoQuality.res720p:
+        return '720p HD';
+      case VideoQuality.res480p:
+        return '480p SD';
+    }
+  }
+
+  String _selectedQualitySubtitle(DownloadOptions options) {
+    if (options.format == TargetFormat.audioMp3) {
+      switch (options.audioQuality) {
+        case AudioQuality.kbps320:
+          return 'Master Studio • 320 kbps MP3';
+        case AudioQuality.kbps256:
+          return 'High Fidelity • 256 kbps MP3';
+        case AudioQuality.kbps192:
+          return 'Standard • 192 kbps MP3';
+        case AudioQuality.kbps128:
+          return 'Compact Saver • 128 kbps MP3';
+      }
+    }
+    switch (options.quality) {
+      case VideoQuality.res4k:
+        return 'Ultra HD • 3840x2160 • 60fps';
+      case VideoQuality.res1080p:
+        return 'Full HD • 1920x1080 • Recommended';
+      case VideoQuality.res720p:
+        return 'HD • 1280x720 • Fast Stream';
+      case VideoQuality.res480p:
+        return 'SD • 854x480 • Mobile Friendly';
+    }
+  }
+
+  String _preProcessingBadge(DownloadOptions options) {
+    int count = 0;
+    if (options.createSubfolder) count++;
+    if (options.embedSubtitles) count++;
+    if (options.saveMetadata) count++;
+    return '$count active';
   }
 
   @override
@@ -695,168 +763,343 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
 
-            // Stream Resolution & Quality Chips
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    'Select Resolution & Stream Quality',
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-                const Text(
-                  'AV1 / VP9 Adaptive',
-                  style: TextStyle(fontSize: 11, color: AppColors.outline),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            // Quality Options
-            _buildQualityCard(
-              title: '4K (2160p)',
-              subtitle: 'VP9 Profile 2 • 3840x2160',
-              size: media?.estimateSizeForQuality(VideoQuality.res4k, false) ?? 'Auto',
-              tag: '60fps',
-              icon: Icons.hd_rounded,
-              selected: state.options.quality == VideoQuality.res4k,
-              onTap: () => notifier.setQuality(VideoQuality.res4k),
-            ),
-            const SizedBox(height: 8),
-            _buildQualityCard(
-              title: '1080p Full HD',
-              subtitle: 'H.264 / AVC • Clean Remux',
-              size: media?.estimateSizeForQuality(VideoQuality.res1080p, false) ?? 'Auto',
-              badge: 'Recommended',
-              icon: Icons.check_rounded,
-              selected: state.options.quality == VideoQuality.res1080p,
-              onTap: () => notifier.setQuality(VideoQuality.res1080p),
-            ),
-            const SizedBox(height: 8),
-            _buildQualityCard(
-              title: '720p HD',
-              subtitle: 'High Speed / Data Saver',
-              size: media?.estimateSizeForQuality(VideoQuality.res720p, false) ?? 'Auto',
-              icon: Icons.video_file_rounded,
-              selected: state.options.quality == VideoQuality.res720p,
-              onTap: () => notifier.setQuality(VideoQuality.res720p),
-            ),
-            const SizedBox(height: 8),
-            _buildQualityCard(
-              title: '480p SD',
-              subtitle: 'Ultra Light • Mobile Friendly',
-              size: media?.estimateSizeForQuality(VideoQuality.res480p, false) ?? 'Auto',
-              icon: Icons.sd_rounded,
-              selected: state.options.quality == VideoQuality.res480p,
-              onTap: () => notifier.setQuality(VideoQuality.res480p),
-            ),
-            const SizedBox(height: 10),
-
-            // Original Audio Track Info Row
+            // 1. Expandable Quality & Stream Options Accordion
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: AppColors.surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(12),
+                color: AppColors.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _isQualityExpanded ? AppColors.primaryAccent.withValues(alpha: 0.5) : AppColors.stroke,
+                  width: 1,
+                ),
               ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
                 children: [
-                  Flexible(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.audiotrack_rounded, color: AppColors.secondary, size: 18),
-                        SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            'Original Audio Track',
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.onSurface,
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _isQualityExpanded = !_isQualityExpanded;
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceContainerHigh,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              state.options.format == TargetFormat.audioMp3
+                                  ? Icons.headphones_rounded
+                                  : Icons.tune_rounded,
+                              size: 18,
+                              color: AppColors.primary,
                             ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  state.options.format == TargetFormat.audioMp3
+                                      ? 'Audio Bitrate & Quality'
+                                      : 'Resolution & Stream Quality',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.onSurface,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _selectedQualitySubtitle(state.options),
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              _selectedQualityBadge(state.options),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          AnimatedRotation(
+                            turns: _isQualityExpanded ? 0.5 : 0.0,
+                            duration: const Duration(milliseconds: 200),
+                            child: const Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              color: AppColors.outline,
+                              size: 20,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  SizedBox(width: 8),
-                  Flexible(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            'AAC LC • 320 kbps (48kHz)',
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontFamily: 'monospace',
-                              color: AppColors.secondary,
+                  AnimatedCrossFade(
+                    firstChild: const SizedBox(width: double.infinity, height: 0),
+                    secondChild: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                      child: Column(
+                        children: [
+                          const Divider(color: AppColors.stroke, height: 12),
+                          if (state.options.format == TargetFormat.audioMp3) ...[
+                            _buildQualityCard(
+                              title: '320 kbps (High Quality)',
+                              subtitle: 'Studio Master • Pristine Audio • ~2.4 MB/min',
+                              size: media?.estimateSizeForQuality(VideoQuality.res1080p, true, AudioQuality.kbps320) ?? 'Auto',
+                              badge: 'Recommended',
+                              tag: '320k',
+                              icon: Icons.album_rounded,
+                              selected: state.options.audioQuality == AudioQuality.kbps320,
+                              onTap: () => notifier.setAudioQuality(AudioQuality.kbps320),
                             ),
-                          ),
-                        ),
-                        Icon(Icons.expand_more_rounded, size: 16, color: AppColors.outline),
-                      ],
+                            const SizedBox(height: 8),
+                            _buildQualityCard(
+                              title: '256 kbps (Standard)',
+                              subtitle: 'High Fidelity VBR • ~1.9 MB/min',
+                              size: media?.estimateSizeForQuality(VideoQuality.res1080p, true, AudioQuality.kbps256) ?? 'Auto',
+                              tag: '256k',
+                              icon: Icons.graphic_eq_rounded,
+                              selected: state.options.audioQuality == AudioQuality.kbps256,
+                              onTap: () => notifier.setAudioQuality(AudioQuality.kbps256),
+                            ),
+                            const SizedBox(height: 8),
+                            _buildQualityCard(
+                              title: '192 kbps (Medium)',
+                              subtitle: 'Balanced Quality • ~1.4 MB/min',
+                              size: media?.estimateSizeForQuality(VideoQuality.res1080p, true, AudioQuality.kbps192) ?? 'Auto',
+                              tag: '192k',
+                              icon: Icons.audiotrack_rounded,
+                              selected: state.options.audioQuality == AudioQuality.kbps192,
+                              onTap: () => notifier.setAudioQuality(AudioQuality.kbps192),
+                            ),
+                            const SizedBox(height: 8),
+                            _buildQualityCard(
+                              title: '128 kbps (Saver)',
+                              subtitle: 'Smallest File Size • Voice/Podcast • ~1.0 MB/min',
+                              size: media?.estimateSizeForQuality(VideoQuality.res1080p, true, AudioQuality.kbps128) ?? 'Auto',
+                              tag: '128k',
+                              icon: Icons.music_note_rounded,
+                              selected: state.options.audioQuality == AudioQuality.kbps128,
+                              onTap: () => notifier.setAudioQuality(AudioQuality.kbps128),
+                            ),
+                          ] else if (state.options.format == TargetFormat.videoMp4) ...[
+                            _buildQualityCard(
+                              title: '4K (2160p)',
+                              subtitle: 'VP9 Profile 2 • 3840x2160',
+                              size: media?.estimateSizeForQuality(VideoQuality.res4k, false) ?? 'Auto',
+                              tag: '60fps',
+                              icon: Icons.hd_rounded,
+                              selected: state.options.quality == VideoQuality.res4k,
+                              onTap: () => notifier.setQuality(VideoQuality.res4k),
+                            ),
+                            const SizedBox(height: 8),
+                            _buildQualityCard(
+                              title: '1080p Full HD',
+                              subtitle: 'H.264 / AVC • Clean Remux',
+                              size: media?.estimateSizeForQuality(VideoQuality.res1080p, false) ?? 'Auto',
+                              badge: 'Recommended',
+                              icon: Icons.check_rounded,
+                              selected: state.options.quality == VideoQuality.res1080p,
+                              onTap: () => notifier.setQuality(VideoQuality.res1080p),
+                            ),
+                            const SizedBox(height: 8),
+                            _buildQualityCard(
+                              title: '720p HD',
+                              subtitle: 'High Speed / Data Saver',
+                              size: media?.estimateSizeForQuality(VideoQuality.res720p, false) ?? 'Auto',
+                              icon: Icons.video_file_rounded,
+                              selected: state.options.quality == VideoQuality.res720p,
+                              onTap: () => notifier.setQuality(VideoQuality.res720p),
+                            ),
+                            const SizedBox(height: 8),
+                            _buildQualityCard(
+                              title: '480p SD',
+                              subtitle: 'Ultra Light • Mobile Friendly',
+                              size: media?.estimateSizeForQuality(VideoQuality.res480p, false) ?? 'Auto',
+                              icon: Icons.sd_rounded,
+                              selected: state.options.quality == VideoQuality.res480p,
+                              onTap: () => notifier.setQuality(VideoQuality.res480p),
+                            ),
+                          ] else ...[
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.terminal_rounded, size: 20, color: AppColors.secondary),
+                                  SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      'Direct original stream download without transcoding.',
+                                      style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
+                    crossFadeState: _isQualityExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                    duration: const Duration(milliseconds: 220),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 12),
 
-            // Pre-Processing & Organization Toggles
+            // 2. Expandable Pre-Processing & Organization Accordion
             Container(
-              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: AppColors.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.stroke, width: 1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _isPreProcessingExpanded ? AppColors.secondary.withValues(alpha: 0.5) : AppColors.stroke,
+                  width: 1,
+                ),
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Pre-Processing & Organization',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.onSurface,
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _isPreProcessingExpanded = !_isPreProcessingExpanded;
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceContainerHigh,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.settings_suggest_rounded,
+                              size: 18,
+                              color: AppColors.secondary,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Pre-Processing & Organization',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.onSurface,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Subfolders, subtitles & metadata',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.secondary.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              _preProcessingBadge(state.options),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.secondary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          AnimatedRotation(
+                            turns: _isPreProcessingExpanded ? 0.5 : 0.0,
+                            duration: const Duration(milliseconds: 200),
+                            child: const Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              color: AppColors.outline,
+                              size: 20,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  _buildToggleTile(
-                    title: 'Create subfolder with title',
-                    subtitle: 'Organizes media by artist and stream name',
-                    icon: Icons.create_new_folder_outlined,
-                    value: state.options.createSubfolder,
-                    onChanged: (_) => notifier.toggleSubfolder(),
-                  ),
-                  const Divider(color: AppColors.stroke, height: 16),
-                  _buildToggleTile(
-                    title: 'Embed Subtitles',
-                    subtitle: 'Auto-detect CC: hr, sr, bs, en',
-                    icon: Icons.subtitles_outlined,
-                    value: state.options.embedSubtitles,
-                    onChanged: (_) => notifier.toggleEmbedSubtitles(),
-                  ),
-                  const Divider(color: AppColors.stroke, height: 16),
-                  _buildToggleTile(
-                    title: 'Save Media Server Metadata',
-                    subtitle: 'Generate Plex / Jellyfin compatible .NFO & poster',
-                    icon: Icons.art_track_rounded,
-                    value: state.options.saveMetadata,
-                    onChanged: (_) => notifier.toggleSaveMetadata(),
+                  AnimatedCrossFade(
+                    firstChild: const SizedBox(width: double.infinity, height: 0),
+                    secondChild: Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                      child: Column(
+                        children: [
+                          const Divider(color: AppColors.stroke, height: 12),
+                          _buildToggleTile(
+                            title: 'Create subfolder with title',
+                            subtitle: 'Organizes media by artist and stream name',
+                            icon: Icons.create_new_folder_outlined,
+                            value: state.options.createSubfolder,
+                            onChanged: (_) => notifier.toggleSubfolder(),
+                          ),
+                          const Divider(color: AppColors.stroke, height: 16),
+                          _buildToggleTile(
+                            title: 'Embed Subtitles',
+                            subtitle: 'Auto-detect CC: hr, sr, bs, en',
+                            icon: Icons.subtitles_outlined,
+                            value: state.options.embedSubtitles,
+                            onChanged: (_) => notifier.toggleEmbedSubtitles(),
+                          ),
+                          const Divider(color: AppColors.stroke, height: 16),
+                          _buildToggleTile(
+                            title: 'Save Media Server Metadata',
+                            subtitle: 'Generate Plex / Jellyfin compatible .NFO & poster',
+                            icon: Icons.art_track_rounded,
+                            value: state.options.saveMetadata,
+                            onChanged: (_) => notifier.toggleSaveMetadata(),
+                          ),
+                        ],
+                      ),
+                    ),
+                    crossFadeState: _isPreProcessingExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                    duration: const Duration(milliseconds: 220),
                   ),
                 ],
               ),
@@ -932,37 +1175,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                     ],
                   ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Target Storage Readout
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.folder_open_rounded, size: 14, color: AppColors.secondary),
-                    const SizedBox(width: 6),
-                    const Text(
-                      'Target: ',
-                      style: TextStyle(fontSize: 12, color: AppColors.outline),
-                    ),
-                    Flexible(
-                      child: Text(
-                        '${ref.watch(settingsProvider).downloadDirectory}/${state.options.format == TargetFormat.audioMp3 ? 'Music' : 'Videos'}/',
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontFamily: 'monospace',
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ),
             ),
