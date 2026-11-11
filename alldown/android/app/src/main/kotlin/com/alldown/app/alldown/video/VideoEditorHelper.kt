@@ -249,6 +249,7 @@ object VideoEditorHelper {
         panX: Float = 0.0f,
         panY: Float = 0.0f,
         fps: Int = 10,
+        maxWidth: Int = 420,
         callback: (Boolean, String?) -> Unit
     ) {
         val mainHandler = Handler(Looper.getMainLooper())
@@ -298,7 +299,7 @@ object VideoEditorHelper {
                         ?: retriever.getFrameAtTime(frameUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
 
                     if (rawFrame != null) {
-                        val processed = processFrameForGif(rawFrame, targetRatio, zoom, panX, panY)
+                        val processed = processFrameForGif(rawFrame, targetRatio, zoom, panX, panY, maxWidth)
                         encoder.addFrame(processed)
                         if (processed != rawFrame) {
                             processed.recycle()
@@ -334,7 +335,8 @@ object VideoEditorHelper {
         targetRatio: Float?,
         zoom: Float,
         panX: Float,
-        panY: Float
+        panY: Float,
+        targetMaxWidth: Int = 420
     ): Bitmap {
         var bmp = src
 
@@ -372,8 +374,8 @@ object VideoEditorHelper {
 
         bmp = Bitmap.createBitmap(src, startX, startY, cropW, cropH)
 
-        // Scale to crisp 540px width for sharp, high-definition GIF playback
-        val maxWidth = 540
+        // Scale to designated width for chosen quality profile (Low 320px, Medium 420px, High 540px)
+        val maxWidth = targetMaxWidth.coerceIn(240, 720)
         if (bmp.width > maxWidth) {
             val scale = maxWidth.toFloat() / bmp.width.toFloat()
             val targetH = (bmp.height * scale).toInt().coerceAtLeast(1)

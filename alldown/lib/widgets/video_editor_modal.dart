@@ -248,7 +248,234 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
     }
   }
 
-  Future<void> _exportGif() async {
+  Future<void> _onGifPressed() async {
+    if (_isProcessing) return;
+    _controller?.pause();
+
+    final durSeconds = _trimRange.end - _trimRange.start;
+
+    // Quality Profiles: (id, title, subtitle, fps, maxWidth, approxMbPerSec)
+    // Low: 320px, 8fps (~0.35 MB/s)
+    // Medium: 420px, 10fps (~0.75 MB/s)
+    // High: 540px, 12fps (~1.50 MB/s)
+    final lowEstMb = (durSeconds * 0.35).toStringAsFixed(1);
+    final medEstMb = (durSeconds * 0.75).toStringAsFixed(1);
+    final highEstMb = (durSeconds * 1.50).toStringAsFixed(1);
+
+    final selected = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceContainer,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border.all(color: AppColors.stroke, width: 1),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.outline.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.gif_box_rounded, color: AppColors.secondary, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Export Animated GIF',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.onSurface,
+                          ),
+                        ),
+                        Text(
+                          'Clip duration: ${durSeconds.toStringAsFixed(1)}s • Choose quality',
+                          style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+
+              // Option 1: Low (Compact)
+              _buildGifQualityTile(
+                ctx: ctx,
+                title: 'Low (Compact)',
+                badge: '~$lowEstMb MB',
+                badgeColor: AppColors.tertiary,
+                subtitle: '320p • 8 FPS • Fastest & best for chat apps',
+                fps: 8,
+                maxWidth: 320,
+                qualityName: 'Low',
+              ),
+              const SizedBox(height: 10),
+
+              // Option 2: Medium (Balanced - Recommended)
+              _buildGifQualityTile(
+                ctx: ctx,
+                title: 'Standard (Balanced)',
+                badge: '~$medEstMb MB',
+                badgeColor: AppColors.primary,
+                subtitle: '420p • 10 FPS • Recommended crisp balance',
+                fps: 10,
+                maxWidth: 420,
+                qualityName: 'Standard',
+                isRecommended: true,
+              ),
+              const SizedBox(height: 10),
+
+              // Option 3: High (HD)
+              _buildGifQualityTile(
+                ctx: ctx,
+                title: 'High (Maximum Clarity)',
+                badge: '~$highEstMb MB',
+                badgeColor: AppColors.secondary,
+                subtitle: '540p • 12 FPS • Studio master for gallery',
+                fps: 12,
+                maxWidth: 540,
+                qualityName: 'High',
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (selected != null) {
+      _exportGif(
+        fps: selected['fps'] as int,
+        maxWidth: selected['maxWidth'] as int,
+        qualityName: selected['qualityName'] as String,
+      );
+    }
+  }
+
+  Widget _buildGifQualityTile({
+    required BuildContext ctx,
+    required String title,
+    required String badge,
+    required Color badgeColor,
+    required String subtitle,
+    required int fps,
+    required int maxWidth,
+    required String qualityName,
+    bool isRecommended = false,
+  }) {
+    return InkWell(
+      onTap: () => Navigator.pop(ctx, {
+        'fps': fps,
+        'maxWidth': maxWidth,
+        'qualityName': qualityName,
+      }),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isRecommended
+              ? AppColors.primary.withValues(alpha: 0.12)
+              : AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isRecommended ? AppColors.primary : AppColors.stroke,
+            width: isRecommended ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: isRecommended ? AppColors.primary : AppColors.onSurface,
+                        ),
+                      ),
+                      if (isRecommended) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'BEST',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: badgeColor.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                badge,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: badgeColor,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _exportGif({
+    int fps = 10,
+    int maxWidth = 420,
+    String qualityName = 'Standard',
+  }) async {
     if (_isProcessing) return;
 
     _controller?.pause();
@@ -257,7 +484,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
 
     setState(() {
       _isProcessing = true;
-      _processingMessage = 'Generating optimized animated GIF...';
+      _processingMessage = 'Generating $qualityName animated GIF...';
     });
 
     try {
@@ -279,7 +506,8 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
         zoom: _zoom,
         panX: _panX,
         panY: _panY,
-        fps: 10,
+        fps: fps,
+        maxWidth: maxWidth,
       );
 
       if (!mounted) return;
@@ -308,7 +536,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
           title: '${widget.item.title} (GIF)',
           channel: widget.item.channel,
           format: 'GIF',
-          resolution: 'Animated GIF',
+          resolution: '$qualityName GIF (${maxWidth}p)',
           sizeFormatted: '$sizeMb MB',
           completedDateFormatted: 'Today',
           duration: durStr,
@@ -324,7 +552,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Animated GIF saved to Gallery and Library: ${newItem.title}'),
+            content: Text('Animated GIF ($sizeMb MB) saved to Gallery: ${newItem.title}'),
             backgroundColor: AppColors.secondary,
           ),
         );
@@ -1036,7 +1264,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                         shadowColor: Colors.transparent,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
-                      onPressed: _isProcessing ? null : _exportGif,
+                      onPressed: _isProcessing ? null : _onGifPressed,
                       icon: Icon(Icons.gif_rounded, size: 22, color: AppColors.secondary),
                       label: Text(
                         'GIF',

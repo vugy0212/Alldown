@@ -65,6 +65,7 @@ class VideoEditorService {
     double panX = 0.0,
     double panY = 0.0,
     int fps = 10,
+    int maxWidth = 420,
   }) async {
     try {
       final res = await _channel.invokeMethod<bool>('createGif', {
@@ -77,6 +78,7 @@ class VideoEditorService {
         'panX': panX,
         'panY': panY,
         'fps': fps,
+        'maxWidth': maxWidth,
       });
       return res ?? false;
     } catch (_) {

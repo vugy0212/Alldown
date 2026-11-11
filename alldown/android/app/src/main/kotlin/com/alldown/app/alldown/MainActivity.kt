@@ -197,6 +197,7 @@ class MainActivity : FlutterActivity() {
                         val panX = (call.argument<Number>("panX"))?.toFloat() ?: 0.0f
                         val panY = (call.argument<Number>("panY"))?.toFloat() ?: 0.0f
                         val fps = call.argument<Int>("fps") ?: 10
+                        val maxWidth = call.argument<Int>("maxWidth") ?: 420
                         if (input != null && output != null) {
                             VideoEditorHelper.createGif(
                                 context = applicationContext,
@@ -208,7 +209,8 @@ class MainActivity : FlutterActivity() {
                                 zoom = zoom,
                                 panX = panX,
                                 panY = panY,
-                                fps = fps
+                                fps = fps,
+                                maxWidth = maxWidth
                             ) { success, error ->
                                 if (success) {
                                     result.success(true)
