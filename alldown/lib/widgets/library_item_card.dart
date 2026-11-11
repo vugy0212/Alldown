@@ -66,16 +66,26 @@ class LibraryItemCard extends StatelessWidget {
                     onPlay();
                   },
                 ),
-                if (!item.isAudio && !isGif)
+                if (!item.isAudio && !isGif) ...[
                   ListTile(
                     leading: Icon(Icons.content_cut_rounded, color: AppColors.secondary),
-                    title: const Text('Trim, Crop & Make GIF'),
-                    subtitle: const Text('Trim video, crop frame, or generate GIF'),
+                    title: const Text('Edit Video & Framing'),
+                    subtitle: const Text('Trim, crop, CapCut pinch-zoom & GIF'),
                     onTap: () {
                       Navigator.pop(ctx);
                       VideoEditorModal.show(context, item);
                     },
                   ),
+                  ListTile(
+                    leading: Icon(Icons.music_note_rounded, color: AppColors.primary),
+                    title: const Text('Extract & Trim Audio'),
+                    subtitle: const Text('Convert video segment to M4A audio'),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      VideoEditorModal.show(context, item);
+                    },
+                  ),
+                ],
                 ListTile(
                   leading: Icon(Icons.share_outlined, color: AppColors.outline),
                   title: const Text('Share / Open Externally'),

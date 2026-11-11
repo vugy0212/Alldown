@@ -84,6 +84,26 @@ class VideoEditorService {
     }
   }
 
+  /// Extracts and trims pure audio from video with zero video overhead using Media3 Transformer
+  static Future<bool> extractAudio({
+    required String inputPath,
+    required String outputPath,
+    required int startMs,
+    required int endMs,
+  }) async {
+    try {
+      final res = await _channel.invokeMethod<bool>('extractAudio', {
+        'inputPath': inputPath,
+        'outputPath': outputPath,
+        'startMs': startMs,
+        'endMs': endMs,
+      });
+      return res ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Registers newly saved media with Android MediaStore so it appears instantly in the Samsung Gallery
   static Future<bool> scanMediaFile({
     required String path,

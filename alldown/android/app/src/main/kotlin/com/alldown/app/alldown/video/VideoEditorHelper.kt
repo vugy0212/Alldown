@@ -166,6 +166,75 @@ object VideoEditorHelper {
     }
 
     /**
+     * Hardware-accelerated Audio Extraction & Trim from any video file using Jetpack Media3 Transformer.
+     * Strips video track (removeVideo=true) and outputs pristine audio (.m4a / .mp4 audio) in seconds.
+     */
+    fun extractAndTrimAudio(
+        context: Context,
+        inputPath: String,
+        outputPath: String,
+        startMs: Long,
+        endMs: Long,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        val mainHandler = Handler(Looper.getMainLooper())
+
+        try {
+            Log.d(TAG, "extractAndTrimAudio: input=$inputPath, output=$outputPath, startMs=$startMs, endMs=$endMs")
+
+            val inFile = File(inputPath)
+            if (!inFile.exists()) {
+                val err = "Input media file does not exist: $inputPath"
+                Log.e(TAG, err)
+                mainHandler.post { callback(false, err) }
+                return
+            }
+
+            val outFile = File(outputPath)
+            outFile.parentFile?.mkdirs()
+            if (outFile.exists()) outFile.delete()
+
+            val clippingConfiguration = MediaItem.ClippingConfiguration.Builder()
+                .setStartPositionMs(startMs)
+                .setEndPositionMs(endMs)
+                .build()
+
+            val mediaItem = MediaItem.Builder()
+                .setUri(Uri.fromFile(inFile))
+                .setClippingConfiguration(clippingConfiguration)
+                .build()
+
+            val editedMediaItem = EditedMediaItem.Builder(mediaItem)
+                .setRemoveVideo(true)
+                .build()
+
+            val transformer = Transformer.Builder(context)
+                .addListener(object : Transformer.Listener {
+                    override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                        Log.i(TAG, "Audio extraction completed successfully -> $outputPath")
+                        MediaScannerConnection.scanFile(context, arrayOf(outputPath), arrayOf("audio/mp4", "audio/m4a"), null)
+                        mainHandler.post { callback(true, null) }
+                    }
+
+                    override fun onError(
+                        composition: Composition,
+                        exportResult: ExportResult,
+                        exportException: ExportException
+                    ) {
+                        Log.e(TAG, "Audio extraction error: ${exportException.message}", exportException)
+                        mainHandler.post { callback(false, exportException.message) }
+                    }
+                })
+                .build()
+
+            transformer.start(editedMediaItem, outputPath)
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception during extractAndTrimAudio setup: ${e.message}", e)
+            mainHandler.post { callback(false, e.message) }
+        }
+    }
+
+    /**
      * Converts a selected video segment into an animated GIF (.gif) with optional crop, zoom & pan.
      * Uses Floyd-Steinberg dithering and adaptive palette for true HD quality.
      */

@@ -39,6 +39,9 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
   double _panX = 0.0; // -1.0 to 1.0 (0.0 is center)
   double _panY = 0.0; // -1.0 to 1.0 (0.0 is center)
 
+  // CapCut gesture tracking
+  double _baseZoom = 1.0;
+
   bool _isProcessing = false;
   String _processingMessage = '';
 
@@ -340,6 +343,95 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
     }
   }
 
+  Future<void> _exportAudio() async {
+    if (_isProcessing) return;
+
+    _controller?.pause();
+    final startMs = (_trimRange.start * 1000).toInt();
+    final endMs = (_trimRange.end * 1000).toInt();
+
+    setState(() {
+      _isProcessing = true;
+      _processingMessage = 'Extracting and trimming audio track...';
+    });
+
+    try {
+      final appDocDir = await getApplicationDocumentsDirectory();
+      final targetFolder = Directory('${appDocDir.path}/AllDown/Audio');
+      if (!targetFolder.existsSync()) {
+        targetFolder.createSync(recursive: true);
+      }
+
+      final timeStamp = DateTime.now().millisecondsSinceEpoch;
+      final outPath = '${targetFolder.path}/Audio_$timeStamp.m4a';
+
+      final success = await VideoEditorService.extractAudio(
+        inputPath: widget.item.localPath,
+        outputPath: outPath,
+        startMs: startMs,
+        endMs: endMs,
+      );
+
+      if (!mounted) return;
+      setState(() => _isProcessing = false);
+
+      if (success && File(outPath).existsSync()) {
+        final fileSize = File(outPath).lengthSync();
+        final sizeMb = (fileSize / (1024 * 1024)).toStringAsFixed(1);
+        final durSeconds = ((endMs - startMs) / 1000).round();
+        final durStr = '${(durSeconds ~/ 60).toString().padLeft(2, '0')}:${(durSeconds % 60).toString().padLeft(2, '0')}';
+
+        // Copy to public Music/AllDown folder for instant Android Music apps indexing
+        String savedPath = outPath;
+        try {
+          final musicDir = Directory('/storage/emulated/0/Music/AllDown');
+          if (!musicDir.existsSync()) musicDir.createSync(recursive: true);
+          final pubFile = File('${musicDir.path}/Audio_$timeStamp.m4a');
+          File(outPath).copySync(pubFile.path);
+          savedPath = pubFile.path;
+          VideoEditorService.scanMediaFile(path: savedPath, mimeType: 'audio/mp4');
+        } catch (_) {}
+
+        // Add to media library
+        final newItem = MediaItem(
+          id: 'audio_$timeStamp',
+          title: '${widget.item.title} (Audio)',
+          channel: widget.item.channel,
+          format: 'M4A',
+          resolution: 'Audio Only',
+          sizeFormatted: '$sizeMb MB',
+          completedDateFormatted: 'Today',
+          duration: durStr,
+          thumbnailUrl: widget.item.thumbnailUrl,
+          localPath: savedPath,
+          isAudio: true,
+          platform: widget.item.platform,
+        );
+
+        ref.read(mediaLibraryProvider.notifier).addItem(newItem);
+
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Audio extracted and saved to Music: ${newItem.title}'),
+            backgroundColor: AppColors.primary,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error extracting audio track.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final startFormatted = VideoEditorService.formatMs((_trimRange.start * 1000).toInt());
@@ -443,16 +535,27 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                                     final pixelY = _panY * maxDy;
 
                                     return GestureDetector(
-                                      onPanUpdate: _isProcessing
+                                      behavior: HitTestBehavior.opaque,
+                                      onScaleStart: _isProcessing
                                           ? null
                                           : (details) {
-                                              if (maxDx <= 0 && maxDy <= 0) return;
+                                              _baseZoom = _zoom;
+                                            },
+                                      onScaleUpdate: _isProcessing
+                                          ? null
+                                          : (details) {
                                               setState(() {
+                                                // 1. Two-finger Pinch to Zoom (CapCut style)
+                                                if (details.pointerCount > 1 || details.scale != 1.0) {
+                                                  _zoom = (_baseZoom * details.scale).clamp(1.0, 3.0);
+                                                }
+
+                                                // 2. Single or Multi-finger Pan / Reframing
                                                 if (maxDx > 0) {
-                                                  _panX = (_panX - (details.delta.dx / maxDx)).clamp(-1.0, 1.0);
+                                                  _panX = (_panX - (details.focalPointDelta.dx / maxDx)).clamp(-1.0, 1.0);
                                                 }
                                                 if (maxDy > 0) {
-                                                  _panY = (_panY + (details.delta.dy / maxDy)).clamp(-1.0, 1.0);
+                                                  _panY = (_panY + (details.focalPointDelta.dy / maxDy)).clamp(-1.0, 1.0);
                                                 }
                                               });
                                             },
@@ -866,6 +969,22 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
             ),
             child: Row(
               children: [
+                // Extract Audio Button
+                Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.stroke, width: 1),
+                  ),
+                  child: IconButton(
+                    tooltip: 'Extract Audio Track',
+                    onPressed: _isProcessing ? null : _exportAudio,
+                    icon: Icon(Icons.music_note_rounded, size: 22, color: AppColors.primary),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
                 // Save Video Button
                 Expanded(
                   child: Container(
@@ -900,7 +1019,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
 
                 // Make GIF Button
                 Expanded(
@@ -920,7 +1039,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                       onPressed: _isProcessing ? null : _exportGif,
                       icon: Icon(Icons.gif_rounded, size: 22, color: AppColors.secondary),
                       label: Text(
-                        'Generate GIF',
+                        'GIF',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,

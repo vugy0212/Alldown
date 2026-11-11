@@ -133,6 +133,29 @@ class MainActivity : FlutterActivity() {
                             result.error("INVALID_ARGS", "Missing paths", null)
                         }
                     }
+                    "extractAudio" -> {
+                        val input = call.argument<String>("inputPath")
+                        val output = call.argument<String>("outputPath")
+                        val startMs = (call.argument<Number>("startMs"))?.toLong() ?: 0L
+                        val endMs = (call.argument<Number>("endMs"))?.toLong() ?: 0L
+                        if (input != null && output != null) {
+                            VideoEditorHelper.extractAndTrimAudio(
+                                context = applicationContext,
+                                inputPath = input,
+                                outputPath = output,
+                                startMs = startMs,
+                                endMs = endMs
+                            ) { success, error ->
+                                if (success) {
+                                    result.success(true)
+                                } else {
+                                    result.error("AUDIO_EXTRACT_ERROR", error ?: "Failed to extract audio", null)
+                                }
+                            }
+                        } else {
+                            result.error("INVALID_ARGS", "Missing paths", null)
+                        }
+                    }
                     "cropVideo" -> {
                         val input = call.argument<String>("inputPath")
                         val output = call.argument<String>("outputPath")

@@ -2,6 +2,13 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.1.0] - 2026-11-11
+
+### Added & Improved
+- **Video to Audio Extraction & Trimming:** Directly extract high-fidelity audio (`M4A/AAC`) from any downloaded video with custom start/end time trimming via Jetpack Media3 Transformer. Saved immediately to `Music/AllDown` and indexed in Android MediaStore & in-app library.
+- **CapCut-style Multi-Touch Canvas:** Full two-finger pinch-to-zoom (`1.0x` - `3.0x`) and single/multi-finger pan directly on the live video preview canvas with instantaneous aspect-ratio clipping.
+- **Library Quick Action:** Added instant "Extract & Trim Audio" shortcut in the video card context menu.
+
 ## [1.0.3] - 2026-11-11
 
 ### Improved & Added
