@@ -2,6 +2,22 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.2.0] - 2026-11-11
+
+### Added & Improved
+- **Video Studio GIF Quality Presets & Live Size Estimation:**
+  - Added an intuitive quality selector bottom sheet for GIF generation with 3 presets: Low (320p, 8 FPS), Standard (420p, 10 FPS - Recommended), and High (540p, 12 FPS).
+  - Dynamic real-time MB size estimation badge for each preset calculated directly from the active trim range.
+  - Native hardware-scaled frame processing in `VideoEditorHelper.kt`.
+- **Audio Extraction Quality Presets & Live Size Estimation:**
+  - Added a quality selector modal for video-to-audio extraction with 3 presets: Standard (128 kbps M4A - Speech & Podcasts), High Quality (192 kbps M4A - Music & Balanced), and Master (Original Stream / 320 kbps M4A - Studio Fidelity).
+  - Dynamic real-time MB size estimation badge calculated directly from the trimmed duration.
+- **Video Player CapCut-style Edit Button:**
+  - Added a prominent vertical action button with a small "Edit" label below the scissors icon in the Video Player header for direct access to Video Studio.
+- **Settings & UI Reorganization:**
+  - Moved the "Supported Services & Extractors" drawer into "Help & User Guide" for cleaner settings structure.
+  - Added a "Buy Me a Coffee" creator support banner placeholder in "About AllDown".
+
 ## [1.1.0] - 2026-11-11
 
 ### Added & Improved
