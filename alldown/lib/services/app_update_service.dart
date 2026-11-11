@@ -32,7 +32,7 @@ class AppUpdateService {
       final uri = Uri.parse('https://api.github.com/repos/$repo/releases/latest');
       final response = await http.get(uri, headers: {
         'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'AllDown-Mobile-App/1.0.0',
+        'User-Agent': 'AllDown-Mobile-App/$currentVersion',
       }).timeout(const Duration(seconds: 6));
 
       if (response.statusCode == 200) {
@@ -45,18 +45,24 @@ class AppUpdateService {
         String apkUrl = data['html_url'] as String? ?? 'https://github.com/$repo/releases';
         final assets = data['assets'] as List?;
         if (assets != null) {
+          String? preferredArm64;
+          String? preferredUniversal;
+          String? fallbackApk;
           for (final a in assets) {
             if (a is Map<String, dynamic>) {
               final name = (a['name'] as String? ?? '').toLowerCase();
               final dl = a['browser_download_url'] as String? ?? '';
               if (name.endsWith('.apk') && dl.isNotEmpty) {
-                apkUrl = dl;
-                if (name.contains('arm64') || name.contains('universal')) {
-                  break;
+                fallbackApk ??= dl;
+                if (name.contains('arm64')) {
+                  preferredArm64 = dl;
+                } else if (name.contains('universal')) {
+                  preferredUniversal = dl;
                 }
               }
             }
           }
+          apkUrl = preferredArm64 ?? preferredUniversal ?? fallbackApk ?? apkUrl;
         }
 
         final isNewer = _compareVersions(tagName, currentVersion);
@@ -244,35 +250,37 @@ class AppUpdateService {
                         ),
                       ),
                       onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Close'),
+                      child: Text(info.isNewer ? 'Later' : 'OK'),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: AppColors.onPrimary,
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                  if (info.isNewer) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.onPrimary,
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () async {
+                          Navigator.pop(ctx);
+                          final uri = Uri.parse(info.downloadUrl);
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          }
+                        },
+                        icon: const Icon(Icons.download_rounded, size: 18),
+                        label: Text(
+                          'Download ${info.tagName}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
-                      onPressed: () async {
-                        Navigator.pop(ctx);
-                        final uri = Uri.parse(info.downloadUrl);
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
-                        }
-                      },
-                      icon: const Icon(Icons.download_rounded, size: 18),
-                      label: Text(
-                        info.isNewer ? 'Download Update' : 'GitHub Releases',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ],
