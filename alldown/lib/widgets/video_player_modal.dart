@@ -106,16 +106,42 @@ class VideoPlayerModal extends ConsumerWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (!item.isAudio && !isGif)
-                        IconButton(
-                          tooltip: 'Trim, Crop & GIF Editor',
-                          icon: const Icon(Icons.content_cut_rounded, size: 20),
-                          color: AppColors.secondary,
-                          onPressed: () {
-                            notifier.pause();
-                            VideoEditorModal.show(context, item);
-                          },
+                      if (!item.isAudio && !isGif) ...[
+                        Tooltip(
+                          message: 'Trim, Crop & GIF Editor',
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(8),
+                            onTap: () {
+                              notifier.pause();
+                              VideoEditorModal.show(context, item);
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.content_cut_rounded,
+                                    size: 19,
+                                    color: AppColors.secondary,
+                                  ),
+                                  const SizedBox(height: 1),
+                                  Text(
+                                    'Edit',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.3,
+                                      color: AppColors.secondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
+                        const SizedBox(width: 4),
+                      ],
                       IconButton(
                         tooltip: 'Minimize',
                         icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 24),
