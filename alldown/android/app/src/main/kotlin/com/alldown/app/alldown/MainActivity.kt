@@ -91,6 +91,15 @@ class MainActivity : FlutterActivity() {
                             result.error("INVALID_PATH", "Path is required", null)
                         }
                     }
+                    "installApk" -> {
+                        val path = call.argument<String>("path")
+                        if (path != null) {
+                            val success = installApkIntent(path)
+                            result.success(success)
+                        } else {
+                            result.error("INVALID_PATH", "Path is required", null)
+                        }
+                    }
                     "openFolder" -> {
                         val path = call.argument<String>("path")
                         if (path != null) {
@@ -265,5 +274,24 @@ class MainActivity : FlutterActivity() {
             }
             startActivity(fallbackIntent)
         } catch (_: Exception) {}
+    }
+
+    private fun installApkIntent(path: String): Boolean {
+        return try {
+            val file = File(path)
+            if (!file.exists()) return false
+
+            val authority = "${applicationContext.packageName}.fileprovider"
+            val uri = FileProvider.getUriForFile(this, authority, file)
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(intent)
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 }

@@ -103,5 +103,15 @@ class NativeDownloaderService {
       await _channel.invokeMethod('openFolder', {'path': path});
     } catch (_) {}
   }
+
+  /// Triggers standard Android system package installer for downloaded APK
+  Future<bool> installApk(String path) async {
+    try {
+      final res = await _channel.invokeMethod<bool>('installApk', {'path': path});
+      return res ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
 }
 
