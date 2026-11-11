@@ -60,214 +60,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Storage Management Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.stroke, width: 1),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceContainerLowest,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.pie_chart_rounded,
-                                size: 20,
-                                color: AppColors.secondary,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Storage Management',
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.onSurface,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Device & cache allocation',
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceContainerLowest,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${_formatBytes(totalBytes)} Total',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Multi-segment Storage Bar
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: SizedBox(
-                      height: 10,
-                      child: Row(
-                        children: [
-                          if (videoBytes > 0)
-                            Expanded(
-                              flex: (videoBytes ~/ 1024).clamp(1, 100000),
-                              child: Container(color: AppColors.primaryAccent),
-                            ),
-                          if (videoBytes > 0 && audioBytes > 0) const SizedBox(width: 2),
-                          if (audioBytes > 0)
-                            Expanded(
-                              flex: (audioBytes ~/ 1024).clamp(1, 100000),
-                              child: Container(color: AppColors.secondary),
-                            ),
-                          if (totalBytes == 0)
-                            Expanded(
-                              child: Container(color: AppColors.surfaceContainerLowest),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Legend (Wrap prevents horizontal overflow)
-                  Wrap(
-                    spacing: 14,
-                    runSpacing: 6,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.circle, size: 7, color: AppColors.primaryAccent),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Videos (${_formatBytes(videoBytes)})',
-                            style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.circle, size: 7, color: AppColors.secondary),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Audio (${_formatBytes(audioBytes)})',
-                            style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.circle, size: 7, color: AppColors.tertiary),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Cache (${_cacheCleared ? "0.0 MB" : "Temp"})',
-                            style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Clear App Cache Button
-                  InkWell(
-                    onTap: () async {
-                      final messenger = ScaffoldMessenger.of(context);
-                      await notifier.clearAppCache();
-                      if (!mounted) return;
-                      setState(() => _cacheCleared = true);
-                      messenger.showSnackBar(
-                        const SnackBar(content: Text('Temporary stream cache cleared')),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceContainer,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete_sweep_rounded, size: 18, color: AppColors.tertiary),
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Clear App Cache',
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.onSurface,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.tertiary.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              _cacheCleared ? '0.0 MB' : 'Clean',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.tertiary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
             // MENU: Account & Authentication (Expandable Menu for Cookies & 18+ Access)
             _buildExpandableCard(
               icon: Icons.vpn_key_rounded,
@@ -483,6 +275,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   value: settings.sponsorBlockEnabled,
                   onChanged: (_) => notifier.toggleSponsorBlock(),
                 ),
+                Divider(color: AppColors.stroke, height: 16),
+                _buildSettingSwitch(
+                  title: 'Download on Wi-Fi Only',
+                  subtitle: 'Pause download tasks on mobile cellular data',
+                  value: settings.wifiOnly,
+                  onChanged: (_) => notifier.toggleWifiOnly(),
+                ),
+                Divider(color: AppColors.stroke, height: 16),
+                _buildSettingSwitch(
+                  title: 'Automatic Retry',
+                  subtitle: '3 attempts with exponential backoff on network drop',
+                  value: settings.autoRetry,
+                  onChanged: (_) => notifier.toggleAutoRetry(),
+                ),
               ],
             ),
 
@@ -545,114 +351,173 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ],
             ),
 
-            // MENU 4: Mrežni Protokol, Dretve i Brzina (Expandable Menu with Dropdowns)
-            _buildExpandableCard(
-              icon: Icons.speed_rounded,
-              iconColor: AppColors.primary,
-              title: 'Network Protocol & Speed',
-              subtitle: 'Concurrent: ${settings.maxConcurrentDownloads} tasks • Timeout: ${settings.connectionTimeout}s',
-              badge: '${settings.maxConcurrentDownloads} Tasks',
-              badgeColor: AppColors.primary,
-              initiallyExpanded: false,
-              children: [
-                _buildDropdownRow<String>(
-                  title: 'Browser User-Agent',
-                  subtitle: 'Browser identifier sent with stream requests',
-                  value: settings.userAgent,
-                  items: const [
-                    DropdownMenuItem(value: 'Android Chrome', child: Text('Android Chrome (Default)')),
-                    DropdownMenuItem(value: 'Windows Desktop', child: Text('Windows Desktop Chrome')),
-                    DropdownMenuItem(value: 'iOS Safari', child: Text('Apple iOS Safari')),
-                    DropdownMenuItem(value: 'Custom AllDown', child: Text('AllDown Engine v1.0')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) notifier.setUserAgent(val);
-                  },
-                ),
-                Divider(color: AppColors.stroke, height: 16),
-                _buildDropdownRow<int>(
-                  title: 'Connection Timeout',
-                  subtitle: 'Maximum server response wait time',
-                  value: settings.connectionTimeout,
-                  items: const [
-                    DropdownMenuItem(value: 10, child: Text('10 seconds (Fast)')),
-                    DropdownMenuItem(value: 15, child: Text('15 seconds (Recommended)')),
-                    DropdownMenuItem(value: 30, child: Text('30 seconds (Slow connections)')),
-                    DropdownMenuItem(value: 60, child: Text('60 seconds (Ultra stable)')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) notifier.setConnectionTimeout(val);
-                  },
-                ),
-                Divider(color: AppColors.stroke, height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Concurrent Downloads',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
-                          ),
-                          Text(
-                            'Number of simultaneous active downloads',
-                            style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryContainer,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '${settings.maxConcurrentDownloads} Tasks',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.onPrimary),
-                      ),
-                    ),
-                  ],
-                ),
-                Slider(
-                  value: settings.maxConcurrentDownloads.toDouble(),
-                  min: 1,
-                  max: 8,
-                  divisions: 7,
-                  activeColor: AppColors.primary,
-                  inactiveColor: AppColors.surfaceContainerLowest,
-                  label: '${settings.maxConcurrentDownloads}',
-                  onChanged: (val) => notifier.setConcurrentDownloads(val.toInt()),
-                ),
-                Divider(color: AppColors.stroke, height: 16),
-                _buildSettingSwitch(
-                  title: 'Download on Wi-Fi Only',
-                  subtitle: 'Pause download tasks on cellular data',
-                  value: settings.wifiOnly,
-                  onChanged: (_) => notifier.toggleWifiOnly(),
-                ),
-                Divider(color: AppColors.stroke, height: 16),
-                _buildSettingSwitch(
-                  title: 'Automatic Retry',
-                  subtitle: '3 attempts with exponential backoff on network drop',
-                  value: settings.autoRetry,
-                  onChanged: (_) => notifier.toggleAutoRetry(),
-                ),
-              ],
-            ),
-
-            // MENU 5: Storage & Directory Management (Expandable Menu)
+            // MENU 4: Storage & Directory Management (Unified Expandable Menu)
             _buildExpandableCard(
               icon: Icons.folder_copy_rounded,
               iconColor: AppColors.secondary,
               title: 'Storage & Directory Management',
-              subtitle: 'Default directory: ${settings.downloadDirectory}',
-              badge: 'Storage',
+              subtitle: 'Storage: ${_formatBytes(totalBytes)} • ${settings.downloadDirectory}',
+              badge: _formatBytes(totalBytes),
               badgeColor: AppColors.secondary,
               initiallyExpanded: false,
               children: [
+                // Multi-segment Storage Bar & Overview
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Storage Allocation',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.onSurface,
+                      ),
+                    ),
+                    Text(
+                      '${_formatBytes(totalBytes)} Total',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // Bar
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: SizedBox(
+                    height: 10,
+                    child: Row(
+                      children: [
+                        if (videoBytes > 0)
+                          Expanded(
+                            flex: (videoBytes ~/ 1024).clamp(1, 100000),
+                            child: Container(color: AppColors.primaryAccent),
+                          ),
+                        if (videoBytes > 0 && audioBytes > 0) const SizedBox(width: 2),
+                        if (audioBytes > 0)
+                          Expanded(
+                            flex: (audioBytes ~/ 1024).clamp(1, 100000),
+                            child: Container(color: AppColors.secondary),
+                          ),
+                        if (totalBytes == 0)
+                          Expanded(
+                            child: Container(color: AppColors.surfaceContainerLowest),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // Legend
+                Wrap(
+                  spacing: 14,
+                  runSpacing: 6,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.circle, size: 7, color: AppColors.primaryAccent),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Videos (${_formatBytes(videoBytes)})',
+                          style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.circle, size: 7, color: AppColors.secondary),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Audio (${_formatBytes(audioBytes)})',
+                          style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.circle, size: 7, color: AppColors.tertiary),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Cache (${_cacheCleared ? "0.0 MB" : "Temp"})',
+                          style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Clear Cache Button
+                InkWell(
+                  onTap: () async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    await notifier.clearAppCache();
+                    if (!mounted) return;
+                    setState(() => _cacheCleared = true);
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('Temporary stream cache cleared')),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceContainerLowest,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.stroke, width: 0.8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_sweep_rounded, size: 18, color: AppColors.tertiary),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Clear App Cache',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.onSurface,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.tertiary.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            _cacheCleared ? '0.0 MB' : 'Clean',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.tertiary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Divider(color: AppColors.stroke, height: 24),
+
+                // Directory Selection Header
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -686,7 +551,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.drive_file_move_rounded, size: 13, color: AppColors.primary),
-                                SizedBox(width: 4),
+                                const SizedBox(width: 4),
                                 Text(
                                   'Change',
                                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
@@ -747,7 +612,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 Divider(color: AppColors.stroke, height: 1),
                 const SizedBox(height: 10),
                 SizedBox(
