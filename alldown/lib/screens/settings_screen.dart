@@ -742,181 +742,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ],
             ),
 
-            // DRAWER: Engine & Core Runtime (Engine & Core Runtime)
-            _buildExpandableCard(
-              icon: Icons.terminal_rounded,
-              iconColor: AppColors.secondary,
-              title: 'Engine & Core Runtime',
-              subtitle: '${settings.ytDlpVersion} • ${settings.ffmpegVersion}',
-              badge: 'Media3',
-              badgeColor: AppColors.secondary,
-              initiallyExpanded: false,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceContainerLowest,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(Icons.terminal_rounded, size: 18, color: AppColors.primary),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Stream Extractor Engine',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
-                                ),
-                                Text(
-                                  settings.ytDlpVersion,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.tertiaryContainer.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.check_rounded, size: 12, color: AppColors.tertiary),
-                          SizedBox(width: 3),
-                          Text(
-                            'Up to date',
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.tertiary),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceContainerLowest,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(Icons.hardware_rounded, size: 18, color: AppColors.secondary),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Media3 ExoPlayer & Remux',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
-                                ),
-                                Text(
-                                  settings.ffmpegVersion,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceContainerLowest,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'HW Accel',
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.secondary),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-
-                // App & Engine Update Trigger Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.surfaceContainer,
-                      foregroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    onPressed: () async {
-                      final messenger = ScaffoldMessenger.of(context);
-                      setState(() => _isCheckingUpdate = true);
-                      final info = await AppUpdateService.checkForUpdate();
-                      if (!mounted) return;
-                      setState(() => _isCheckingUpdate = false);
-                      if (info != null) {
-                        if (context.mounted) {
-                          AppUpdateService.showUpdateModal(context, info);
-                        }
-                      } else {
-                        messenger.showSnackBar(
-                          const SnackBar(content: Text('AllDown engine and modules are up to date!')),
-                        );
-                      }
-                    },
-                    icon: _isCheckingUpdate
-                        ? SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-                          )
-                        : const Icon(Icons.sync_rounded, size: 18),
-                    label: Text(
-                      _isCheckingUpdate ? 'Checking for updates...' : 'Check for Updates (GitHub)',
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // Repo & License Link
-                TextButton.icon(
-                  onPressed: () => launchUrl(Uri.parse('https://github.com/yt-dlp/yt-dlp')),
-                  icon: Icon(Icons.code_rounded, size: 16, color: AppColors.outline),
-                  label: Text(
-                    'yt-dlp Extraction Engine (GitHub)',
-                    style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
-                  ),
-                ),
-              ],
-            ),
-
             // DRAWER: O Aplikaciji (About AllDown) - S ugniježđenom opcijom Podržani Servisi
             _buildExpandableCard(
               icon: Icons.info_outline_rounded,
@@ -1009,7 +834,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   icon: Icons.verified_rounded,
                   iconColor: AppColors.secondary,
                   label: 'Version',
-                  value: '${AppUpdateService.currentVersion} (Build ${AppUpdateService.currentVersion})',
+                  value: 'v${AppUpdateService.currentVersion}',
                 ),
                 const SizedBox(height: 10),
                 _buildAboutRow(
@@ -1027,8 +852,51 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const SizedBox(height: 14),
 
-
-                const SizedBox(height: 16),
+                // Check for Updates Button inside About
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryContainer,
+                      foregroundColor: AppColors.onPrimaryContainer,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    onPressed: _isCheckingUpdate
+                        ? null
+                        : () async {
+                            final messenger = ScaffoldMessenger.of(context);
+                            setState(() => _isCheckingUpdate = true);
+                            final info = await AppUpdateService.checkForUpdate();
+                            if (!mounted) return;
+                            setState(() => _isCheckingUpdate = false);
+                            if (info != null) {
+                              if (context.mounted) {
+                                AppUpdateService.showUpdateModal(context, info);
+                              }
+                            } else {
+                              messenger.showSnackBar(
+                                const SnackBar(content: Text('AllDown is already up to date!')),
+                              );
+                            }
+                          },
+                    icon: _isCheckingUpdate
+                        ? SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.onPrimaryContainer),
+                          )
+                        : const Icon(Icons.sync_rounded, size: 18),
+                    label: Text(
+                      _isCheckingUpdate ? 'Checking for updates...' : 'Check for Updates',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
 
                 // Ugniježđena ladica za Podržane Servise unutar About-a
                 Container(
