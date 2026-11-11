@@ -2,6 +2,13 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.0.2] - 2026-11-11
+
+### Improved & Fixed
+- **Updater UX Streamlining:** The download button is now cleanly hidden when the app is already up to date, showing only a concise status card with an 'OK' button.
+- **Direct APK Resolution:** The updater directly resolves and targets the optimal device-specific `arm64-v8a` APK from GitHub Releases for fast downloads.
+- **Scrollable Modal:** Release notes are now fully contained in a smooth scroll view, keeping action buttons permanently anchored and accessible.
+
 ## [1.0.1] - 2026-11-11
 
 ### Added & Improved
