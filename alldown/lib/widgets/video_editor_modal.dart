@@ -571,7 +571,231 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
     }
   }
 
-  Future<void> _exportAudio() async {
+  Future<void> _onAudioPressed() async {
+    if (_isProcessing) return;
+    _controller?.pause();
+
+    final durSeconds = _trimRange.end - _trimRange.start;
+
+    // Quality Profiles:
+    // Standard: 128 kbps (~0.016 MB/s, ~0.95 MB/min)
+    // High: 192 kbps (~0.024 MB/s, ~1.44 MB/min)
+    // Master: 320 kbps / Original (~0.040 MB/s, ~2.40 MB/min)
+    final stdMb = durSeconds * 0.016;
+    final highMb = durSeconds * 0.024;
+    final masterMb = durSeconds * 0.040;
+
+    final stdEstMb = stdMb < 0.1 ? '<0.1' : stdMb.toStringAsFixed(1);
+    final highEstMb = highMb < 0.1 ? '<0.1' : highMb.toStringAsFixed(1);
+    final masterEstMb = masterMb < 0.1 ? '<0.1' : masterMb.toStringAsFixed(1);
+
+    final selected = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceContainer,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border.all(color: AppColors.stroke, width: 1),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.outline.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.music_note_rounded, color: AppColors.primary, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Extract Audio Track',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.onSurface,
+                          ),
+                        ),
+                        Text(
+                          'Clip duration: ${durSeconds.toStringAsFixed(1)}s • Choose quality',
+                          style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+
+              // Option 1: Standard (Speech / Podcasts)
+              _buildAudioQualityTile(
+                ctx: ctx,
+                title: 'Standard (Compact)',
+                badge: '~$stdEstMb MB',
+                badgeColor: AppColors.tertiary,
+                subtitle: '128 kbps • M4A • Best for speech, voice & podcasts',
+                qualityName: 'Standard 128k',
+                bitrateKbps: 128,
+              ),
+              const SizedBox(height: 10),
+
+              // Option 2: High (Music / Balanced - Recommended)
+              _buildAudioQualityTile(
+                ctx: ctx,
+                title: 'High Quality (Balanced)',
+                badge: '~$highEstMb MB',
+                badgeColor: AppColors.primary,
+                subtitle: '192 kbps • M4A • Rich acoustic balance for music',
+                qualityName: 'High 192k',
+                bitrateKbps: 192,
+                isRecommended: true,
+              ),
+              const SizedBox(height: 10),
+
+              // Option 3: Master (Pristine Original)
+              _buildAudioQualityTile(
+                ctx: ctx,
+                title: 'Master (Pristine Fidelity)',
+                badge: '~$masterEstMb MB',
+                badgeColor: AppColors.secondary,
+                subtitle: 'Original Stream • Pure lossless source fidelity',
+                qualityName: 'Master Original',
+                bitrateKbps: 320,
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (selected != null) {
+      _exportAudio(
+        qualityName: selected['qualityName'] as String,
+        bitrateKbps: selected['bitrateKbps'] as int,
+      );
+    }
+  }
+
+  Widget _buildAudioQualityTile({
+    required BuildContext ctx,
+    required String title,
+    required String badge,
+    required Color badgeColor,
+    required String subtitle,
+    required String qualityName,
+    required int bitrateKbps,
+    bool isRecommended = false,
+  }) {
+    return InkWell(
+      onTap: () => Navigator.pop(ctx, {
+        'qualityName': qualityName,
+        'bitrateKbps': bitrateKbps,
+      }),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isRecommended
+              ? AppColors.primary.withValues(alpha: 0.12)
+              : AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isRecommended ? AppColors.primary : AppColors.stroke,
+            width: isRecommended ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: isRecommended ? AppColors.primary : AppColors.onSurface,
+                        ),
+                      ),
+                      if (isRecommended) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'BEST',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: badgeColor.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                badge,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: badgeColor,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _exportAudio({
+    String qualityName = 'High 192k',
+    int bitrateKbps = 192,
+  }) async {
     if (_isProcessing) return;
 
     _controller?.pause();
@@ -580,7 +804,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
 
     setState(() {
       _isProcessing = true;
-      _processingMessage = 'Extracting and trimming audio track...';
+      _processingMessage = 'Extracting audio track ($qualityName)...';
     });
 
     try {
@@ -623,10 +847,10 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
         // Add to media library
         final newItem = MediaItem(
           id: 'audio_$timeStamp',
-          title: '${widget.item.title} (Audio)',
+          title: '${widget.item.title} ($qualityName)',
           channel: widget.item.channel,
           format: 'M4A',
-          resolution: 'Audio Only',
+          resolution: qualityName,
           sizeFormatted: '$sizeMb MB',
           completedDateFormatted: 'Today',
           duration: durStr,
@@ -641,7 +865,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Audio extracted and saved to Music: ${newItem.title}'),
+            content: Text('Audio extracted ($qualityName): ${newItem.title} ($sizeMb MB)'),
             backgroundColor: AppColors.primary,
           ),
         );
@@ -1207,7 +1431,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                   ),
                   child: IconButton(
                     tooltip: 'Extract Audio Track',
-                    onPressed: _isProcessing ? null : _exportAudio,
+                    onPressed: _isProcessing ? null : _onAudioPressed,
                     icon: Icon(Icons.music_note_rounded, size: 22, color: AppColors.primary),
                   ),
                 ),
