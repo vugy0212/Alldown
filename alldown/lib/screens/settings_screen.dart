@@ -268,199 +268,152 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Highlighted Feature: Account & Authentication Card (18+ Gate Bypass)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.stroke, width: 1),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primaryAccent.withValues(alpha: 0.1),
-                    blurRadius: 18,
+            // MENU: Account & Authentication (Expandable Menu for Cookies & 18+ Access)
+            _buildExpandableCard(
+              icon: Icons.vpn_key_rounded,
+              iconColor: AppColors.primary,
+              title: 'Browser Cookies & Auth',
+              subtitle: hasCookies
+                  ? 'Cookies active • ${settings.cookiesCount} entries loaded'
+                  : 'No cookies loaded • Public streams active',
+              badge: hasCookies ? 'ACTIVE' : 'OPTIONAL',
+              badgeColor: hasCookies ? AppColors.tertiary : AppColors.outline,
+              initiallyExpanded: false,
+              children: [
+                // Real Cookie Status Badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: hasCookies
+                        ? AppColors.tertiaryContainer.withValues(alpha: 0.3)
+                        : AppColors.surfaceContainerLowest,
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        width: 40,
-                        height: 40,
+                        width: 8,
+                        height: 8,
                         decoration: BoxDecoration(
-                          color: AppColors.primaryContainer.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          Icons.vpn_key_rounded,
-                          size: 22,
-                          color: AppColors.primary,
+                          color: hasCookies ? AppColors.tertiary : AppColors.outline,
+                          shape: BoxShape.circle,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Browser Cookies & Auth',
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.onSurface,
-                              ),
-                            ),
-                            Text(
-                              'Access restricted & private streams',
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
-                            ),
-                          ],
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          hasCookies
+                              ? 'Cookies Active (${settings.cookiesCount} entries loaded)'
+                              : 'No cookies loaded (Public streams active)',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: hasCookies ? AppColors.tertiary : AppColors.onSurfaceVariant,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Bypass 18+ age restrictions, private member-only channels, and login walls safely without re-authenticating repeatedly.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.4,
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 14),
 
-                  // Real Cookie Status Badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: hasCookies
-                          ? AppColors.tertiaryContainer.withValues(alpha: 0.3)
-                          : AppColors.surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: hasCookies ? AppColors.tertiary : AppColors.outline,
-                            shape: BoxShape.circle,
+                // Action Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: AppColors.surfaceContainerLowest,
+                          side: BorderSide(color: AppColors.stroke),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            hasCookies
-                                ? 'Cookies Active (${settings.cookiesCount} entries loaded)'
-                                : 'No cookies loaded (Public streams active)',
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: hasCookies ? AppColors.tertiary : AppColors.onSurfaceVariant,
+                        onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          final success = await notifier.importCookiesFile();
+                          if (!mounted) return;
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                success
+                                    ? 'Cookies imported & saved'
+                                    : 'Import cancelled',
+                              ),
                             ),
+                          );
+                        },
+                        icon: Icon(Icons.folder_open_rounded, size: 18, color: AppColors.primary),
+                        label: Text(
+                          'Import cookies.txt',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.onPrimary,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                      ],
+                        onPressed: () {
+                          notifier.clearCookies();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Imported cookies cleared')),
+                          );
+                        },
+                        icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                        label: const Text(
+                          'Clear Cookies',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Bypass 18+ age restrictions, private member-only channels, and login walls safely without re-authenticating repeatedly.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      height: 1.4,
-                      color: AppColors.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
+                  ],
+                ),
+                const SizedBox(height: 10),
 
-                  // Action Buttons
-                  Row(
+                // Security Notice
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainerLowest.withValues(alpha: 0.8),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Icon(Icons.verified_user_rounded, size: 16, color: AppColors.secondary),
+                      SizedBox(width: 8),
                       Expanded(
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: AppColors.surfaceContainerLowest,
-                            side: BorderSide(color: AppColors.stroke),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          onPressed: () async {
-                            final messenger = ScaffoldMessenger.of(context);
-                            final success = await notifier.importCookiesFile();
-                            if (!mounted) return;
-                            messenger.showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  success
-                                      ? 'Cookies imported & saved'
-                                      : 'Import cancelled',
-                                ),
-                              ),
-                            );
-                          },
-                          icon: Icon(Icons.folder_open_rounded, size: 18, color: AppColors.primary),
-                          label: Text(
-                            'Import cookies.txt',
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: AppColors.onPrimary,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          onPressed: () {
-                            notifier.clearCookies();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Imported cookies cleared')),
-                            );
-                          },
-                          icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                          label: const Text(
-                            'Clear Cookies',
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                          ),
+                        child: Text(
+                          'Cookies are stored locally in app storage and never uploaded to remote servers.',
+                          style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant, height: 1.3),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-
-                  // Security Notice
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceContainerLowest.withValues(alpha: 0.8),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.verified_user_rounded, size: 16, color: AppColors.secondary),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Cookies are stored locally in app storage and never uploaded to remote servers.',
-                            style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant, height: 1.3),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
             const SizedBox(height: 18),
 

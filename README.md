@@ -154,7 +154,7 @@ To sign a production release APK with your own Android keystore:
 ## 👤 About
 
 - **Project:** AllDown
-- **Version:** 1.0.2 (`v1.0.2+3`)
+- **Version:** 1.0.3 (`v1.0.3+4`)
 - **Author:** **Allen**
 - **Repository:** [https://github.com/vugy0212/Alldown](https://github.com/vugy0212/Alldown)
 

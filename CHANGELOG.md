@@ -2,6 +2,12 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.0.3] - 2026-11-11
+
+### Improved & Added
+- **Collapsible Cookies & Auth Drawer:** Converted the standalone Cookies & 18+ Access card in Settings into a sleek, expandable drawer matching all other settings modules.
+- **In-App Direct Updater:** Enhanced native APK downloading with live progress indicator and automatic Android Package Installer intent.
+
 ## [1.0.2] - 2026-11-11
 
 ### Improved & Fixed
