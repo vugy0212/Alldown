@@ -739,6 +739,123 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   description:
                       'Downloaded videos are saved to Download/AllDown, edited clips in Movies/AllDown, and animated GIFs in Pictures/AllDown. All files immediately appear in your device Gallery.',
                 ),
+                Divider(color: AppColors.stroke, height: 16),
+                const SizedBox(height: 4),
+
+                // Nested Supported Services & Extractors inside Help
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainerLowest,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.stroke, width: 0.8),
+                  ),
+                  child: Theme(
+                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                      childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                      leading: Icon(Icons.hub_rounded, size: 20, color: AppColors.primary),
+                      title: Text(
+                        'Supported Services & Extractors',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                      ),
+                      subtitle: Text(
+                        '12+ tested services & universal stream parser',
+                        style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                      ),
+                      children: [
+                        Divider(color: AppColors.stroke, height: 1),
+                        const SizedBox(height: 8),
+                        _buildServiceRow(
+                          icon: Icons.play_circle_fill_rounded,
+                          iconColor: Colors.redAccent,
+                          name: 'YouTube & YouTube Shorts',
+                          description: '4K, 1080p, 720p & M4A audio',
+                          badge: 'ACTIVE',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.tag_rounded,
+                          iconColor: Colors.white,
+                          name: 'X (Twitter)',
+                          description: 'HD MP4 video directly from posts',
+                          badge: 'ACTIVE',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.music_note_rounded,
+                          iconColor: Colors.cyanAccent,
+                          name: 'TikTok',
+                          description: 'Watermark-free video downloads',
+                          badge: 'ACTIVE',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.facebook_rounded,
+                          iconColor: Colors.blueAccent,
+                          name: 'Facebook Watch & Reels',
+                          description: '1080p HD & 480p SD video streams',
+                          badge: 'ACTIVE',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.stream_rounded,
+                          iconColor: Colors.indigoAccent,
+                          name: 'Streamable',
+                          description: 'Fast API integration for MP4 downloads',
+                          badge: 'ACTIVE',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.account_balance_rounded,
+                          iconColor: Colors.amberAccent,
+                          name: 'Archive.org',
+                          description: 'Public domain movies and audio archive',
+                          badge: 'ACTIVE',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.public_rounded,
+                          iconColor: Colors.tealAccent,
+                          name: 'Wikimedia Commons',
+                          description: 'Free open educational media repository',
+                          badge: 'ACTIVE',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.cloud_download_rounded,
+                          iconColor: Colors.orangeAccent,
+                          name: 'Test-Videos & Global CDNs',
+                          description: 'High-speed edge content delivery network',
+                          badge: 'ACTIVE',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.html_rounded,
+                          iconColor: Colors.deepOrangeAccent,
+                          name: 'W3Schools & HTML5 Portali',
+                          description: 'HTML5 embedded video & audio media',
+                          badge: 'ACTIVE',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.code_rounded,
+                          iconColor: Colors.purpleAccent,
+                          name: 'GitHub Raw & Assets',
+                          description: 'Direct repository raw media assets',
+                          badge: 'ACTIVE',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.video_library_rounded,
+                          iconColor: Colors.blueGrey,
+                          name: 'Dailymotion & Vimeo',
+                          description: 'OpenGraph web media scraper',
+                          badge: 'ACTIVE',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.link_rounded,
+                          iconColor: AppColors.secondary,
+                          name: 'Universal Direct Stream Links',
+                          description: '.mp4, .webm, .m4a, .mp3, .wav',
+                          badge: 'ACTIVE',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
 
@@ -896,123 +1013,111 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
 
-                // Ugniježđena ladica za Podržane Servise unutar About-a
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceContainerLowest,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.stroke, width: 0.8),
+                // Buy Me a Coffee Support Banner (Option A)
+                InkWell(
+                  onTap: () => launchUrl(
+                    Uri.parse('https://buymeacoffee.com/vugy0212'),
+                    mode: LaunchMode.externalApplication,
                   ),
-                  child: Theme(
-                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                    child: ExpansionTile(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                      childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                      leading: Icon(Icons.hub_rounded, size: 20, color: AppColors.primary),
-                      title: Text(
-                        'Supported Services & Extractors',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFFFFDD00).withValues(alpha: 0.16),
+                          AppColors.surfaceContainerLowest,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      subtitle: Text(
-                        '12+ tested services & universal stream parser',
-                        style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFFFFDD00).withValues(alpha: 0.6),
+                        width: 1.2,
                       ),
+                    ),
+                    child: Row(
                       children: [
-                        Divider(color: AppColors.stroke, height: 1),
-                        const SizedBox(height: 8),
-                        _buildServiceRow(
-                          icon: Icons.play_circle_fill_rounded,
-                          iconColor: Colors.redAccent,
-                          name: 'YouTube & YouTube Shorts',
-                          description: '4K, 1080p, 720p & M4A audio',
-                          badge: 'ACTIVE',
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFDD00),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFFFDD00).withValues(alpha: 0.35),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.coffee_rounded,
+                            size: 20,
+                            color: Color(0xFF1A1A1A),
+                          ),
                         ),
-                        _buildServiceRow(
-                          icon: Icons.tag_rounded,
-                          iconColor: Colors.white,
-                          name: 'X (Twitter)',
-                          description: 'HD MP4 video directly from posts',
-                          badge: 'ACTIVE',
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Support Project',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.onSurface,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Buy me a coffee & keep AllDown ad-free',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.onSurfaceVariant,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
                         ),
-                        _buildServiceRow(
-                          icon: Icons.music_note_rounded,
-                          iconColor: Colors.cyanAccent,
-                          name: 'TikTok',
-                          description: 'Watermark-free video downloads',
-                          badge: 'ACTIVE',
-                        ),
-                        _buildServiceRow(
-                          icon: Icons.facebook_rounded,
-                          iconColor: Colors.blueAccent,
-                          name: 'Facebook Watch & Reels',
-                          description: '1080p HD & 480p SD video streams',
-                          badge: 'ACTIVE',
-                        ),
-                        _buildServiceRow(
-                          icon: Icons.stream_rounded,
-                          iconColor: Colors.indigoAccent,
-                          name: 'Streamable',
-                          description: 'Fast API integration for MP4 downloads',
-                          badge: 'ACTIVE',
-                        ),
-                        _buildServiceRow(
-                          icon: Icons.account_balance_rounded,
-                          iconColor: Colors.amberAccent,
-                          name: 'Archive.org',
-                          description: 'Public domain movies and audio archive',
-                          badge: 'ACTIVE',
-                        ),
-                        _buildServiceRow(
-                          icon: Icons.public_rounded,
-                          iconColor: Colors.tealAccent,
-                          name: 'Wikimedia Commons',
-                          description: 'Free open educational media repository',
-                          badge: 'ACTIVE',
-                        ),
-                        _buildServiceRow(
-                          icon: Icons.cloud_download_rounded,
-                          iconColor: Colors.orangeAccent,
-                          name: 'Test-Videos & Global CDNs',
-                          description: 'High-speed edge content delivery network',
-                          badge: 'ACTIVE',
-                        ),
-                        _buildServiceRow(
-                          icon: Icons.html_rounded,
-                          iconColor: Colors.deepOrangeAccent,
-                          name: 'W3Schools & HTML5 Portali',
-                          description: 'HTML5 embedded video & audio media',
-                          badge: 'ACTIVE',
-                        ),
-                        _buildServiceRow(
-                          icon: Icons.code_rounded,
-                          iconColor: Colors.purpleAccent,
-                          name: 'GitHub Raw & Assets',
-                          description: 'Direct repository raw media assets',
-                          badge: 'ACTIVE',
-                        ),
-                        _buildServiceRow(
-                          icon: Icons.video_library_rounded,
-                          iconColor: Colors.blueGrey,
-                          name: 'Dailymotion & Vimeo',
-                          description: 'OpenGraph web media scraper',
-                          badge: 'ACTIVE',
-                        ),
-                        _buildServiceRow(
-                          icon: Icons.link_rounded,
-                          iconColor: AppColors.secondary,
-                          name: 'Universal Direct Stream Links',
-                          description: '.mp4, .webm, .m4a, .mp3, .wav',
-                          badge: 'ACTIVE',
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFDD00).withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.favorite_rounded,
+                                size: 12,
+                                color: Color(0xFFFFDD00),
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Donate',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFFFDD00),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
 
                 // GitHub Repo Link Button
                 SizedBox(
