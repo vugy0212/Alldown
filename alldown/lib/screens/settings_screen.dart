@@ -1015,12 +1015,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Buy Me a Coffee Support Banner (Option A)
+                // Buy Me a Coffee Support Banner (Placeholder - active when link is configured)
                 InkWell(
-                  onTap: () => launchUrl(
-                    Uri.parse('https://buymeacoffee.com/vugy0212'),
-                    mode: LaunchMode.externalApplication,
-                  ),
+                  onTap: () {
+                    const bmcUrl = ''; // TODO: Insert active BuyMeACoffee URL when ready (e.g. 'https://buymeacoffee.com/vugy0212')
+                    if (bmcUrl.isNotEmpty) {
+                      launchUrl(
+                        Uri.parse(bmcUrl),
+                        mode: LaunchMode.externalApplication,
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Support page coming soon! Thank you for supporting AllDown.'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  },
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
