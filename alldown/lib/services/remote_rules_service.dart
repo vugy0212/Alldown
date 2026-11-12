@@ -186,5 +186,10 @@ class RemoteRulesService {
     final match = RegExp(r'instagram\.com\/(?:[^\/]+\/)?(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+)', caseSensitive: false).firstMatch(url);
     return match?.group(1);
   }
+
+  /// Checks if URL belongs to Reddit
+  static bool isRedditUrl(String url) {
+    return RegExp(r'(reddit\.com|redd\.it)', caseSensitive: false).hasMatch(url);
+  }
 }
 

@@ -98,6 +98,13 @@ export default {
           if (resolved) return jsonResponse(resolved);
         }
 
+        // 4. Check Reddit
+        const isReddit = inputUrl.includes("reddit.com") || inputUrl.includes("redd.it");
+        if (isReddit) {
+          const resolved = await resolveReddit(inputUrl);
+          if (resolved) return jsonResponse(resolved);
+        }
+
         return jsonResponse({
           success: false,
           error: "Platform not directly resolvable on edge. Use local client extractor with rules from /api/rules.",
@@ -360,4 +367,175 @@ function formatDuration(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60);
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
+async function resolveReddit(postUrl: string) {
+  try {
+    let cleanUrl = postUrl.trim();
+    if (cleanUrl.includes("redd.it/") || cleanUrl.includes("/s/")) {
+      try {
+        const headRes = await fetch(cleanUrl, {
+          redirect: "follow",
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          },
+        });
+        if (headRes.url && headRes.url.startsWith("http")) {
+          cleanUrl = headRes.url;
+        }
+      } catch (_) {}
+    }
+
+    // Try fetching official oembed for pristine title and author
+    let title = "";
+    let author = "";
+    try {
+      const oembedRes = await fetch(`https://www.reddit.com/oembed?url=${encodeURIComponent(cleanUrl)}`, {
+        headers: { "User-Agent": "Mozilla/5.0" },
+      });
+      if (oembedRes.ok) {
+        const oembedData: any = await oembedRes.json();
+        if (oembedData.title) title = oembedData.title.trim();
+        if (oembedData.author_name && oembedData.author_name !== "[account deleted]") {
+          author = `u/${oembedData.author_name}`;
+        }
+      }
+    } catch (_) {}
+
+    // Fallback title from URL slug if still empty
+    if (!title) {
+      try {
+        const u = new URL(cleanUrl);
+        const segs = u.pathname.split("/").filter(Boolean);
+        const commentsIdx = segs.indexOf("comments");
+        if (commentsIdx !== -1 && segs.length > commentsIdx + 2) {
+          const rawSlug = segs[commentsIdx + 2];
+          title = rawSlug.replace(/[_-]+/g, " ").replace(/\b\w/g, c => c.toUpperCase()).trim();
+        }
+      } catch (_) {}
+    }
+
+    const rsUrl = `https://rapidsave.com/info?url=${encodeURIComponent(cleanUrl)}`;
+    const rsRes = await fetch(rsUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      },
+    });
+
+    if (!rsRes.ok) return null;
+    const html = await rsRes.text();
+
+    if (!title) {
+      const ogTitleMatch = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i);
+      const titleTagMatch = html.match(/<title>([^<]+)<\/title>/i);
+      const captionMatch = html.match(/class=["']caption["'][^>]*>([^<]+)</i);
+      if (captionMatch && captionMatch[1].trim()) {
+        title = captionMatch[1].trim();
+      } else if (ogTitleMatch && ogTitleMatch[1].trim()) {
+        title = ogTitleMatch[1].trim();
+      } else if (titleTagMatch && titleTagMatch[1].trim()) {
+        const t = titleTagMatch[1].trim().replace(/\s*-\s*RapidSave.*$/i, "").replace(/\s*-\s*Reddit.*$/i, "").trim();
+        if (!t.toLowerCase().includes("download reddit video")) {
+          title = t;
+        }
+      }
+    }
+    if (!title) title = "Reddit Video";
+
+    if (!author) {
+      const subMatch = html.match(/<td>Subreddit:<\/td>\s*<td>([^<]+)<\/td>/i);
+      const authorMatch = html.match(/<td>Author:<\/td>\s*<td>([^<]+)<\/td>/i);
+      if (authorMatch && authorMatch[1].trim()) {
+        author = `u/${authorMatch[1].trim()}`;
+      } else if (subMatch && subMatch[1].trim()) {
+        author = `r/${subMatch[1].trim()}`;
+      } else {
+        author = "Reddit User";
+      }
+    }
+
+    let thumbnail = "";
+    const previewMatch = html.match(/class=["'][^"']*preview[^"']*["'][^>]*src=["']([^"']+)["']/i) ||
+                         html.match(/<img[^>]+src=["'](https?:\/\/[^"']*(?:thumbs\.redditmedia\.com|preview\.redd\.it)[^"']*)["']/i);
+    if (previewMatch) {
+      thumbnail = previewMatch[1];
+    }
+
+    let bestStreamUrl = "";
+    const dlButtonMatch = html.match(/<a[^>]+class=["'][^"']*downloadbutton[^"']*["'][^>]+href=["']([^"']+)["']/i);
+    if (dlButtonMatch) {
+      const rawHref = dlButtonMatch[1].trim();
+      if (rawHref.startsWith("/sd.php")) {
+        try {
+          const sdRes = await fetch(`https://rapidsave.com${rawHref}`, {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            },
+          });
+          if (sdRes.ok) {
+            const sdHtml = await sdRes.text();
+            const sdLinks = [...sdHtml.matchAll(/href=["'](https?:\/\/sd\.rapidsave\.com\/download[^"']+)["']/gi)];
+            if (sdLinks.length > 0) {
+              const sorted = sdLinks.map(m => m[1]);
+              const q1080 = sorted.find(u => u.includes("DASH_1080") || u.includes("1080"));
+              const q720 = sorted.find(u => u.includes("DASH_720") || u.includes("720"));
+              const q480 = sorted.find(u => u.includes("DASH_480") || u.includes("480"));
+              bestStreamUrl = q1080 || q720 || q480 || sorted[0];
+            }
+          }
+        } catch (_) {}
+      } else if (rawHref.startsWith("http")) {
+        bestStreamUrl = rawHref;
+      } else if (rawHref.startsWith("/")) {
+        bestStreamUrl = `https://rapidsave.com${rawHref}`;
+      }
+    }
+
+    if (!bestStreamUrl) {
+      const anySd = html.match(/https?:\/\/sd\.rapidsave\.com\/download[^"'\s<>]+/i);
+      if (anySd) {
+        bestStreamUrl = anySd[0];
+      }
+    }
+
+    const vMatch = html.match(/https?:\/\/v\.redd\.it\/([a-zA-Z0-9]+)/i) ||
+                   cleanUrl.match(/https?:\/\/v\.redd\.it\/([a-zA-Z0-9]+)/i);
+    const vId = vMatch ? vMatch[1] : "";
+    const hlsUrl = vId ? `https://v.redd.it/${vId}/HLSPlaylist.m3u8` : "";
+
+    if (!bestStreamUrl && !hlsUrl) {
+      return null;
+    }
+
+    const finalUrl = bestStreamUrl || hlsUrl;
+    const isHls = !bestStreamUrl && !!hlsUrl;
+
+    return {
+      success: true,
+      platform: "Reddit",
+      id: vId || "reddit_video",
+      title: title.replace(/&amp;/g, "&").replace(/&quot;/g, '"'),
+      author,
+      duration: 30,
+      durationFormatted: "Reddit HD",
+      thumbnail,
+      bestStreamUrl: finalUrl,
+      bestResolution: "HD MP4",
+      isHls,
+      streams: [
+        {
+          url: finalUrl,
+          quality: "HD",
+          format: isHls ? "HLS" : "MP4",
+        },
+      ],
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Referer": "https://rapidsave.com/",
+      },
+    };
+  } catch (err: any) {
+    return null;
+  }
 }

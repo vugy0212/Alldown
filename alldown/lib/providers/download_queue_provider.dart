@@ -598,6 +598,70 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
           realPlatform: realPlatform,
         );
         return;
+      } else if (MetadataFetcherService.isRedditUrl(task.url) || RemoteRulesService.isRedditUrl(task.url)) {
+        _updateTask(
+          task.id,
+          (t) => t.copyWith(
+            speed: "Connecting to Reddit...",
+            eta: "Resolving video stream...",
+            progress: 0.03,
+          ),
+        );
+
+        final resolved = await MetadataFetcherService.resolveRedditStream(
+          task.url,
+          preferredResolution: task.resolution,
+        );
+
+        if (resolved == null) {
+          throw Exception('Could not extract direct stream from this Reddit post.');
+        }
+
+        realTitle = resolved.title;
+        realChannel = resolved.author;
+        realDuration = resolved.duration;
+        if (resolved.thumbnailUrl.isNotEmpty) {
+          realThumb = resolved.thumbnailUrl;
+        }
+        actualResolution = resolved.resolutionLabel;
+        realPlatform = 'Reddit';
+
+        if (resolved.isHls) {
+          await _downloadHlsSegments(
+            job: job,
+            task: task,
+            dlr: null,
+            directM3u8Url: resolved.streamUrl,
+            targetDir: targetDir,
+            isCustom: isCustom,
+            subFolder: subFolder,
+            settings: settings,
+            realTitle: realTitle,
+            realChannel: realChannel,
+            realThumb: realThumb,
+            realDuration: realDuration,
+            actualResolution: actualResolution,
+            realPlatform: realPlatform,
+          );
+          return;
+        } else {
+          final client = http.Client();
+          job.httpClient = client;
+          final resp = await _sendConfiguredRequest(
+            client,
+            resolved.streamUrl,
+            settings,
+            extraHeaders: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+              'Referer': 'https://rapidsave.com/',
+            },
+          );
+          if (resp.statusCode >= 400) {
+            throw Exception('HTTP ${resp.statusCode}');
+          }
+          totalBytes = resp.contentLength ?? 0;
+          byteStream = resp.stream;
+        }
       } else {
         // Direct media URL or generic webpage containing video/audio
         ResolvedDirectStream? resolvedStream;
@@ -972,6 +1036,7 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
     required _ActiveDownloadJob job,
     required DownloadTask task,
     required DlrResolvedMedia? dlr,
+    String? directM3u8Url,
     required Directory targetDir,
     required bool isCustom,
     required String subFolder,
@@ -987,7 +1052,7 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
     job.httpClient = client;
 
     try {
-      String masterM3u8Url = dlr?.bestStreamUrl ?? '';
+      String masterM3u8Url = directM3u8Url ?? (dlr?.bestStreamUrl ?? '');
 
       // Direct metadata fetch from device IP for Dailymotion (fixes IP-bound token 403 E030)
       if (RemoteRulesService.isDailymotionUrl(task.url) || (dlr != null && dlr.platform.toLowerCase().contains('daily'))) {

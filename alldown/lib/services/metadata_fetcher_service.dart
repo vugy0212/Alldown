@@ -12,6 +12,7 @@ class ResolvedDirectStream {
   final String thumbnailUrl;
   final String resolutionLabel;
   final String platform;
+  final bool isHls;
 
   const ResolvedDirectStream({
     required this.streamUrl,
@@ -21,6 +22,7 @@ class ResolvedDirectStream {
     required this.thumbnailUrl,
     required this.resolutionLabel,
     required this.platform,
+    this.isHls = false,
   });
 }
 
@@ -103,6 +105,120 @@ class MetadataFetcherService {
       caseSensitive: false,
     ).firstMatch(input);
     return match?.group(1);
+  }
+
+  static bool isRedditUrl(String input) {
+    final lower = input.toLowerCase();
+    return lower.contains('reddit.com') || lower.contains('redd.it');
+  }
+
+  /// Resolves Reddit direct stream via Cloudflare Edge DLR or direct client fallback
+  static Future<ResolvedDirectStream?> resolveRedditStream(
+    String url, {
+    String preferredResolution = '720p',
+  }) async {
+    // 1. First try Cloudflare Edge DLR resolver
+    try {
+      final dlr = await RemoteRulesService.resolveViaDlr(url);
+      if (dlr != null && dlr.success && dlr.bestStreamUrl.isNotEmpty) {
+        return ResolvedDirectStream(
+          streamUrl: dlr.bestStreamUrl,
+          title: dlr.title,
+          author: dlr.author,
+          duration: dlr.durationFormatted,
+          thumbnailUrl: dlr.thumbnailUrl,
+          resolutionLabel: dlr.bestResolution,
+          platform: 'Reddit',
+          isHls: dlr.isHls,
+        );
+      }
+    } catch (_) {}
+
+    // 2. Client-side fallback via RapidSave / oEmbed
+    try {
+      final rsUri = Uri.parse('https://rapidsave.com/info?url=${Uri.encodeComponent(url.trim())}');
+      final response = await http.get(
+        rsUri,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
+      ).timeout(const Duration(seconds: 7));
+
+      if (response.statusCode == 200) {
+        final html = response.body;
+
+        String title = 'Reddit Video';
+        final captionMatch = RegExp(r'class=["\x27]caption["\x27][^>]*>([^<]+)<', caseSensitive: false).firstMatch(html);
+        final titleTagMatch = RegExp(r'<title>([^<]+)<\/title>', caseSensitive: false).firstMatch(html);
+        if (captionMatch != null && captionMatch.group(1)!.trim().isNotEmpty) {
+          title = captionMatch.group(1)!.trim();
+        } else if (titleTagMatch != null) {
+          final t = titleTagMatch.group(1)!.trim().replaceAll(RegExp(r'\s*-\s*RapidSave.*$', caseSensitive: false), '').trim();
+          if (!t.toLowerCase().contains('download reddit video')) {
+            title = t;
+          }
+        }
+
+        String author = 'Reddit User';
+        final authorMatch = RegExp(r'<td>Author:<\/td>\s*<td>([^<]+)<\/td>', caseSensitive: false).firstMatch(html);
+        final subMatch = RegExp(r'<td>Subreddit:<\/td>\s*<td>([^<]+)<\/td>', caseSensitive: false).firstMatch(html);
+        if (authorMatch != null && authorMatch.group(1)!.trim().isNotEmpty) {
+          author = 'u/${authorMatch.group(1)!.trim()}';
+        } else if (subMatch != null && subMatch.group(1)!.trim().isNotEmpty) {
+          author = 'r/${subMatch.group(1)!.trim()}';
+        }
+
+        String? bestStreamUrl;
+        final dlButtonMatch = RegExp(r'<a[^>]+class=["\x27][^"\x27]*downloadbutton[^"\x27]*["\x27][^>]+href=["\x27]([^"\x27]+)["\x27]', caseSensitive: false).firstMatch(html);
+        if (dlButtonMatch != null) {
+          final rawHref = dlButtonMatch.group(1)!.trim();
+          if (rawHref.startsWith('/sd.php')) {
+            try {
+              final sdRes = await http.get(
+                Uri.parse('https://rapidsave.com$rawHref'),
+                headers: {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'},
+              ).timeout(const Duration(seconds: 5));
+              if (sdRes.statusCode == 200) {
+                final sdLinks = RegExp(r'href=["\x27](https?:\/\/sd\.rapidsave\.com\/download[^"\x27]+)["\x27]', caseSensitive: false)
+                    .allMatches(sdRes.body)
+                    .map((m) => m.group(1)!)
+                    .toList();
+                if (sdLinks.isNotEmpty) {
+                  final q1080 = sdLinks.where((u) => u.contains('1080')).toList();
+                  final q720 = sdLinks.where((u) => u.contains('720')).toList();
+                  bestStreamUrl = q1080.isNotEmpty ? q1080.first : (q720.isNotEmpty ? q720.first : sdLinks.first);
+                }
+              }
+            } catch (_) {}
+          } else if (rawHref.startsWith('http')) {
+            bestStreamUrl = rawHref;
+          }
+        }
+
+        final vMatch = RegExp(r'https?:\/\/v\.redd\.it\/([a-zA-Z0-9]+)', caseSensitive: false).firstMatch(html) ??
+                       RegExp(r'https?:\/\/v\.redd\.it\/([a-zA-Z0-9]+)', caseSensitive: false).firstMatch(url);
+        final vId = vMatch?.group(1);
+        final hlsUrl = vId != null ? 'https://v.redd.it/$vId/HLSPlaylist.m3u8' : null;
+
+        final finalStream = bestStreamUrl ?? hlsUrl;
+        if (finalStream != null && finalStream.isNotEmpty) {
+          final isHls = bestStreamUrl == null && hlsUrl != null;
+          return ResolvedDirectStream(
+            streamUrl: finalStream,
+            title: title,
+            author: author,
+            duration: 'Reddit HD',
+            thumbnailUrl: '',
+            resolutionLabel: 'HD MP4',
+            platform: 'Reddit',
+            isHls: isHls,
+          );
+        }
+      }
+    } catch (_) {}
+
+    return null;
   }
 
   static String formatDuration(Duration? d) {
@@ -996,20 +1112,20 @@ class MetadataFetcherService {
       );
     }
 
-    // 6.5 Dynamic Link Resolver (Vimeo, Dailymotion, etc. via Cloudflare Edge)
-    if (RemoteRulesService.isVimeoUrl(trimmed) || RemoteRulesService.isDailymotionUrl(trimmed)) {
+    // 6.5 Dynamic Link Resolver (Reddit, Vimeo, Dailymotion via Cloudflare Edge)
+    if (isRedditUrl(trimmed) || RemoteRulesService.isVimeoUrl(trimmed) || RemoteRulesService.isDailymotionUrl(trimmed)) {
       try {
         final dlr = await RemoteRulesService.resolveViaDlr(trimmed);
         if (dlr != null && dlr.success) {
           return DetectedMedia(
             title: dlr.title,
             channel: dlr.author,
-            subscribers: '${dlr.platform} Stream',
+            subscribers: '${dlr.platform} Post',
             duration: dlr.durationFormatted,
-            durationSeconds: dlr.durationSeconds > 0 ? dlr.durationSeconds : 180,
+            durationSeconds: dlr.durationSeconds > 0 ? dlr.durationSeconds : 60,
             uploadTime: dlr.platform,
-            viewCount: 'Stream Ready',
-            license: 'Public Stream',
+            viewCount: 'Sound Included',
+            license: 'Public Video',
             thumbnailUrl: dlr.thumbnailUrl,
             platform: dlr.platform,
             badgeText: dlr.bestResolution,
