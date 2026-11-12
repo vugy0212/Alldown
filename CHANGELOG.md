@@ -2,7 +2,7 @@
 
 All notable changes to **AllDown** are documented in this file.
 
-## [1.3.4] - 2026-11-12
+## [1.3.5] - 2026-11-12
 
 ### Added & Improved
 - **Reddit Video & Audio Downloader:**
@@ -11,13 +11,18 @@ All notable changes to **AllDown** are documented in this file.
   - Integration with Cloudflare DLR edge resolver and client-side fallback parsing.
   - Master HLS playlist (`HLSPlaylist.m3u8`) fallback support using Android Media3 Transformer.
   - Automated extraction of post titles, subreddit origin, author `@username`, and HD stream badge.
+  - Rule Definitions: Updated `rules.json` and `RemoteRulesService` with Reddit pattern matching.
+
+## [1.3.4] - 2026-11-12
+
+### Added & Improved
 - **Instagram Video & Reels Downloader:**
   - Added full support for downloading Instagram Reels, Videos, and Posts (`instagram.com/reel/`, `/p/`, `/tv/`, `instagr.am/`).
   - Implemented zero-auth direct progressive MP4 stream extractor via inline `data-sjs` and `xig_polaris_media` payload parsing.
   - Automatic detection of highest available resolution (HD 1080p / 720p), post caption/title, uploader `@username`, duration, and cover art.
   - Seamless support for authenticated sessions: imports cookies from "Browser Cookies & Auth" settings drawer to download private or restricted posts.
   - Added background headless WebView fallback mechanism to bypass login redirect walls on Android.
-- **Rule Definitions:** Updated `rules.json` and `RemoteRulesService` with Instagram and Reddit pattern matching.
+  - Rule Definitions: Updated `rules.json` and `RemoteRulesService` with Instagram pattern matching and URL shortcode extraction.
 
 ## [1.3.3] - 2026-11-12
 
