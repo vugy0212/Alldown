@@ -2,6 +2,14 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.3.3] - 2026-11-12
+
+### Fixed & Improved
+- **fMP4 / CMAF HLS Support (`#EXT-X-MAP`):** Fixed playback failure for Dailymotion and Vimeo video downloads by downloading the required initialization segment (`init.mp4` / `init.m4s`) with `ftyp` and `moov` track headers.
+- **In-App Video Player Fix:** Fixed `Playback error: Source error` in ExoPlayer when playing downloaded HLS video files.
+- **Smart Remuxing:** Enhanced `VideoEditorHelper.kt` to dynamically differentiate MPEG-TS (`0x47`) and fMP4 streams for clean Jetpack Media3 container remuxing.
+- **About Versioning:** Updated in-app version indicator in Settings > About to accurately reflect `v1.3.3`.
+
 ## [1.3.0] - 2026-11-12
 
 ### Added & Improved
