@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "alldown-dlr",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-12",
+  "kv_namespaces": [
+    {
+      "binding": "ALLDOWN_RULES",
+      "id": "4bc678a225e44dc4a1d84f48d7eeff3e"
+    }
+  ]
+}
+

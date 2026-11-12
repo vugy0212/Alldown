@@ -1,0 +1,91 @@
+{
+  "version": "2026.11.12.1",
+  "min_app_version": "1.0.0",
+  "updated_at": "2026-11-12T07:10:00Z",
+  "message": "Dynamic Link Resolver Engine active with Vimeo and Dailymotion support",
+  "services": {
+    "vimeo": {
+      "name": "Vimeo",
+      "enabled": true,
+      "patterns": [
+        "vimeo\\.com\\/(?:channels\\/(?:\\w+\\/)?|groups\\/[^\\/]*\\/videos\\/|album\\/(?:\\d+\\/)?video\\/|video\\/|)(\\d+)",
+        "player\\.vimeo\\.com\\/video\\/(\\d+)"
+      ],
+      "api_template": "https://player.vimeo.com/video/{id}/config",
+      "headers": {
+        "Referer": "https://vimeo.com/{id}",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+      },
+      "extraction": {
+        "type": "json_progressive",
+        "title_path": "video.title",
+        "author_path": "video.owner.name",
+        "duration_path": "video.duration",
+        "thumbnail_path": "video.thumbs.base",
+        "progressive_path": "request.files.progressive"
+      }
+    },
+    "dailymotion": {
+      "name": "Dailymotion",
+      "enabled": true,
+      "patterns": [
+        "dailymotion\\.com\\/video\\/([a-zA-Z0-9]+)",
+        "dai\\.ly\\/([a-zA-Z0-9]+)",
+        "dailymotion\\.com\\/embed\\/video\\/([a-zA-Z0-9]+)"
+      ],
+      "api_template": "https://www.dailymotion.com/player/metadata/video/{id}?app=com.dailymotion.neon",
+      "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Referer": "https://www.dailymotion.com/video/{id}"
+      },
+      "extraction": {
+        "type": "dailymotion_metadata",
+        "title_path": "title",
+        "author_path": "owner.screenname",
+        "duration_path": "duration",
+        "thumbnail_path": "posters.60",
+        "qualities_path": "qualities"
+      }
+    },
+    "tiktok": {
+      "name": "TikTok",
+      "enabled": true,
+      "patterns": [
+        "tiktok\\.com\\/@([\\w\\.-]+)\\/video\\/(\\d+)",
+        "vt\\.tiktok\\.com\\/([a-zA-Z0-9]+)",
+        "vm\\.tiktok\\.com\\/([a-zA-Z0-9]+)"
+      ],
+      "api_template": "https://api.tiktokv.com/aweme/v1/feed/?aweme_id={id}",
+      "headers": {
+        "User-Agent": "com.ss.android.ugc.trill/400103 (Linux; U; Android 14; en_US; Pixel 8; Build/UD1A.230803.041; Cronet/58.0.2991.0)"
+      }
+    },
+    "streamable": {
+      "name": "Streamable",
+      "enabled": true,
+      "patterns": [
+        "streamable\\.com\\/([a-zA-Z0-9]+)"
+      ],
+      "api_template": "https://api.streamable.com/videos/{id}",
+      "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0"
+      }
+    },
+    "twitter": {
+      "name": "X (Twitter)",
+      "enabled": true,
+      "patterns": [
+        "(?:twitter|x)\\.com\\/(?:#!\/)?(\\w+)\\/status(?:es)?\\/(\\d+)"
+      ]
+    },
+    "facebook": {
+      "name": "Facebook",
+      "enabled": true,
+      "patterns": [
+        "facebook\\.com\\/.*\\/(?:videos|reel)\\/(\\d+)",
+        "fb\\.watch\\/([a-zA-Z0-9_-]+)"
+      ]
+    }
+  }
+}
+

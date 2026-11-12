@@ -2,6 +2,18 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.3.0] - 2026-11-12
+
+### Added & Improved
+- **Cloudflare Dynamic Link Resolver (DLR) & Remote Rules Engine:**
+  - Integrated zero-downtime remote extraction engine running on Cloudflare Workers + KV (`alldown-dlr`).
+  - Real-time dynamic URL resolution for streaming platforms without requiring APK updates when web structures change.
+  - Offline-first cache architecture with local rules fallback.
+- **Vimeo & Dailymotion Video Downloading Support:**
+  - Implemented native HLS (`.m3u8`) segment parsing and sequential chunk downloading in `DownloadQueueProvider`.
+  - Live percentage progress tracking during segment retrieval with direct lossless muxing into playable `.mp4`.
+  - Added session cookie warmup and header spoofing (`Referer`, `User-Agent`) to prevent stream 403 errors.
+
 ## [1.2.0] - 2026-11-11
 
 ### Added & Improved

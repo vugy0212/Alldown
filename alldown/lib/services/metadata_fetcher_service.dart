@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import '../providers/quick_download_provider.dart';
+import 'remote_rules_service.dart';
 
 class ResolvedDirectStream {
   final String streamUrl;
@@ -751,6 +752,28 @@ class MetadataFetcherService {
         platform: domain,
         badgeText: isAudio ? 'Audio $ext' : 'HD $ext',
       );
+    }
+
+    // 6.5 Dynamic Link Resolver (Vimeo, Dailymotion, etc. via Cloudflare Edge)
+    if (RemoteRulesService.isVimeoUrl(trimmed) || RemoteRulesService.isDailymotionUrl(trimmed)) {
+      try {
+        final dlr = await RemoteRulesService.resolveViaDlr(trimmed);
+        if (dlr != null && dlr.success) {
+          return DetectedMedia(
+            title: dlr.title,
+            channel: dlr.author,
+            subscribers: '${dlr.platform} Stream',
+            duration: dlr.durationFormatted,
+            durationSeconds: dlr.durationSeconds > 0 ? dlr.durationSeconds : 180,
+            uploadTime: dlr.platform,
+            viewCount: 'Stream Ready',
+            license: 'Public Stream',
+            thumbnailUrl: dlr.thumbnailUrl,
+            platform: dlr.platform,
+            badgeText: dlr.bestResolution,
+          );
+        }
+      } catch (_) {}
     }
 
     // 7. Generic Webpage Video Parser (og:video, HTML5 <video>)

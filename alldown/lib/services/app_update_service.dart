@@ -26,7 +26,7 @@ class AppReleaseInfo {
 }
 
 class AppUpdateService {
-  static const String currentVersion = '1.2.0';
+  static const String currentVersion = '1.3.0';
   static const String defaultRepo = 'vugy0212/Alldown';
 
   /// Queries GitHub Releases API for the latest version

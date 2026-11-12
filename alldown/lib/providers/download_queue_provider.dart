@@ -9,6 +9,7 @@ import '../models/download_task.dart';
 import '../models/media_item.dart';
 import '../services/metadata_fetcher_service.dart';
 import '../services/native_downloader_service.dart';
+import '../services/remote_rules_service.dart';
 import '../services/storage_service.dart';
 import 'settings_provider.dart';
 import 'media_library_provider.dart';
@@ -118,12 +119,16 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
   Future<http.StreamedResponse> _sendConfiguredRequest(
     http.Client client,
     String url,
-    AppSettings settings,
-  ) {
+    AppSettings settings, {
+    Map<String, String>? extraHeaders,
+  }) {
     final req = http.Request('GET', Uri.parse(url));
     req.headers['User-Agent'] = settings.resolvedUserAgent;
     if (settings.cookiesActive && settings.cookiesHeader.isNotEmpty) {
       req.headers['Cookie'] = settings.cookiesHeader;
+    }
+    if (extraHeaders != null) {
+      req.headers.addAll(extraHeaders);
     }
     return client
         .send(req)
@@ -411,6 +416,63 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
         }
         totalBytes = resp.contentLength ?? 0;
         byteStream = resp.stream;
+      } else if (RemoteRulesService.isVimeoUrl(task.url) || RemoteRulesService.isDailymotionUrl(task.url)) {
+        final platformName = RemoteRulesService.isVimeoUrl(task.url) ? 'Vimeo' : 'Dailymotion';
+        _updateTask(
+          task.id,
+          (t) => t.copyWith(
+            speed: "Resolving $platformName via Cloudflare DLR...",
+            eta: "Extracting stream...",
+            progress: 0.03,
+          ),
+        );
+
+        final dlr = await RemoteRulesService.resolveViaDlr(task.url);
+        if (dlr == null || !dlr.success) {
+          throw Exception('Could not extract $platformName video stream via DLR.');
+        }
+
+        realTitle = dlr.title;
+        realChannel = dlr.author;
+        realDuration = dlr.durationFormatted;
+        if (dlr.thumbnailUrl.isNotEmpty) {
+          realThumb = dlr.thumbnailUrl;
+        }
+        actualResolution = dlr.bestResolution;
+        realPlatform = dlr.platform;
+
+        if (dlr.isHls) {
+          await _downloadHlsSegments(
+            job: job,
+            task: task,
+            dlr: dlr,
+            targetDir: targetDir,
+            isCustom: isCustom,
+            subFolder: subFolder,
+            settings: settings,
+            realTitle: realTitle,
+            realChannel: realChannel,
+            realThumb: realThumb,
+            realDuration: realDuration,
+            actualResolution: actualResolution,
+            realPlatform: realPlatform,
+          );
+          return;
+        } else {
+          final client = http.Client();
+          job.httpClient = client;
+          final resp = await _sendConfiguredRequest(
+            client,
+            dlr.bestStreamUrl,
+            settings,
+            extraHeaders: dlr.headers,
+          );
+          if (resp.statusCode >= 400) {
+            throw Exception('HTTP ${resp.statusCode}');
+          }
+          totalBytes = resp.contentLength ?? 0;
+          byteStream = resp.stream;
+        }
       } else {
         // Direct media URL or generic webpage containing video/audio
         ResolvedDirectStream? resolvedStream;
@@ -751,6 +813,221 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
     });
     state = sorted;
     _storage.saveQueue(state);
+  }
+
+  Future<void> _downloadHlsSegments({
+    required _ActiveDownloadJob job,
+    required DownloadTask task,
+    required DlrResolvedMedia dlr,
+    required Directory targetDir,
+    required bool isCustom,
+    required String subFolder,
+    required AppSettings settings,
+    required String realTitle,
+    required String realChannel,
+    required String realThumb,
+    required String realDuration,
+    required String actualResolution,
+    required String realPlatform,
+  }) async {
+    final client = http.Client();
+    job.httpClient = client;
+
+    try {
+      // Warm up cookies for Dailymotion if needed
+      if (dlr.platform.toLowerCase().contains('daily')) {
+        try {
+          await client.get(
+            Uri.parse('https://www.dailymotion.com/'),
+            headers: {'User-Agent': dlr.headers['User-Agent'] ?? settings.resolvedUserAgent},
+          ).timeout(const Duration(seconds: 4));
+        } catch (_) {}
+      }
+
+      // 1. Fetch master M3U8
+      final m3u8Res = await client.get(
+        Uri.parse(dlr.bestStreamUrl),
+        headers: dlr.headers,
+      ).timeout(const Duration(seconds: 10));
+
+      if (m3u8Res.statusCode >= 400) {
+        throw Exception('HTTP ${m3u8Res.statusCode} loading HLS manifest');
+      }
+
+      String mediaPlaylistUrl = dlr.bestStreamUrl;
+      final masterLines = m3u8Res.body.split('\n').map((l) => l.trim()).toList();
+      if (masterLines.any((l) => l.startsWith('#EXT-X-STREAM-INF'))) {
+        String? candidate;
+        for (int i = 0; i < masterLines.length; i++) {
+          if (masterLines[i].startsWith('#EXT-X-STREAM-INF') && i + 1 < masterLines.length) {
+            final nextLine = masterLines[i + 1];
+            if (nextLine.isNotEmpty && !nextLine.startsWith('#')) {
+              candidate = nextLine;
+            }
+          }
+        }
+        if (candidate != null) {
+          mediaPlaylistUrl = Uri.parse(dlr.bestStreamUrl).resolve(candidate).toString();
+        }
+      }
+
+      // 2. Fetch media segments playlist
+      final mediaRes = await client.get(
+        Uri.parse(mediaPlaylistUrl),
+        headers: dlr.headers,
+      ).timeout(const Duration(seconds: 10));
+
+      if (mediaRes.statusCode >= 400) {
+        throw Exception('HTTP ${mediaRes.statusCode} loading media segments');
+      }
+
+      final mediaLines = mediaRes.body.split('\n').map((l) => l.trim()).toList();
+      final segmentUris = <Uri>[];
+      final baseUri = Uri.parse(mediaPlaylistUrl);
+      for (final line in mediaLines) {
+        if (line.isNotEmpty && !line.startsWith('#')) {
+          segmentUris.add(baseUri.resolve(line));
+        }
+      }
+
+      if (segmentUris.isEmpty) {
+        throw Exception('No playable video segments found in HLS stream.');
+      }
+
+      final safeName = _sanitizeFileName(realTitle);
+      final timeStamp = DateTime.now().millisecondsSinceEpoch;
+      final savePath = '${targetDir.path}/${safeName}_$timeStamp.mp4';
+      job.filePath = savePath;
+      final file = File(savePath);
+      final sink = file.openWrite();
+      job.fileSink = sink;
+
+      _updateTask(
+        task.id,
+        (t) => t.copyWith(
+          title: realTitle,
+          thumbnailUrl: realThumb,
+          duration: realDuration,
+          resolution: actualResolution,
+          format: 'MP4',
+          platform: realPlatform,
+          status: DownloadStatus.active,
+        ),
+      );
+
+      int receivedBytes = 0;
+      final stopwatch = Stopwatch()..start();
+      final totalSegs = segmentUris.length;
+
+      for (int i = 0; i < totalSegs; i++) {
+        final segRes = await client.get(
+          segmentUris[i],
+          headers: dlr.headers,
+        ).timeout(const Duration(seconds: 15));
+
+        if (segRes.statusCode == 200) {
+          sink.add(segRes.bodyBytes);
+          receivedBytes += segRes.bodyBytes.length;
+
+          final prog = (i + 1) / totalSegs;
+          final elapsedSec = (stopwatch.elapsedMilliseconds / 1000.0).clamp(0.1, 86400.0);
+          final bytesPerSec = receivedBytes / elapsedSec;
+          final mbPerSec = bytesPerSec / (1024 * 1024);
+          final speedStr = mbPerSec >= 0.1
+              ? '${mbPerSec.toStringAsFixed(1)} MB/s'
+              : '${(bytesPerSec / 1024).toStringAsFixed(0)} KB/s';
+
+          final estTotalBytes = (receivedBytes / prog).round();
+          final estTotalStr = _formatBytes(estTotalBytes);
+
+          _updateTask(
+            task.id,
+            (t) => t.copyWith(
+              progress: prog.clamp(0.01, 0.99),
+              downloadedBytes: _formatBytes(receivedBytes),
+              totalBytes: estTotalStr,
+              sizeFormatted: estTotalStr,
+              speed: speedStr,
+              eta: '${i + 1}/$totalSegs parts',
+            ),
+          );
+
+          _nativeService.updateNotificationProgress(
+            title: realTitle,
+            progress: (prog * 100).toInt(),
+            speed: speedStr,
+            eta: '${i + 1}/$totalSegs parts',
+          );
+        }
+      }
+
+      await sink.flush();
+      await sink.close();
+      client.close();
+      _activeJobs.remove(task.id);
+
+      final finalSize = file.existsSync() ? file.lengthSync() : receivedBytes;
+      final finalSizeStr = _formatBytes(finalSize);
+
+      String finalPath = savePath;
+      if (!isCustom) {
+        try {
+          final pubDir = Directory('/storage/emulated/0/Download/AllDown/$subFolder');
+          if (!pubDir.existsSync()) {
+            pubDir.createSync(recursive: true);
+          }
+          final pubFile = File('${pubDir.path}/$safeName.mp4');
+          file.copySync(pubFile.path);
+          finalPath = pubFile.path;
+        } catch (_) {}
+      }
+
+      _updateTask(
+        task.id,
+        (t) => t.copyWith(
+          progress: 1.0,
+          status: DownloadStatus.completed,
+          downloadedBytes: finalSizeStr,
+          totalBytes: finalSizeStr,
+          sizeFormatted: finalSizeStr,
+          speed: "0.0 MB/s",
+          eta: "Completed",
+        ),
+      );
+
+      _ref.read(mediaLibraryProvider.notifier).addItem(
+        MediaItem(
+          id: "lib_${task.id}",
+          title: realTitle,
+          channel: realChannel,
+          duration: realDuration,
+          thumbnailUrl: realThumb,
+          localPath: finalPath,
+          format: 'MP4',
+          resolution: actualResolution,
+          sizeFormatted: finalSizeStr,
+          completedDateFormatted: "Completed Just Now",
+          isAudio: task.isAudio,
+          platform: realPlatform,
+        ),
+      );
+
+      _retryCounts.remove(task.id);
+
+      if (settings.notifyOnComplete) {
+        _nativeService.showCompletionNotification(title: realTitle);
+      }
+
+      if (activeCount == 0) {
+        _nativeService.stopForegroundService();
+      } else {
+        _promoteNextQueued();
+      }
+    } catch (e) {
+      await job.cancelAndClean(deleteFile: true);
+      _activeJobs.remove(task.id);
+      await _handleFailureOrRetry(task, settings, "Stream error - Tap Resume");
+    }
   }
 
   void pauseAll() {
