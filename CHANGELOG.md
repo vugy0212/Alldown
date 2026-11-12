@@ -2,6 +2,11 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.3.6] - 2026-11-12
+
+### Fixed
+- **Single Instance & Task Management (`singleTask`):** Fixed an issue where opening or sharing links from external apps (YouTube, Reddit, Instagram, browser) spawned multiple duplicate window instances in Android's Recents screen. Removed empty `taskAffinity` and switched to `android:launchMode="singleTask"` so AllDown always maintains a single unified application instance, routing shared links cleanly to the foreground window via `onNewIntent`.
+
 ## [1.3.5] - 2026-11-12
 
 ### Added & Improved
