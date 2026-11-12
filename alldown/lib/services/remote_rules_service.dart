@@ -154,9 +154,25 @@ class RemoteRulesService {
            url.contains('player.vimeo.com/video/');
   }
 
+  /// Extracts Vimeo numeric video ID
+  static String? extractVimeoId(String url) {
+    final match = RegExp(r'vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/[^\/]*\/videos\/|album\/(?:\d+\/)?video\/|video\/|)(\d+)', caseSensitive: false).firstMatch(url);
+    if (match != null && match.group(1) != null) {
+      return match.group(1);
+    }
+    final playerMatch = RegExp(r'player\.vimeo\.com\/video\/(\d+)', caseSensitive: false).firstMatch(url);
+    return playerMatch?.group(1);
+  }
+
   /// Checks if URL belongs to Dailymotion
   static bool isDailymotionUrl(String url) {
     return RegExp(r'(dailymotion\.com\/(video|embed\/video)|dai\.ly)\/([a-zA-Z0-9]+)', caseSensitive: false).hasMatch(url);
+  }
+
+  /// Extracts Dailymotion video ID
+  static String? extractDailymotionId(String url) {
+    final match = RegExp(r'(dailymotion\.com\/(video|embed\/video)|dai\.ly)\/([a-zA-Z0-9]+)', caseSensitive: false).firstMatch(url);
+    return match?.group(3);
   }
 }
 

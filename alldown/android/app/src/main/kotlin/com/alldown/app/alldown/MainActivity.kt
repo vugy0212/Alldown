@@ -13,14 +13,69 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
+import java.io.FileOutputStream
+import java.net.CookieHandler
+import java.net.CookieManager
+import java.net.CookiePolicy
+import java.net.HttpURLConnection
+import java.net.URL
+import android.webkit.WebView
+import org.json.JSONObject
+import kotlin.concurrent.thread
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.alldown.app/downloader"
     private var sharedUrl: String? = null
     private var methodChannel: MethodChannel? = null
+    private var headlessWebView: WebView? = null
+
+    inner class HeadlessWebBridge {
+        private var callback: ((Int, String) -> Unit)? = null
+
+        fun setCallback(cb: (Int, String) -> Unit) {
+            this.callback = cb
+        }
+
+        @android.webkit.JavascriptInterface
+        fun postResult(code: Int, body: String) {
+            callback?.invoke(code, body)
+        }
+    }
+    private val webBridge = HeadlessWebBridge()
+
+    private fun getOrCreateHeadlessWebView(): WebView {
+        if (headlessWebView == null) {
+            headlessWebView = WebView(this).apply {
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.allowFileAccess = true
+                settings.allowContentAccess = true
+                settings.allowUniversalAccessFromFileURLs = true
+                settings.allowFileAccessFromFileURLs = true
+                settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+                webChromeClient = object : android.webkit.WebChromeClient() {
+                    override fun onConsoleMessage(cm: android.webkit.ConsoleMessage?): Boolean {
+                        android.util.Log.d("AllDownWV", "JS [${cm?.messageLevel()}]: ${cm?.message()}")
+                        return true
+                    }
+                }
+                addJavascriptInterface(webBridge, "AllDownBridge")
+                loadDataWithBaseURL("https://www.dailymotion.com", "<html><body><h1>AllDown</h1></body></html>", "text/html", "UTF-8", null)
+            }
+        }
+        return headlessWebView!!
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        try {
+            System.setProperty("java.net.preferIPv4Stack", "true")
+            System.setProperty("java.net.preferIPv6Addresses", "false")
+            if (CookieHandler.getDefault() == null) {
+                CookieHandler.setDefault(CookieManager(null, CookiePolicy.ACCEPT_ALL))
+            }
+            getOrCreateHeadlessWebView()
+        } catch (_: Exception) {}
         handleIntent(intent)
     }
 
@@ -33,11 +88,16 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun handleIntent(intent: Intent?) {
-        if (intent?.action == Intent.ACTION_SEND && intent.type == "text/plain") {
+        if (intent?.action == Intent.ACTION_SEND && (intent.type?.startsWith("text/") == true || intent.type == "text/plain")) {
             val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
             if (!sharedText.isNullOrEmpty()) {
                 val extracted = extractUrl(sharedText)
                 sharedUrl = extracted ?: sharedText
+            }
+        } else if (intent?.action == Intent.ACTION_VIEW) {
+            val dataStr = intent.dataString
+            if (!dataStr.isNullOrEmpty()) {
+                sharedUrl = dataStr
             }
         }
     }
@@ -237,10 +297,197 @@ class MainActivity : FlutterActivity() {
                             result.error("INVALID_PATH", "Path is required", null)
                         }
                     }
+                    "nativeHttpGet" -> {
+                        val urlStr = call.argument<String>("url")
+                        val headers = call.argument<Map<String, String>>("headers")
+                        if (urlStr != null) {
+                            thread {
+                                try {
+                                    android.util.Log.d("AllDownNative", "nativeHttpGet start: $urlStr")
+                                    val conn = openFollowRedirectsConnection(urlStr, headers)
+                                    val code = conn.responseCode
+                                    val inputStream = if (code in 200..299) conn.inputStream else conn.errorStream
+                                    val text = inputStream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() } ?: ""
+
+                                    val resHeaders = HashMap<String, String>()
+                                    conn.headerFields.forEach { (k, vList) ->
+                                        if (k != null && vList.isNotEmpty()) {
+                                            resHeaders[k] = vList.joinToString(", ")
+                                        }
+                                    }
+
+                                    android.util.Log.d("AllDownNative", "nativeHttpGet status: $code for $urlStr (error-code: ${resHeaders["X-Error-Code"]})")
+                                    if (code !in 200..299) {
+                                        android.util.Log.e("AllDownNative", "nativeHttpGet error response: headers=$resHeaders body=$text")
+                                    }
+
+                                    val resultMap = mapOf(
+                                        "statusCode" to code,
+                                        "body" to text,
+                                        "headers" to resHeaders
+                                    )
+                                    runOnUiThread { result.success(resultMap) }
+                                } catch (e: Exception) {
+                                    android.util.Log.e("AllDownNative", "nativeHttpGet exception: ${e.message}", e)
+                                    runOnUiThread { result.error("NATIVE_HTTP_ERROR", e.message, null) }
+                                }
+                            }
+                        } else {
+                            result.error("INVALID_ARGS", "URL is required", null)
+                        }
+                    }
+                    "nativeDownloadFile" -> {
+                        val urlStr = call.argument<String>("url")
+                        val outputPath = call.argument<String>("outputPath")
+                        val headers = call.argument<Map<String, String>>("headers")
+                        val append = call.argument<Boolean>("append") ?: false
+                        if (urlStr != null && outputPath != null) {
+                            thread {
+                                try {
+                                    android.util.Log.d("AllDownNative", "nativeDownloadFile start: $urlStr -> $outputPath (append=$append)")
+                                    val conn = openFollowRedirectsConnection(urlStr, headers)
+                                    val code = conn.responseCode
+                                    android.util.Log.d("AllDownNative", "nativeDownloadFile status: $code for $urlStr")
+                                    if (code in 200..299) {
+                                        val outFile = File(outputPath)
+                                        outFile.parentFile?.mkdirs()
+                                        var bytesWritten = 0L
+                                        conn.inputStream.use { input ->
+                                            FileOutputStream(outFile, append).use { output ->
+                                                val buffer = ByteArray(32768)
+                                                var read: Int
+                                                while (input.read(buffer).also { read = it } != -1) {
+                                                    output.write(buffer, 0, read)
+                                                    bytesWritten += read
+                                                }
+                                                output.flush()
+                                            }
+                                        }
+                                        runOnUiThread {
+                                            result.success(mapOf("statusCode" to code, "bytesWritten" to bytesWritten))
+                                        }
+                                    } else {
+                                        android.util.Log.e("AllDownNative", "nativeDownloadFile error HTTP_$code for $urlStr")
+                                        runOnUiThread {
+                                            result.error("HTTP_$code", "Download failed with HTTP $code", null)
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    android.util.Log.e("AllDownNative", "nativeDownloadFile exception: ${e.message}", e)
+                                    runOnUiThread { result.error("DOWNLOAD_ERROR", e.message, null) }
+                                }
+                            }
+                        } else {
+                            result.error("INVALID_ARGS", "Missing url or outputPath", null)
+                        }
+                    }
+                    "webViewFetch" -> {
+                        val urlStr = call.argument<String>("url")
+                        if (urlStr != null) {
+                            runOnUiThread {
+                                try {
+                                    android.util.Log.d("AllDownNative", "webViewFetch start: $urlStr")
+                                    val wv = getOrCreateHeadlessWebView()
+                                    val escapedUrl = JSONObject.quote(urlStr)
+                                    var responded = false
+
+                                    webBridge.setCallback { code, body ->
+                                        if (!responded) {
+                                            responded = true
+                                            android.util.Log.d("AllDownNative", "webViewFetch bridge received: $code, length: ${body.length}")
+                                            runOnUiThread {
+                                                result.success(mapOf("statusCode" to code, "body" to body))
+                                            }
+                                        }
+                                    }
+
+                                    val handler = android.os.Handler(android.os.Looper.getMainLooper())
+                                    handler.postDelayed({
+                                        if (!responded) {
+                                            responded = true
+                                            android.util.Log.e("AllDownNative", "webViewFetch timeout for $urlStr")
+                                            result.success(mapOf("statusCode" to 408, "body" to ""))
+                                        }
+                                    }, 15000)
+
+                                    val js = """
+                                        (function() {
+                                            try {
+                                                console.log("Fetching: " + $escapedUrl);
+                                                fetch($escapedUrl, { mode: 'cors', credentials: 'omit' })
+                                                    .then(function(r) {
+                                                        console.log("Fetch response status: " + r.status);
+                                                        return r.text().then(function(t) {
+                                                            if (window.AllDownBridge) {
+                                                                window.AllDownBridge.postResult(r.status, t);
+                                                            } else {
+                                                                console.error("AllDownBridge missing on window!");
+                                                            }
+                                                        });
+                                                    })
+                                                    .catch(function(e) {
+                                                        console.error("Fetch catch: " + e);
+                                                        if (window.AllDownBridge) {
+                                                            window.AllDownBridge.postResult(500, e.toString());
+                                                        }
+                                                    });
+                                            } catch(err) {
+                                                console.error("JS error: " + err);
+                                                if (window.AllDownBridge) {
+                                                    window.AllDownBridge.postResult(500, err.toString());
+                                                }
+                                            }
+                                        })();
+                                    """.trimIndent()
+                                    wv.evaluateJavascript(js, null)
+                                } catch (e: Exception) {
+                                    android.util.Log.e("AllDownNative", "webViewFetch error: ${e.message}", e)
+                                    result.error("WEBVIEW_ERROR", e.message, null)
+                                }
+                            }
+                        } else {
+                            result.error("INVALID_ARGS", "URL is required", null)
+                        }
+                    }
                     else -> result.notImplemented()
                 }
             }
         }
+    }
+
+    private fun openFollowRedirectsConnection(
+        initialUrl: String,
+        headers: Map<String, String>?
+    ): HttpURLConnection {
+        var curUrl = initialUrl
+        var redirects = 0
+        while (redirects < 8) {
+            val url = URL(curUrl)
+            val conn = url.openConnection() as HttpURLConnection
+            conn.instanceFollowRedirects = false
+            conn.connectTimeout = 20000
+            conn.readTimeout = 20000
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36")
+            headers?.forEach { (k, v) -> conn.setRequestProperty(k, v) }
+            val code = conn.responseCode
+            if (code in 301..308 && code != 304) {
+                val loc = conn.getHeaderField("Location")
+                conn.disconnect()
+                if (loc != null) {
+                    curUrl = if (loc.startsWith("http://") || loc.startsWith("https://")) {
+                        loc
+                    } else {
+                        URL(url, loc).toString()
+                    }
+                    redirects++
+                    continue
+                }
+            }
+            return conn
+        }
+        val conn = URL(curUrl).openConnection() as HttpURLConnection
+        headers?.forEach { (k, v) -> conn.setRequestProperty(k, v) }
+        return conn
     }
 
     private fun isWifiOrEthernetConnected(): Boolean {

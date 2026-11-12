@@ -208,8 +208,7 @@ async function resolveDailymotion(videoId: string) {
   const metaUrl = `https://www.dailymotion.com/player/metadata/video/${videoId}?app=com.dailymotion.neon`;
   const res = await fetch(metaUrl, {
     headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36",
-      "Referer": `https://www.dailymotion.com/video/${videoId}`,
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
     },
   });
 
@@ -242,6 +241,50 @@ async function resolveDailymotion(videoId: string) {
 
   if (!streams.length) return null;
 
+  // Attempt to parse master manifest in Worker to get direct sub-playlists
+  let directSubStreams: any[] = [];
+  let debugM3u8Status = 0;
+  let debugM3u8Text = "";
+  try {
+    const m3u8Res = await fetch(streams[0].url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "cross-site",
+      },
+    });
+    debugM3u8Status = m3u8Res.status;
+    if (m3u8Res.ok) {
+      const m3u8Text = await m3u8Res.text();
+      debugM3u8Text = m3u8Text.substring(0, 100);
+      const lines = m3u8Text.split("\n").map(l => l.trim());
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].startsWith("#EXT-X-STREAM-INF") && i + 1 < lines.length) {
+          const streamInf = lines[i];
+          const subUrl = lines[i + 1];
+          if (subUrl.startsWith("http")) {
+            const resMatch = streamInf.match(/RESOLUTION=(\d+x\d+)/);
+            const nameMatch = streamInf.match(/NAME="([^"]+)"/);
+            const qual = nameMatch ? `${nameMatch[1]}p` : (resMatch ? resMatch[1] : "HD");
+            directSubStreams.push({
+              url: subUrl,
+              quality: qual,
+              resolution: resMatch ? resMatch[1] : undefined,
+              format: "HLS",
+            });
+          }
+        }
+      }
+    } else {
+      debugM3u8Text = await m3u8Res.text();
+    }
+  } catch (err: any) {
+    debugM3u8Text = err.message;
+  }
+
+  const finalStreams = directSubStreams.length > 0 ? directSubStreams : streams;
+
   return {
     success: true,
     platform: "Dailymotion",
@@ -251,12 +294,16 @@ async function resolveDailymotion(videoId: string) {
     duration,
     durationFormatted: formatDuration(duration),
     thumbnail,
-    bestStreamUrl: streams[0].url,
-    bestResolution: streams[0].quality,
-    streams,
+    bestStreamUrl: finalStreams[0].url,
+    bestResolution: finalStreams[0].quality,
+    streams: finalStreams,
+    debugM3u8Status,
+    debugM3u8Text: debugM3u8Text.substring(0, 150),
     headers: {
-      "Referer": `https://www.dailymotion.com/video/${videoId}`,
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "Sec-Fetch-Dest": "empty",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Site": "cross-site",
     },
   };
 }

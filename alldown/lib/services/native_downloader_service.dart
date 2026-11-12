@@ -113,5 +113,61 @@ class NativeDownloaderService {
       return false;
     }
   }
+
+  /// Performs an HTTP GET request using Android's native HttpURLConnection (bypasses TLS/CDN fingerprinting)
+  Future<Map<String, dynamic>?> nativeHttpGet({
+    required String url,
+    Map<String, String>? headers,
+  }) async {
+    try {
+      final res = await _channel.invokeMethod<dynamic>('nativeHttpGet', {
+        'url': url,
+        'headers': headers ?? {},
+      });
+      if (res is Map) {
+        return Map<String, dynamic>.from(res);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Fetches a URL (such as an anti-bot protected HLS manifest) using headless Chromium WebView
+  Future<Map<String, dynamic>?> webViewFetch({required String url}) async {
+    try {
+      final res = await _channel.invokeMethod<dynamic>('webViewFetch', {'url': url});
+      if (res is Map) {
+        return Map<String, dynamic>.from(res);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Streams a remote file or HLS segment directly to disk using Android's native connection
+  Future<bool> nativeDownloadFile({
+    required String url,
+    required String outputPath,
+    Map<String, String>? headers,
+    bool append = false,
+  }) async {
+    try {
+      final res = await _channel.invokeMethod<dynamic>('nativeDownloadFile', {
+        'url': url,
+        'outputPath': outputPath,
+        'headers': headers ?? {},
+        'append': append,
+      });
+      if (res is Map) {
+        final code = (res['statusCode'] as num?)?.toInt() ?? 0;
+        return code >= 200 && code < 300;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
 }
 

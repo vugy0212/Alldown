@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -30,8 +31,10 @@ class _ActiveDownloadJob {
   YoutubeExplode? yt;
   http.Client? httpClient;
   String? filePath;
+  bool isCancelled = false;
 
   Future<void> cancelAndClean({bool deleteFile = false}) async {
+    isCancelled = true;
     await subscription?.cancel();
     await fileSink?.flush();
     await fileSink?.close();
@@ -416,63 +419,108 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
         }
         totalBytes = resp.contentLength ?? 0;
         byteStream = resp.stream;
-      } else if (RemoteRulesService.isVimeoUrl(task.url) || RemoteRulesService.isDailymotionUrl(task.url)) {
-        final platformName = RemoteRulesService.isVimeoUrl(task.url) ? 'Vimeo' : 'Dailymotion';
+      } else if (RemoteRulesService.isVimeoUrl(task.url)) {
         _updateTask(
           task.id,
           (t) => t.copyWith(
-            speed: "Resolving $platformName via Cloudflare DLR...",
-            eta: "Extracting stream...",
-            progress: 0.03,
+            speed: "Connecting to Vimeo...",
+            eta: "Checking stream permissions...",
+            progress: 0.04,
           ),
         );
 
-        final dlr = await RemoteRulesService.resolveViaDlr(task.url);
-        if (dlr == null || !dlr.success) {
-          throw Exception('Could not extract $platformName video stream via DLR.');
+        final vimeoId = RemoteRulesService.extractVimeoId(task.url);
+        if (vimeoId == null) {
+          throw Exception('Invalid Vimeo video link.');
         }
 
-        realTitle = dlr.title;
-        realChannel = dlr.author;
-        realDuration = dlr.durationFormatted;
-        if (dlr.thumbnailUrl.isNotEmpty) {
-          realThumb = dlr.thumbnailUrl;
-        }
-        actualResolution = dlr.bestResolution;
-        realPlatform = dlr.platform;
+        final configRes = await _nativeService.nativeHttpGet(
+          url: 'https://player.vimeo.com/video/$vimeoId/config',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+            'Referer': 'https://vimeo.com/',
+          },
+        );
 
-        if (dlr.isHls) {
-          await _downloadHlsSegments(
-            job: job,
-            task: task,
-            dlr: dlr,
-            targetDir: targetDir,
-            isCustom: isCustom,
-            subFolder: subFolder,
-            settings: settings,
-            realTitle: realTitle,
-            realChannel: realChannel,
-            realThumb: realThumb,
-            realDuration: realDuration,
-            actualResolution: actualResolution,
-            realPlatform: realPlatform,
-          );
-          return;
-        } else {
+        if (configRes == null || configRes['statusCode'] != 200) {
+          throw Exception('Could not fetch Vimeo configuration.');
+        }
+
+        final configJson = jsonDecode(configRes['body'] as String) as Map<String, dynamic>;
+        final videoInfo = configJson['video'] as Map<String, dynamic>?;
+        if (videoInfo != null) {
+          final t = (videoInfo['title'] as String? ?? '').trim();
+          if (t.isNotEmpty) realTitle = t;
+          final thumbs = videoInfo['thumbs'] as Map<String, dynamic>?;
+          if (thumbs != null && thumbs.isNotEmpty) {
+            realThumb = thumbs.values.last.toString();
+          }
+          final dur = videoInfo['duration'];
+          if (dur is num) {
+            realDuration = MetadataFetcherService.formatDuration(Duration(seconds: dur.toInt()));
+          }
+        }
+
+        final files = configJson['request']?['files'] as Map<String, dynamic>?;
+        final progressive = (files?['progressive'] as List?) ?? [];
+
+        if (progressive.isNotEmpty) {
+          final progressiveList = progressive.whereType<Map<String, dynamic>>().toList();
+          progressiveList.sort((a, b) => ((b['height'] as num?)?.toInt() ?? 0).compareTo((a['height'] as num?)?.toInt() ?? 0));
+          final chosen = progressiveList.first;
+          final directMp4Url = chosen['url'] as String;
+          actualResolution = '${chosen['height']}p';
+          realPlatform = 'Vimeo';
+
           final client = http.Client();
           job.httpClient = client;
-          final resp = await _sendConfiguredRequest(
-            client,
-            dlr.bestStreamUrl,
-            settings,
-            extraHeaders: dlr.headers,
-          );
+          final resp = await _sendConfiguredRequest(client, directMp4Url, settings);
           if (resp.statusCode >= 400) {
             throw Exception('HTTP ${resp.statusCode}');
           }
           totalBytes = resp.contentLength ?? 0;
           byteStream = resp.stream;
+        } else {
+          throw Exception('DRM_VIMEO: Ovaj Vimeo video je zaštićen autorskim DRM pravima i autor nije omogućio preuzimanje.');
         }
+      } else if (RemoteRulesService.isDailymotionUrl(task.url)) {
+        _updateTask(
+          task.id,
+          (t) => t.copyWith(
+            speed: "Connecting to Dailymotion...",
+            eta: "Resolving metadata...",
+            progress: 0.03,
+          ),
+        );
+
+        final dlr = await RemoteRulesService.resolveViaDlr(task.url);
+        if (dlr != null && dlr.success) {
+          realTitle = dlr.title;
+          realChannel = dlr.author;
+          realDuration = dlr.durationFormatted;
+          if (dlr.thumbnailUrl.isNotEmpty) {
+            realThumb = dlr.thumbnailUrl;
+          }
+          actualResolution = dlr.bestResolution;
+          realPlatform = dlr.platform;
+        }
+
+        await _downloadHlsSegments(
+          job: job,
+          task: task,
+          dlr: dlr,
+          targetDir: targetDir,
+          isCustom: isCustom,
+          subFolder: subFolder,
+          settings: settings,
+          realTitle: realTitle,
+          realChannel: realChannel,
+          realThumb: realThumb,
+          realDuration: realDuration,
+          actualResolution: actualResolution,
+          realPlatform: realPlatform,
+        );
+        return;
       } else {
         // Direct media URL or generic webpage containing video/audio
         ResolvedDirectStream? resolvedStream;
@@ -673,10 +721,26 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
         },
         cancelOnError: true,
       );
-    } catch (e) {
+    } catch (e, stack) {
       await job.cancelAndClean(deleteFile: true);
       _activeJobs.remove(task.id);
-      await _handleFailureOrRetry(task, settings, "Stream error - Tap Resume");
+      final errorMsg = e.toString();
+      // ignore: avoid_print
+      print('ALLDOWN_TASK_ERROR: $errorMsg\n$stack');
+      if (errorMsg.contains('DRM_VIMEO') || errorMsg.contains('DRM_PROTECTED')) {
+        _retryCounts.remove(task.id);
+        _updateTask(
+          task.id,
+          (t) => t.copyWith(
+            status: DownloadStatus.paused,
+            speed: "0.0 MB/s",
+            eta: "DRM zaštićeno (autor ne dopušta preuzimanje)",
+          ),
+        );
+        return;
+      }
+      final cleanMsg = errorMsg.replaceAll('Exception: ', '').trim();
+      await _handleFailureOrRetry(task, settings, cleanMsg.isNotEmpty ? cleanMsg : "Stream error");
     }
   }
 
@@ -818,7 +882,7 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
   Future<void> _downloadHlsSegments({
     required _ActiveDownloadJob job,
     required DownloadTask task,
-    required DlrResolvedMedia dlr,
+    required DlrResolvedMedia? dlr,
     required Directory targetDir,
     required bool isCustom,
     required String subFolder,
@@ -834,54 +898,134 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
     job.httpClient = client;
 
     try {
-      // Warm up cookies for Dailymotion if needed
-      if (dlr.platform.toLowerCase().contains('daily')) {
-        try {
-          await client.get(
-            Uri.parse('https://www.dailymotion.com/'),
-            headers: {'User-Agent': dlr.headers['User-Agent'] ?? settings.resolvedUserAgent},
-          ).timeout(const Duration(seconds: 4));
-        } catch (_) {}
+      String masterM3u8Url = dlr?.bestStreamUrl ?? '';
+
+      // Direct metadata fetch from device IP for Dailymotion (fixes IP-bound token 403 E030)
+      if (RemoteRulesService.isDailymotionUrl(task.url) || (dlr != null && dlr.platform.toLowerCase().contains('daily'))) {
+        final dailyId = RemoteRulesService.extractDailymotionId(task.url);
+        if (dailyId != null) {
+          _updateTask(
+            task.id,
+            (t) => t.copyWith(speed: "Dailymotion Token...", eta: "Generating device token..."),
+          );
+          final metaRes = await _nativeService.nativeHttpGet(
+            url: 'https://www.dailymotion.com/player/metadata/video/$dailyId?app=com.dailymotion.neon',
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+              'Accept': 'application/json',
+            },
+          );
+          if (metaRes != null && metaRes['statusCode'] == 200) {
+            try {
+              final root = jsonDecode(metaRes['body'] as String) as Map<String, dynamic>;
+              final autoList = root['qualities']?['auto'] as List?;
+              if (autoList != null && autoList.isNotEmpty) {
+                final directUrl = autoList[0]['url'] as String?;
+                if (directUrl != null && directUrl.isNotEmpty) {
+                  masterM3u8Url = directUrl;
+                }
+              }
+              final t = root['title'] as String?;
+              if (t != null && t.isNotEmpty) realTitle = t;
+              final owner = root['owner'] as Map<String, dynamic>?;
+              if (owner != null) {
+                realChannel = owner['screenname'] as String? ?? owner['username'] as String? ?? realChannel;
+              }
+              final posters = root['posters'] as Map<String, dynamic>?;
+              if (posters != null && posters.isNotEmpty) {
+                realThumb = posters.values.last.toString();
+              }
+              final dur = root['duration'];
+              if (dur is num) {
+                realDuration = MetadataFetcherService.formatDuration(Duration(seconds: dur.toInt()));
+              }
+            } catch (_) {}
+          }
+        }
       }
 
-      // 1. Fetch master M3U8
-      final m3u8Res = await client.get(
-        Uri.parse(dlr.bestStreamUrl),
-        headers: dlr.headers,
-      ).timeout(const Duration(seconds: 10));
-
-      if (m3u8Res.statusCode >= 400) {
-        throw Exception('HTTP ${m3u8Res.statusCode} loading HLS manifest');
+      if (masterM3u8Url.isEmpty) {
+        throw Exception('No playable HLS stream found.');
       }
 
-      String mediaPlaylistUrl = dlr.bestStreamUrl;
-      final masterLines = m3u8Res.body.split('\n').map((l) => l.trim()).toList();
+      // 1. Fetch master M3U8 (try webViewFetch first to bypass Cloudflare bot check, fallback to nativeHttpGet)
+      String masterBody = '';
+      Map<String, dynamic>? masterRes;
+      try {
+        masterRes = await _nativeService.webViewFetch(url: masterM3u8Url);
+      } catch (_) {}
+      if (masterRes == null || (masterRes['statusCode'] as int? ?? 0) < 200 || (masterRes['statusCode'] as int? ?? 0) >= 300) {
+        masterRes = await _nativeService.nativeHttpGet(
+          url: masterM3u8Url,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+            'Sec-Fetch-Mode': 'cors',
+            'Accept': '*/*',
+          },
+        );
+      }
+
+      final masterCode = masterRes?['statusCode'] as int? ?? 0;
+      if (masterCode >= 200 && masterCode < 300) {
+        masterBody = masterRes!['body'] as String? ?? '';
+      } else {
+        throw Exception('HLS Master Manifest HTTP $masterCode');
+      }
+
+      if (masterBody.contains('METHOD=SAMPLE-AES') || masterBody.contains('skd://drm') || masterM3u8Url.contains('/playlist/drm/')) {
+        throw Exception('DRM_PROTECTED: Ovaj video je zaštićen DRM enkripcijom.');
+      }
+
+      String mediaPlaylistUrl = masterM3u8Url;
+      final masterLines = masterBody.split('\n').map((l) => l.trim()).toList();
       if (masterLines.any((l) => l.startsWith('#EXT-X-STREAM-INF'))) {
-        String? candidate;
+        final variants = <Map<String, dynamic>>[];
         for (int i = 0; i < masterLines.length; i++) {
           if (masterLines[i].startsWith('#EXT-X-STREAM-INF') && i + 1 < masterLines.length) {
+            final inf = masterLines[i];
             final nextLine = masterLines[i + 1];
             if (nextLine.isNotEmpty && !nextLine.startsWith('#')) {
-              candidate = nextLine;
+              final bwMatch = RegExp(r'BANDWIDTH=(\d+)').firstMatch(inf);
+              final bw = bwMatch != null ? int.tryParse(bwMatch.group(1)!) ?? 0 : 0;
+              variants.add({'bw': bw, 'url': nextLine});
             }
           }
         }
-        if (candidate != null) {
-          mediaPlaylistUrl = Uri.parse(dlr.bestStreamUrl).resolve(candidate).toString();
+        if (variants.isNotEmpty) {
+          variants.sort((a, b) => (b['bw'] as int).compareTo(a['bw'] as int));
+          mediaPlaylistUrl = Uri.parse(masterM3u8Url).resolve(variants.first['url'] as String).toString();
         }
       }
 
-      // 2. Fetch media segments playlist
-      final mediaRes = await client.get(
-        Uri.parse(mediaPlaylistUrl),
-        headers: dlr.headers,
-      ).timeout(const Duration(seconds: 10));
-
-      if (mediaRes.statusCode >= 400) {
-        throw Exception('HTTP ${mediaRes.statusCode} loading media segments');
+      // 2. Fetch media segments playlist (try webViewFetch first, fallback to nativeHttpGet)
+      String mediaBody = '';
+      Map<String, dynamic>? subRes;
+      try {
+        subRes = await _nativeService.webViewFetch(url: mediaPlaylistUrl);
+      } catch (_) {}
+      if (subRes == null || (subRes['statusCode'] as int? ?? 0) < 200 || (subRes['statusCode'] as int? ?? 0) >= 300) {
+        subRes = await _nativeService.nativeHttpGet(
+          url: mediaPlaylistUrl,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+            'Sec-Fetch-Mode': 'cors',
+            'Accept': '*/*',
+          },
+        );
       }
 
-      final mediaLines = mediaRes.body.split('\n').map((l) => l.trim()).toList();
+      final subCode = subRes?['statusCode'] as int? ?? 0;
+      if (subCode >= 200 && subCode < 300) {
+        mediaBody = subRes!['body'] as String? ?? '';
+      } else {
+        throw Exception('HLS Media Playlist HTTP $subCode');
+      }
+
+      if (mediaBody.contains('METHOD=SAMPLE-AES') || mediaBody.contains('skd://drm')) {
+        throw Exception('DRM_PROTECTED: Ovaj video je zaštićen DRM enkripcijom.');
+      }
+
+      final mediaLines = mediaBody.split('\n').map((l) => l.trim()).toList();
       final segmentUris = <Uri>[];
       final baseUri = Uri.parse(mediaPlaylistUrl);
       for (final line in mediaLines) {
@@ -899,8 +1043,7 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
       final savePath = '${targetDir.path}/${safeName}_$timeStamp.mp4';
       job.filePath = savePath;
       final file = File(savePath);
-      final sink = file.openWrite();
-      job.fileSink = sink;
+      if (file.existsSync()) file.deleteSync();
 
       _updateTask(
         task.id,
@@ -920,49 +1063,61 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
       final totalSegs = segmentUris.length;
 
       for (int i = 0; i < totalSegs; i++) {
-        final segRes = await client.get(
-          segmentUris[i],
-          headers: dlr.headers,
-        ).timeout(const Duration(seconds: 15));
-
-        if (segRes.statusCode == 200) {
-          sink.add(segRes.bodyBytes);
-          receivedBytes += segRes.bodyBytes.length;
-
-          final prog = (i + 1) / totalSegs;
-          final elapsedSec = (stopwatch.elapsedMilliseconds / 1000.0).clamp(0.1, 86400.0);
-          final bytesPerSec = receivedBytes / elapsedSec;
-          final mbPerSec = bytesPerSec / (1024 * 1024);
-          final speedStr = mbPerSec >= 0.1
-              ? '${mbPerSec.toStringAsFixed(1)} MB/s'
-              : '${(bytesPerSec / 1024).toStringAsFixed(0)} KB/s';
-
-          final estTotalBytes = (receivedBytes / prog).round();
-          final estTotalStr = _formatBytes(estTotalBytes);
-
-          _updateTask(
-            task.id,
-            (t) => t.copyWith(
-              progress: prog.clamp(0.01, 0.99),
-              downloadedBytes: _formatBytes(receivedBytes),
-              totalBytes: estTotalStr,
-              sizeFormatted: estTotalStr,
-              speed: speedStr,
-              eta: '${i + 1}/$totalSegs parts',
-            ),
+        if (job.isCancelled) return;
+        final segUriStr = segmentUris[i].toString();
+        bool segSuccess = false;
+        for (int retry = 0; retry < 3; retry++) {
+          segSuccess = await _nativeService.nativeDownloadFile(
+            url: segUriStr,
+            outputPath: savePath,
+            append: true,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+              'Sec-Fetch-Mode': 'cors',
+            },
           );
+          if (segSuccess) break;
+          await Future.delayed(const Duration(milliseconds: 300));
+        }
 
-          _nativeService.updateNotificationProgress(
-            title: realTitle,
-            progress: (prog * 100).toInt(),
+        if (!segSuccess) {
+          throw Exception('Failed to download segment ${i + 1}/$totalSegs');
+        }
+
+        final currentSize = file.existsSync() ? file.lengthSync() : (receivedBytes + 250000);
+        receivedBytes = currentSize;
+
+        final prog = (i + 1) / totalSegs;
+        final elapsedSec = (stopwatch.elapsedMilliseconds / 1000.0).clamp(0.1, 86400.0);
+        final bytesPerSec = receivedBytes / elapsedSec;
+        final mbPerSec = bytesPerSec / (1024 * 1024);
+        final speedStr = mbPerSec >= 0.1
+            ? '${mbPerSec.toStringAsFixed(1)} MB/s'
+            : '${(bytesPerSec / 1024).toStringAsFixed(0)} KB/s';
+
+        final estTotalBytes = (receivedBytes / prog).round();
+        final estTotalStr = _formatBytes(estTotalBytes);
+
+        _updateTask(
+          task.id,
+          (t) => t.copyWith(
+            progress: prog.clamp(0.01, 0.99),
+            downloadedBytes: _formatBytes(receivedBytes),
+            totalBytes: estTotalStr,
+            sizeFormatted: estTotalStr,
             speed: speedStr,
             eta: '${i + 1}/$totalSegs parts',
-          );
-        }
+          ),
+        );
+
+        _nativeService.updateNotificationProgress(
+          title: realTitle,
+          progress: (prog * 100).toInt(),
+          speed: speedStr,
+          eta: '${i + 1}/$totalSegs parts',
+        );
       }
 
-      await sink.flush();
-      await sink.close();
       client.close();
       _activeJobs.remove(task.id);
 
@@ -1023,10 +1178,26 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
       } else {
         _promoteNextQueued();
       }
-    } catch (e) {
+    } catch (e, stack) {
       await job.cancelAndClean(deleteFile: true);
       _activeJobs.remove(task.id);
-      await _handleFailureOrRetry(task, settings, "Stream error - Tap Resume");
+      final errorMsg = e.toString();
+      // ignore: avoid_print
+      print('ALLDOWN_TASK_ERROR: $errorMsg\n$stack');
+      if (errorMsg.contains('DRM_VIMEO') || errorMsg.contains('DRM_PROTECTED')) {
+        _retryCounts.remove(task.id);
+        _updateTask(
+          task.id,
+          (t) => t.copyWith(
+            status: DownloadStatus.paused,
+            speed: "0.0 MB/s",
+            eta: "DRM zaštićeno (autor ne dopušta preuzimanje)",
+          ),
+        );
+        return;
+      }
+      final cleanMsg = errorMsg.replaceAll('Exception: ', '').trim();
+      await _handleFailureOrRetry(task, settings, cleanMsg.isNotEmpty ? cleanMsg : "Stream error");
     }
   }
 
