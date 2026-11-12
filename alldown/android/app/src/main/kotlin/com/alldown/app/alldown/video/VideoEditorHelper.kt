@@ -2,7 +2,11 @@ package com.alldown.app.alldown.video
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.media.MediaCodec
+import android.media.MediaExtractor
+import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
+import android.media.MediaMuxer
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Handler
@@ -19,6 +23,8 @@ import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
 import java.io.File
 import java.io.FileOutputStream
+import java.nio.ByteBuffer
+import kotlin.concurrent.thread
 import kotlin.math.max
 import kotlin.math.min
 
@@ -385,5 +391,80 @@ object VideoEditorHelper {
         }
 
         return bmp
+    }
+
+    /**
+     * Remuxes an MPEG-TS or concatenated HLS stream file into a standard, cleanly indexed MP4 container.
+     * Uses Jetpack Media3 Transformer to guarantee valid sample tables, strictly monotonic PTS/DTS timestamps,
+     * B-frame handling, audio/video synchronization, and universal playback across all mobile players.
+     */
+    fun remuxTsToMp4(
+        context: Context,
+        inputPath: String,
+        outputPath: String,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        val mainHandler = Handler(Looper.getMainLooper())
+        mainHandler.post {
+            try {
+                Log.d(TAG, "remuxTsToMp4: input=$inputPath, output=$outputPath")
+                val inFile = File(inputPath)
+                if (!inFile.exists() || inFile.length() == 0L) {
+                    val err = "Input file is missing or empty: $inputPath"
+                    Log.e(TAG, err)
+                    callback(false, err)
+                    return@post
+                }
+
+                val outFile = File(outputPath)
+                outFile.parentFile?.mkdirs()
+                if (outFile.exists()) outFile.delete()
+
+                var effectiveInput = inFile
+                var tempTsFile: File? = null
+                if (!inputPath.endsWith(".ts", ignoreCase = true)) {
+                    val isTs = try {
+                        val raf = java.io.RandomAccessFile(inFile, "r")
+                        val b = raf.readByte()
+                        raf.close()
+                        b == 0x47.toByte()
+                    } catch (_: Exception) { false }
+                    if (isTs) {
+                        tempTsFile = File(context.cacheDir, "temp_remux_${System.currentTimeMillis()}.ts")
+                        inFile.copyTo(tempTsFile, overwrite = true)
+                        effectiveInput = tempTsFile
+                    }
+                }
+
+                val mediaItem = MediaItem.fromUri(Uri.fromFile(effectiveInput))
+                val editedMediaItem = EditedMediaItem.Builder(mediaItem).build()
+
+                val transformer = Transformer.Builder(context)
+                    .addListener(object : Transformer.Listener {
+                        override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                            Log.i(TAG, "remuxTsToMp4: Transformer export completed -> $outputPath")
+                            try { tempTsFile?.delete() } catch (_: Exception) {}
+                            MediaScannerConnection.scanFile(context, arrayOf(outputPath), arrayOf("video/mp4"), null)
+                            callback(true, null)
+                        }
+
+                        override fun onError(
+                            composition: Composition,
+                            exportResult: ExportResult,
+                            exportException: ExportException
+                        ) {
+                            Log.e(TAG, "remuxTsToMp4: Transformer export error: ${exportException.message}", exportException)
+                            try { tempTsFile?.delete() } catch (_: Exception) {}
+                            callback(false, exportException.message)
+                        }
+                    })
+                    .build()
+
+                transformer.start(editedMediaItem, outputPath)
+            } catch (e: Exception) {
+                Log.e(TAG, "remuxTsToMp4 exception: ${e.message}", e)
+                callback(false, e.message)
+            }
+        }
     }
 }

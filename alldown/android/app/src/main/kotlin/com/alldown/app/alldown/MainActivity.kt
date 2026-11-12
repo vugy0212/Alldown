@@ -297,6 +297,25 @@ class MainActivity : FlutterActivity() {
                             result.error("INVALID_PATH", "Path is required", null)
                         }
                     }
+                    "remuxTsToMp4" -> {
+                        val input = call.argument<String>("inputPath")
+                        val output = call.argument<String>("outputPath")
+                        if (input != null && output != null) {
+                            VideoEditorHelper.remuxTsToMp4(
+                                context = applicationContext,
+                                inputPath = input,
+                                outputPath = output
+                            ) { success, error ->
+                                if (success) {
+                                    result.success(true)
+                                } else {
+                                    result.error("REMUX_ERROR", error ?: "Remux failed", null)
+                                }
+                            }
+                        } else {
+                            result.error("INVALID_ARGS", "Missing inputPath or outputPath", null)
+                        }
+                    }
                     "nativeHttpGet" -> {
                         val urlStr = call.argument<String>("url")
                         val headers = call.argument<Map<String, String>>("headers")

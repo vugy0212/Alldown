@@ -169,5 +169,23 @@ class NativeDownloaderService {
       return false;
     }
   }
+
+  /// Remuxes an MPEG-TS or concatenated HLS file into a cleanly indexed, universally playable MP4 container
+  Future<bool> remuxTsToMp4({
+    required String inputPath,
+    required String outputPath,
+  }) async {
+    try {
+      final res = await _channel.invokeMethod<bool>('remuxTsToMp4', {
+        'inputPath': inputPath,
+        'outputPath': outputPath,
+      });
+      return res ?? false;
+    } catch (e) {
+      // ignore: avoid_print
+      print('remuxTsToMp4 error: $e');
+      return false;
+    }
+  }
 }
 

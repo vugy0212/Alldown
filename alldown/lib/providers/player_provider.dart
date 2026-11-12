@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 import '../models/media_item.dart';
+import '../services/native_downloader_service.dart';
 
 class PlayerState {
   final MediaItem? currentItem;
@@ -115,7 +116,30 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
         return;
       }
 
-      final ctrl = VideoPlayerController.file(file);
+      var targetFile = file;
+      try {
+        final raf = file.openSync(mode: FileMode.read);
+        final firstByte = raf.readByteSync();
+        raf.closeSync();
+        if (firstByte == 0x47) {
+          // Unremuxed MPEG-TS file (sync byte 0x47). Auto-remux to clean MP4 for instant ExoPlayer playback!
+          final fixedPath = '${file.path.replaceAll(RegExp(r'\.mp4$', caseSensitive: false), '')}_clean.mp4';
+          final fixedFile = File(fixedPath);
+          if (!fixedFile.existsSync() || fixedFile.lengthSync() < 1024) {
+            final ok = await NativeDownloaderService().remuxTsToMp4(
+              inputPath: file.path,
+              outputPath: fixedPath,
+            );
+            if (ok && fixedFile.existsSync() && fixedFile.lengthSync() > 1024) {
+              targetFile = fixedFile;
+            }
+          } else {
+            targetFile = fixedFile;
+          }
+        }
+      } catch (_) {}
+
+      final ctrl = VideoPlayerController.file(targetFile);
       _controller = ctrl;
 
       await ctrl.initialize();
@@ -131,7 +155,9 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
           clearError: true,
         );
       }
-    } catch (e) {
+    } catch (e, stack) {
+      // ignore: avoid_print
+      print('ALLDOWN_PLAYBACK_ERROR: $e\n$stack');
       if (mounted) {
         state = state.copyWith(
           errorMessage: 'Playback error: $e',

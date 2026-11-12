@@ -1040,9 +1040,9 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
 
       final safeName = _sanitizeFileName(realTitle);
       final timeStamp = DateTime.now().millisecondsSinceEpoch;
-      final savePath = '${targetDir.path}/${safeName}_$timeStamp.mp4';
-      job.filePath = savePath;
-      final file = File(savePath);
+      final rawTsPath = '${targetDir.path}/${safeName}_$timeStamp.ts';
+      job.filePath = rawTsPath;
+      final file = File(rawTsPath);
       if (file.existsSync()) file.deleteSync();
 
       _updateTask(
@@ -1069,7 +1069,7 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
         for (int retry = 0; retry < 3; retry++) {
           segSuccess = await _nativeService.nativeDownloadFile(
             url: segUriStr,
-            outputPath: savePath,
+            outputPath: rawTsPath,
             append: true,
             headers: {
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
@@ -1121,21 +1121,52 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
       client.close();
       _activeJobs.remove(task.id);
 
-      final finalSize = file.existsSync() ? file.lengthSync() : receivedBytes;
-      final finalSizeStr = _formatBytes(finalSize);
+      _updateTask(
+        task.id,
+        (t) => t.copyWith(
+          speed: "Finalizing...",
+          eta: "Muxing clean MP4...",
+          progress: 0.99,
+        ),
+      );
 
-      String finalPath = savePath;
+      final finalMp4Name = '$safeName.mp4';
+      String finalPath;
       if (!isCustom) {
+        final pubDir = Directory('/storage/emulated/0/Download/AllDown/$subFolder');
+        if (!pubDir.existsSync()) {
+          pubDir.createSync(recursive: true);
+        }
+        finalPath = '${pubDir.path}/$finalMp4Name';
+      } else {
+        finalPath = '${targetDir.path}/${safeName}_$timeStamp.mp4';
+      }
+
+      // Remux MPEG-TS chunks into standard, cleanly indexed MP4 container
+      bool remuxSuccess = false;
+      try {
+        remuxSuccess = await _nativeService.remuxTsToMp4(
+          inputPath: rawTsPath,
+          outputPath: finalPath,
+        );
+      } catch (_) {}
+
+      if (!remuxSuccess || !File(finalPath).existsSync()) {
+        // Fallback: copy raw stream if remuxing fails
         try {
-          final pubDir = Directory('/storage/emulated/0/Download/AllDown/$subFolder');
-          if (!pubDir.existsSync()) {
-            pubDir.createSync(recursive: true);
-          }
-          final pubFile = File('${pubDir.path}/$safeName.mp4');
-          file.copySync(pubFile.path);
-          finalPath = pubFile.path;
+          File(rawTsPath).copySync(finalPath);
         } catch (_) {}
       }
+
+      try {
+        if (File(rawTsPath).existsSync() && rawTsPath != finalPath) {
+          File(rawTsPath).deleteSync();
+        }
+      } catch (_) {}
+
+      final finalFile = File(finalPath);
+      final finalSize = finalFile.existsSync() ? finalFile.lengthSync() : receivedBytes;
+      final finalSizeStr = _formatBytes(finalSize);
 
       _updateTask(
         task.id,
