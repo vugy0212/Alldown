@@ -85,6 +85,14 @@
         "facebook\\.com\\/.*\\/(?:videos|reel)\\/(\\d+)",
         "fb\\.watch\\/([a-zA-Z0-9_-]+)"
       ]
+    },
+    "instagram": {
+      "name": "Instagram",
+      "enabled": true,
+      "patterns": [
+        "instagram\\.com\\/(?:[^\\/]+\\/)?(?:p|reel|reels|tv)\\/([a-zA-Z0-9_-]+)",
+        "instagr\\.am\\/(?:p|reel)\\/([a-zA-Z0-9_-]+)"
+      ]
     }
   }
 }

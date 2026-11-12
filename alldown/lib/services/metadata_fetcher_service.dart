@@ -88,6 +88,23 @@ class MetadataFetcherService {
     return lower.contains('facebook.com') || lower.contains('fb.watch') || lower.contains('fb.com');
   }
 
+  static bool isInstagramUrl(String input) {
+    final lower = input.toLowerCase();
+    return lower.contains('instagram.com/reel/') ||
+        lower.contains('instagram.com/reels/') ||
+        lower.contains('instagram.com/p/') ||
+        lower.contains('instagram.com/tv/') ||
+        lower.contains('instagr.am/');
+  }
+
+  static String? extractInstagramShortcode(String input) {
+    final match = RegExp(
+      r'instagram\.com\/(?:[^\/]+\/)?(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+)',
+      caseSensitive: false,
+    ).firstMatch(input);
+    return match?.group(1);
+  }
+
   static String formatDuration(Duration? d) {
     if (d == null || d.inSeconds <= 0) return '00:30';
     final hours = d.inHours;
@@ -384,6 +401,196 @@ class MetadataFetcherService {
         thumbnailUrl: thumb,
         resolutionLabel: chosenLabel,
         platform: 'Facebook',
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Resolves direct progressive MP4 stream for Instagram Reels, Posts, and Videos
+  static Future<ResolvedDirectStream?> resolveInstagramStream(
+    String rawUrl, {
+    String preferredResolution = '1080p',
+    String? cookiesHeader,
+  }) async {
+    try {
+      final shortcode = extractInstagramShortcode(rawUrl);
+      if (shortcode == null) return null;
+
+      final targetUrl = 'https://www.instagram.com/reel/$shortcode/';
+      final client = http.Client();
+      final request = http.Request('GET', Uri.parse(targetUrl));
+      request.headers.addAll({
+        'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+        'Accept':
+            'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+      });
+      if (cookiesHeader != null && cookiesHeader.trim().isNotEmpty) {
+        request.headers['Cookie'] = cookiesHeader.trim();
+      }
+      request.followRedirects = true;
+      request.maxRedirects = 5;
+
+      final streamedResponse = await client.send(request).timeout(const Duration(seconds: 10));
+      final responseBody = await streamedResponse.stream.bytesToString();
+      client.close();
+
+      if (responseBody.isEmpty) return null;
+
+      String cleanUrl(String u) {
+        var res = u.replaceAll(r'\/', '/');
+        res = res.replaceAll(r'\u0026', '&');
+        res = res.replaceAll(r'\u0025', '%');
+        res = res.replaceAll('&amp;', '&');
+        return res.trim();
+      }
+
+      // Method 1: Scan <script type="application/json" data-sjs> tags
+      final sjsRegex = RegExp(r'<script\b[^>]+\bdata-sjs>(\{.+?\})<\/script>', dotAll: true);
+      final sjsMatches = sjsRegex.allMatches(responseBody);
+
+      String? streamUrl;
+      String? title;
+      String? author;
+      String? thumbUrl;
+      String? duration;
+      String resolutionLabel = 'HD MP4';
+
+      for (final match in sjsMatches) {
+        final jsonText = match.group(1);
+        if (jsonText == null ||
+            (!jsonText.contains('video_versions') && !jsonText.contains('xig_polaris_media'))) {
+          continue;
+        }
+
+        try {
+          final data = jsonDecode(jsonText);
+          void scan(dynamic obj) {
+            if (obj is Map) {
+              if (obj.containsKey('video_versions') && obj['video_versions'] is List) {
+                final list = (obj['video_versions'] as List).whereType<Map>().toList();
+                if (list.isNotEmpty) {
+                  // Sort by resolution (width * height) descending
+                  list.sort((a, b) {
+                    final areaA = ((a['width'] as num?)?.toInt() ?? 0) *
+                        ((a['height'] as num?)?.toInt() ?? 0);
+                    final areaB = ((b['width'] as num?)?.toInt() ?? 0) *
+                        ((b['height'] as num?)?.toInt() ?? 0);
+                    return areaB.compareTo(areaA);
+                  });
+                  final best = list.first;
+                  final rawU = best['url']?.toString();
+                  if (rawU != null && rawU.isNotEmpty) {
+                    streamUrl = cleanUrl(rawU);
+                    final h = best['height'];
+                    if (h != null) {
+                      resolutionLabel = '${h}p HD';
+                    }
+                  }
+                }
+              }
+
+              if (obj.containsKey('caption') && obj['caption'] is Map) {
+                final capMap = obj['caption'] as Map;
+                final txt = capMap['text']?.toString().trim();
+                if (txt != null && txt.isNotEmpty) {
+                  title = txt.split('\n').first.trim();
+                  if (title!.length > 80) {
+                    title = '${title!.substring(0, 80)}...';
+                  }
+                }
+              }
+
+              if (obj.containsKey('user') && obj['user'] is Map) {
+                final userMap = obj['user'] as Map;
+                final uname = userMap['username']?.toString();
+                if (uname != null && uname.isNotEmpty) {
+                  author = '@$uname';
+                }
+              }
+
+              if (obj.containsKey('image_versions2') && obj['image_versions2'] is Map) {
+                final imgMap = obj['image_versions2'] as Map;
+                final candidates = imgMap['candidates'];
+                if (candidates is List && candidates.isNotEmpty) {
+                  final firstCand = candidates.first;
+                  if (firstCand is Map && firstCand['url'] != null) {
+                    thumbUrl = cleanUrl(firstCand['url'].toString());
+                  }
+                }
+              }
+
+              if (obj.containsKey('video_duration') && obj['video_duration'] is num) {
+                final sec = (obj['video_duration'] as num).toInt();
+                final m = sec ~/ 60;
+                final sRem = sec % 60;
+                duration = '${m.toString().padLeft(2, '0')}:${sRem.toString().padLeft(2, '0')}';
+              }
+
+              for (final val in obj.values) {
+                scan(val);
+              }
+            } else if (obj is List) {
+              for (final elem in obj) {
+                scan(elem);
+              }
+            }
+          }
+
+          scan(data);
+          if (streamUrl != null) break;
+        } catch (_) {}
+      }
+
+      // Method 2: Fallback regex on HTML for video_versions or fbcdn .mp4
+      if (streamUrl == null) {
+        final videoVersionRegex = RegExp(r'"video_versions":\s*\[\s*\{[^}]*?"url":\s*"([^"]+)"');
+        final match = videoVersionRegex.firstMatch(responseBody);
+        if (match != null && match.group(1) != null) {
+          streamUrl = cleanUrl(match.group(1)!);
+        }
+      }
+
+      if (streamUrl == null) {
+        final fbcdnRegex = RegExp(r'''https?:\\?\/\\?\/[^\s"'<>]*(?:fbcdn\.net|cdninstagram\.com)[^\s"'<>]+\.mp4[^\s"'<>]*''');
+        final match = fbcdnRegex.firstMatch(responseBody);
+        if (match != null) {
+          streamUrl = cleanUrl(match.group(0)!);
+        }
+      }
+
+      if (streamUrl == null) return null;
+
+      // Extract title / author fallbacks
+      String finalTitle = title ?? '';
+      if (finalTitle.isEmpty) {
+        final ogTitle = RegExp(r'<meta\s+property=["\x27]og:title["\x27]\s+content=["\x27]([^"\x27]+)["\x27]', caseSensitive: false).firstMatch(responseBody)?.group(1);
+        final titleTag = RegExp(r'<title>([^<]+)<\/title>', caseSensitive: false).firstMatch(responseBody)?.group(1);
+        var t = (ogTitle ?? titleTag ?? 'Instagram Video ($shortcode)').trim();
+        t = t.replaceAll(RegExp(r'\s*•\s*Instagram.*$', caseSensitive: false), '').trim();
+        finalTitle = t.isNotEmpty ? t : 'Instagram Video ($shortcode)';
+      }
+
+      String finalThumb = thumbUrl ?? '';
+      if (finalThumb.isEmpty) {
+        final ogImg = RegExp(r'<meta\s+property=["\x27]og:image["\x27]\s+content=["\x27]([^"\x27]+)["\x27]', caseSensitive: false).firstMatch(responseBody)?.group(1);
+        if (ogImg != null) finalThumb = cleanUrl(ogImg);
+      }
+
+      return ResolvedDirectStream(
+        streamUrl: streamUrl!,
+        title: finalTitle,
+        author: author ?? 'Instagram Creator',
+        duration: duration ?? '00:30',
+        thumbnailUrl: finalThumb,
+        resolutionLabel: resolutionLabel,
+        platform: 'Instagram',
       );
     } catch (_) {
       return null;
@@ -706,6 +913,41 @@ class MetadataFetcherService {
           thumbnailUrl: fb.thumbnailUrl,
           platform: 'Facebook',
           badgeText: fb.resolutionLabel,
+        );
+      }
+    }
+
+    // 5. Check Instagram URL
+    if (isInstagramUrl(trimmed)) {
+      final ig = await resolveInstagramStream(trimmed);
+      if (ig != null) {
+        return DetectedMedia(
+          title: ig.title,
+          channel: ig.author,
+          subscribers: 'Instagram Creator',
+          duration: ig.duration,
+          durationSeconds: 30,
+          uploadTime: 'Instagram Reel',
+          viewCount: 'Direct Stream',
+          license: 'Direct MP4 Stream',
+          thumbnailUrl: ig.thumbnailUrl,
+          platform: 'Instagram',
+          badgeText: ig.resolutionLabel,
+        );
+      } else {
+        final shortcode = extractInstagramShortcode(trimmed) ?? 'Reel';
+        return DetectedMedia(
+          title: 'Instagram Post ($shortcode)',
+          channel: 'Instagram',
+          subscribers: 'Instagram Creator',
+          duration: '00:30',
+          durationSeconds: 30,
+          uploadTime: 'Instagram Post',
+          viewCount: 'Direct Stream',
+          license: 'Direct MP4 Stream',
+          thumbnailUrl: '',
+          platform: 'Instagram',
+          badgeText: 'HD MP4',
         );
       }
     }

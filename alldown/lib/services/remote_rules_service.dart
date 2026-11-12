@@ -174,5 +174,17 @@ class RemoteRulesService {
     final match = RegExp(r'(dailymotion\.com\/(video|embed\/video)|dai\.ly)\/([a-zA-Z0-9]+)', caseSensitive: false).firstMatch(url);
     return match?.group(3);
   }
+
+  /// Checks if URL belongs to Instagram (Reels, Posts, TV)
+  static bool isInstagramUrl(String url) {
+    return RegExp(r'instagram\.com\/(?:[^\/]+\/)?(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+)', caseSensitive: false).hasMatch(url) ||
+           url.contains('instagr.am/');
+  }
+
+  /// Extracts Instagram shortcode
+  static String? extractInstagramShortcode(String url) {
+    final match = RegExp(r'instagram\.com\/(?:[^\/]+\/)?(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+)', caseSensitive: false).firstMatch(url);
+    return match?.group(1);
+  }
 }
 

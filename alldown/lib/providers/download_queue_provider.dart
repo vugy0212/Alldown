@@ -199,6 +199,7 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
       final twitterId = MetadataFetcherService.extractTwitterStatusId(task.url);
       final isTikTok = MetadataFetcherService.isTikTokUrl(task.url);
       final isFacebook = MetadataFetcherService.isFacebookUrl(task.url);
+      final isInstagram = MetadataFetcherService.isInstagramUrl(task.url);
       final isStreamable = MetadataFetcherService.isStreamableUrl(task.url);
       final isDirectMedia = MetadataFetcherService.isDirectMediaUrl(task.url);
 
@@ -382,6 +383,82 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
         final client = http.Client();
         job.httpClient = client;
         final resp = await _sendConfiguredRequest(client, resolved.streamUrl, settings);
+        if (resp.statusCode >= 400) {
+          throw Exception('HTTP ${resp.statusCode}');
+        }
+        totalBytes = resp.contentLength ?? 0;
+        byteStream = resp.stream;
+      } else if (isInstagram) {
+        _updateTask(
+          task.id,
+          (t) => t.copyWith(
+            speed: "Extracting Instagram video...",
+            eta: "Resolving MP4...",
+            progress: 0.03,
+          ),
+        );
+
+        var resolved = await MetadataFetcherService.resolveInstagramStream(
+          task.url,
+          preferredResolution: task.resolution,
+          cookiesHeader: settings.cookiesActive ? settings.cookiesHeader : null,
+        );
+
+        // Native WebView fallback if direct fetch got blocked or gated
+        if (resolved == null) {
+          try {
+            _updateTask(
+              task.id,
+              (t) => t.copyWith(
+                speed: "Connecting via WebView...",
+                eta: "Bypassing gating...",
+                progress: 0.05,
+              ),
+            );
+            final webViewRes = await _nativeService.webViewFetch(url: task.url);
+            final webViewHtml = webViewRes?['body'] as String?;
+            if (webViewHtml != null && webViewHtml.isNotEmpty) {
+              final fbcdnRegex = RegExp(r'''https?:\\?\/\\?\/[^\s"'<>]*(?:fbcdn\.net|cdninstagram\.com)[^\s"'<>]+\.mp4[^\s"'<>]*''');
+              final m = fbcdnRegex.firstMatch(webViewHtml);
+              if (m != null) {
+                var c = m.group(0)!.replaceAll(r'\/', '/').replaceAll(r'\u0026', '&').replaceAll('&amp;', '&');
+                resolved = ResolvedDirectStream(
+                  streamUrl: c,
+                  title: 'Instagram Video',
+                  author: 'Instagram Creator',
+                  duration: '00:30',
+                  thumbnailUrl: '',
+                  resolutionLabel: 'HD MP4',
+                  platform: 'Instagram',
+                );
+              }
+            }
+          } catch (_) {}
+        }
+
+        if (resolved == null) {
+          throw Exception('INSTAGRAM_LOGIN_REQUIRED: Nije moguće dohvatiti Instagram video. Ako je sadržaj privatan, uvezite kolačiće u Postavkama.');
+        }
+
+        realTitle = resolved.title;
+        realChannel = resolved.author;
+        realDuration = resolved.duration;
+        if (resolved.thumbnailUrl.isNotEmpty) {
+          realThumb = resolved.thumbnailUrl;
+        }
+        actualResolution = resolved.resolutionLabel;
+        realPlatform = 'Instagram';
+
+        final client = http.Client();
+        job.httpClient = client;
+        final resp = await _sendConfiguredRequest(
+          client,
+          resolved.streamUrl,
+          settings,
+          extraHeaders: {
+            'Referer': 'https://www.instagram.com/',
+          },
+        );
         if (resp.statusCode >= 400) {
           throw Exception('HTTP ${resp.statusCode}');
         }
@@ -735,6 +812,18 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
             status: DownloadStatus.paused,
             speed: "0.0 MB/s",
             eta: "DRM zaštićeno (autor ne dopušta preuzimanje)",
+          ),
+        );
+        return;
+      }
+      if (errorMsg.contains('INSTAGRAM_LOGIN_REQUIRED')) {
+        _retryCounts.remove(task.id);
+        _updateTask(
+          task.id,
+          (t) => t.copyWith(
+            status: DownloadStatus.paused,
+            speed: "0.0 MB/s",
+            eta: "Instagram: prijava potrebna (uvezite cookies u postavkama)",
           ),
         );
         return;
@@ -1240,6 +1329,18 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
             status: DownloadStatus.paused,
             speed: "0.0 MB/s",
             eta: "DRM zaštićeno (autor ne dopušta preuzimanje)",
+          ),
+        );
+        return;
+      }
+      if (errorMsg.contains('INSTAGRAM_LOGIN_REQUIRED')) {
+        _retryCounts.remove(task.id);
+        _updateTask(
+          task.id,
+          (t) => t.copyWith(
+            status: DownloadStatus.paused,
+            speed: "0.0 MB/s",
+            eta: "Instagram: prijava potrebna (uvezite cookies u postavkama)",
           ),
         );
         return;
