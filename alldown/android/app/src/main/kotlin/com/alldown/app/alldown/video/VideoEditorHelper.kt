@@ -421,18 +421,28 @@ object VideoEditorHelper {
                 if (outFile.exists()) outFile.delete()
 
                 var effectiveInput = inFile
-                var tempTsFile: File? = null
-                if (!inputPath.endsWith(".ts", ignoreCase = true)) {
-                    val isTs = try {
-                        val raf = java.io.RandomAccessFile(inFile, "r")
-                        val b = raf.readByte()
-                        raf.close()
-                        b == 0x47.toByte()
-                    } catch (_: Exception) { false }
-                    if (isTs) {
-                        tempTsFile = File(context.cacheDir, "temp_remux_${System.currentTimeMillis()}.ts")
-                        inFile.copyTo(tempTsFile, overwrite = true)
-                        effectiveInput = tempTsFile
+                var tempFile: File? = null
+
+                val firstByte = try {
+                    val raf = java.io.RandomAccessFile(inFile, "r")
+                    val b = raf.readByte()
+                    raf.close()
+                    b
+                } catch (_: Exception) { null }
+
+                if (firstByte == 0x47.toByte()) {
+                    // MPEG-TS stream (starts with 0x47 sync byte)
+                    if (!inputPath.endsWith(".ts", ignoreCase = true)) {
+                        tempFile = File(context.cacheDir, "temp_remux_${System.currentTimeMillis()}.ts")
+                        inFile.copyTo(tempFile, overwrite = true)
+                        effectiveInput = tempFile
+                    }
+                } else {
+                    // MP4 / fMP4 / CMAF stream (starts with 0x00... ftyp/styp/moov)
+                    if (inputPath.endsWith(".ts", ignoreCase = true)) {
+                        tempFile = File(context.cacheDir, "temp_remux_${System.currentTimeMillis()}.mp4")
+                        inFile.copyTo(tempFile, overwrite = true)
+                        effectiveInput = tempFile
                     }
                 }
 
@@ -443,7 +453,7 @@ object VideoEditorHelper {
                     .addListener(object : Transformer.Listener {
                         override fun onCompleted(composition: Composition, exportResult: ExportResult) {
                             Log.i(TAG, "remuxTsToMp4: Transformer export completed -> $outputPath")
-                            try { tempTsFile?.delete() } catch (_: Exception) {}
+                            try { tempFile?.delete() } catch (_: Exception) {}
                             MediaScannerConnection.scanFile(context, arrayOf(outputPath), arrayOf("video/mp4"), null)
                             callback(true, null)
                         }
@@ -454,7 +464,7 @@ object VideoEditorHelper {
                             exportException: ExportException
                         ) {
                             Log.e(TAG, "remuxTsToMp4: Transformer export error: ${exportException.message}", exportException)
-                            try { tempTsFile?.delete() } catch (_: Exception) {}
+                            try { tempFile?.delete() } catch (_: Exception) {}
                             callback(false, exportException.message)
                         }
                     })

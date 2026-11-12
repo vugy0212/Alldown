@@ -1028,8 +1028,15 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
       final mediaLines = mediaBody.split('\n').map((l) => l.trim()).toList();
       final segmentUris = <Uri>[];
       final baseUri = Uri.parse(mediaPlaylistUrl);
+      Uri? initSegmentUri;
+
       for (final line in mediaLines) {
-        if (line.isNotEmpty && !line.startsWith('#')) {
+        if (line.startsWith('#EXT-X-MAP:')) {
+          final uriMatch = RegExp(r'URI="([^"]+)"').firstMatch(line);
+          if (uriMatch != null) {
+            initSegmentUri = baseUri.resolve(uriMatch.group(1)!);
+          }
+        } else if (line.isNotEmpty && !line.startsWith('#')) {
           segmentUris.add(baseUri.resolve(line));
         }
       }
@@ -1038,11 +1045,21 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
         throw Exception('No playable video segments found in HLS stream.');
       }
 
+      // Prepend fMP4 / CMAF initialization segment (init.mp4 / init.m4s)
+      // containing essential ftyp and moov box headers required for MP4 playback
+      if (initSegmentUri != null) {
+        segmentUris.insert(0, initSegmentUri);
+      }
+
+      final bool isFmp4 = initSegmentUri != null ||
+          segmentUris.any((u) => u.path.endsWith('.m4s') || u.path.endsWith('.mp4'));
+
       final safeName = _sanitizeFileName(realTitle);
       final timeStamp = DateTime.now().millisecondsSinceEpoch;
-      final rawTsPath = '${targetDir.path}/${safeName}_$timeStamp.ts';
-      job.filePath = rawTsPath;
-      final file = File(rawTsPath);
+      final rawExt = isFmp4 ? 'mp4' : 'ts';
+      final rawPath = '${targetDir.path}/${safeName}_${timeStamp}_raw.$rawExt';
+      job.filePath = rawPath;
+      final file = File(rawPath);
       if (file.existsSync()) file.deleteSync();
 
       _updateTask(
@@ -1069,7 +1086,7 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
         for (int retry = 0; retry < 3; retry++) {
           segSuccess = await _nativeService.nativeDownloadFile(
             url: segUriStr,
-            outputPath: rawTsPath,
+            outputPath: rawPath,
             append: true,
             headers: {
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
@@ -1142,11 +1159,11 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
         finalPath = '${targetDir.path}/${safeName}_$timeStamp.mp4';
       }
 
-      // Remux MPEG-TS chunks into standard, cleanly indexed MP4 container
+      // Remux MPEG-TS chunks or fragmented MP4 into standard, cleanly indexed MP4 container
       bool remuxSuccess = false;
       try {
         remuxSuccess = await _nativeService.remuxTsToMp4(
-          inputPath: rawTsPath,
+          inputPath: rawPath,
           outputPath: finalPath,
         );
       } catch (_) {}
@@ -1154,13 +1171,13 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
       if (!remuxSuccess || !File(finalPath).existsSync()) {
         // Fallback: copy raw stream if remuxing fails
         try {
-          File(rawTsPath).copySync(finalPath);
+          File(rawPath).copySync(finalPath);
         } catch (_) {}
       }
 
       try {
-        if (File(rawTsPath).existsSync() && rawTsPath != finalPath) {
-          File(rawTsPath).deleteSync();
+        if (File(rawPath).existsSync() && rawPath != finalPath) {
+          File(rawPath).deleteSync();
         }
       } catch (_) {}
 
