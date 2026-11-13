@@ -109,7 +109,7 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
     final shouldQueue = activeCount >= maxConcurrent;
     final initialTask = shouldQueue
         ? task.copyWith(status: DownloadStatus.queued, speed: "Queued", eta: "Waiting slot")
-        : task;
+        : task.copyWith(status: DownloadStatus.active, speed: "Connecting...", eta: "Starting...");
 
     state = [initialTask, ...state];
     _storage.saveQueue(state);
@@ -231,16 +231,26 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
           ),
         );
 
-        try {
-          final video = await yt.videos.get(ytId);
-          realTitle = video.title;
-          realChannel = video.author;
-          realDuration = MetadataFetcherService.formatDuration(video.duration);
-          realThumb = 'https://i.ytimg.com/vi/$ytId/hqdefault.jpg';
-          realPlatform = 'YouTube';
-        } catch (_) {}
+        if (realTitle.startsWith('YouTube Video') || realTitle == 'Media Download') {
+          try {
+            final video = await yt.videos.get(ytId).timeout(const Duration(seconds: 4));
+            realTitle = video.title;
+            realChannel = video.author;
+            realDuration = MetadataFetcherService.formatDuration(video.duration);
+            realThumb = 'https://i.ytimg.com/vi/$ytId/hqdefault.jpg';
+            realPlatform = 'YouTube';
+          } catch (_) {}
+        }
 
-        final manifest = await yt.videos.streamsClient.getManifest(ytId);
+        final manifest = await yt.videos.streamsClient.getManifest(
+          ytId,
+          requireWatchPage: false,
+          ytClients: [
+            YoutubeApiClient.androidSdkless,
+            YoutubeApiClient.ios,
+            YoutubeApiClient.androidMusic,
+          ],
+        );
 
         StreamInfo streamInfo;
         if (task.isAudio && manifest.audioOnly.isNotEmpty) {
@@ -864,10 +874,9 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
             _nativeService.showCompletionNotification(title: realTitle);
           }
 
+          _promoteNextQueued();
           if (activeCount == 0) {
             _nativeService.stopForegroundService();
-          } else {
-            _promoteNextQueued();
           }
         },
         onError: (e) async {
@@ -945,6 +954,7 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
         eta: fallbackMessage,
       ),
     );
+    _promoteNextQueued();
     if (activeCount == 0) {
       _nativeService.stopForegroundService();
     }
@@ -957,8 +967,10 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
   }
 
   void _promoteNextQueued() {
-    final queuedIndex = state.indexWhere((t) => t.status == DownloadStatus.queued);
-    if (queuedIndex != -1) {
+    final maxConcurrent = _ref.read(settingsProvider).maxConcurrentDownloads;
+    while (activeCount < maxConcurrent) {
+      final queuedIndex = state.indexWhere((t) => t.status == DownloadStatus.queued);
+      if (queuedIndex == -1) break;
       final promoted = state[queuedIndex];
       startTaskNow(promoted.id);
     }

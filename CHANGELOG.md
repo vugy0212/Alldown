@@ -2,7 +2,15 @@
 
 All notable changes to **AllDown** are documented in this file.
 
-## [1.5.0] - 2026-11-13
+## [1.5.1] - 2026-11-13
+
+### Fixed & Improved
+- **YouTube Playlist Stream Extraction & Queue Concurrency:**
+  - Resolved `RequestLimitExceededException` by switching to pure InnerTube clients (`androidSdkless`, `ios`, `androidMusic`) with `requireWatchPage: false`, eliminating YouTube botguard blocks and rate limiting.
+  - Eliminated redundant watch page network calls during download when track metadata is already present from the playlist intake.
+  - Fixed download queue promotion logic: resolved an issue where downloads stopped promoting queued items when active tasks completed, ensuring continuous processing.
+  - Enforced `maxConcurrentDownloads` limit when queuing multiple playlist items, preventing simultaneous stream extraction overload.
+
 
 ### Added
 - **YouTube Playlist Audio Download Engine:**

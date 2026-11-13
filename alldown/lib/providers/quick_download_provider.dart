@@ -434,7 +434,7 @@ class QuickDownloadNotifier extends StateNotifier<QuickDownloadState> {
         eta: "Waiting slot",
         downloadedBytes: "0.0 MB",
         totalBytes: item.estimateSize(state.options.audioQuality),
-        status: DownloadStatus.queued,
+        status: DownloadStatus.active,
         isAudio: true,
         platform: "YouTube",
       );
