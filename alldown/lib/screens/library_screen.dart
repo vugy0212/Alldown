@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/media_item.dart';
 import '../providers/media_library_provider.dart';
 import '../providers/player_provider.dart';
+import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/library_item_card.dart';
 import '../widgets/video_player_modal.dart';
@@ -85,13 +86,15 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   Widget build(BuildContext context) {
     final libraryState = ref.watch(mediaLibraryProvider);
     final libraryNotifier = ref.read(mediaLibraryProvider.notifier);
+    final settings = ref.watch(settingsProvider);
+    final isDark = settings.isDarkMode;
 
     final items = libraryState.filteredItems;
     final videoCount = libraryState.items.where((e) => !e.isAudio).length;
     final audioCount = libraryState.items.where((e) => e.isAudio).length;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: isDark ? AppColors.background : const Color(0xFFF3F4F8),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
         child: Column(
@@ -101,15 +104,18 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             Container(
               height: 48,
               decoration: BoxDecoration(
-                color: AppColors.isDark ? AppColors.surfaceContainer : Colors.white,
+                color: isDark ? AppColors.surfaceContainer : Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: AppColors.stroke, width: 1),
-                boxShadow: AppColors.isDark
+                border: Border.all(
+                  color: isDark ? AppColors.stroke : const Color(0xFFE2E8F0),
+                  width: 1,
+                ),
+                boxShadow: isDark
                     ? null
                     : [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 6,
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
                       ],
@@ -117,16 +123,26 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Row(
                 children: [
-                  Icon(Icons.search_rounded, color: AppColors.outline, size: 20),
+                  Icon(
+                    Icons.search_rounded,
+                    color: isDark ? AppColors.outline : const Color(0xFF94A3B8),
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: TextField(
                       controller: _searchController,
                       onChanged: libraryNotifier.setSearchQuery,
-                      style: TextStyle(color: AppColors.onSurface, fontSize: 13),
+                      style: TextStyle(
+                        color: isDark ? AppColors.onSurface : const Color(0xFF0F172A),
+                        fontSize: 13,
+                      ),
                       decoration: InputDecoration(
                         hintText: 'Search ${libraryState.items.length} downloaded media files...',
-                        hintStyle: TextStyle(color: AppColors.outline, fontSize: 13),
+                        hintStyle: TextStyle(
+                          color: isDark ? AppColors.outline : const Color(0xFF94A3B8),
+                          fontSize: 13,
+                        ),
                         border: InputBorder.none,
                         isDense: true,
                       ),
@@ -135,7 +151,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   if (_searchController.text.isNotEmpty)
                     IconButton(
                       icon: const Icon(Icons.close_rounded, size: 16),
-                      color: AppColors.outline,
+                      color: isDark ? AppColors.outline : const Color(0xFF64748B),
                       onPressed: () {
                         _searchController.clear();
                         libraryNotifier.setSearchQuery('');
@@ -156,6 +172,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     icon: Icons.check_rounded,
                     isSelected: libraryState.selectedCategory == LibraryCategory.all,
                     onTap: () => libraryNotifier.setCategory(LibraryCategory.all),
+                    isDark: isDark,
                   ),
                   const SizedBox(width: 8),
                   _buildCategoryChip(
@@ -163,6 +180,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     icon: Icons.movie_rounded,
                     isSelected: libraryState.selectedCategory == LibraryCategory.videos,
                     onTap: () => libraryNotifier.setCategory(LibraryCategory.videos),
+                    isDark: isDark,
                   ),
                   const SizedBox(width: 8),
                   _buildCategoryChip(
@@ -170,6 +188,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     icon: Icons.headphones_rounded,
                     isSelected: libraryState.selectedCategory == LibraryCategory.audio,
                     onTap: () => libraryNotifier.setCategory(LibraryCategory.audio),
+                    isDark: isDark,
                   ),
                   const SizedBox(width: 8),
                   _buildCategoryChip(
@@ -177,6 +196,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     icon: Icons.favorite_rounded,
                     isSelected: libraryState.selectedCategory == LibraryCategory.favorites,
                     onTap: () => libraryNotifier.setCategory(LibraryCategory.favorites),
+                    isDark: isDark,
                   ),
                 ],
               ),
@@ -187,9 +207,21 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppColors.surfaceContainerLow,
+                color: isDark ? AppColors.surfaceContainerLow : Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.stroke, width: 1),
+                border: Border.all(
+                  color: isDark ? AppColors.stroke : const Color(0xFFE2E8F0),
+                  width: 1,
+                ),
+                boxShadow: isDark
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
               ),
               child: Column(
                 children: [
@@ -208,7 +240,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                                 children: [
                                   Text(
                                     'Local Storage Used',
-                                    style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isDark ? AppColors.onSurfaceVariant : const Color(0xFF64748B),
+                                    ),
                                   ),
                                   Text(
                                     _calculateRealStorageUsed(libraryState.items),
@@ -216,7 +251,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
-                                      color: AppColors.onSurface,
+                                      color: isDark ? AppColors.onSurface : const Color(0xFF0F172A),
                                     ),
                                   ),
                                 ],
@@ -233,7 +268,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                           Container(
                             padding: const EdgeInsets.all(2),
                             decoration: BoxDecoration(
-                              color: AppColors.surfaceContainerHighest,
+                              color: isDark ? AppColors.surfaceContainerHighest : const Color(0xFFF1F5F9),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
@@ -245,13 +280,25 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                                   child: Container(
                                     padding: const EdgeInsets.all(4),
                                     decoration: BoxDecoration(
-                                      color: !libraryState.isGridView ? AppColors.surfaceContainer : Colors.transparent,
+                                      color: !libraryState.isGridView
+                                          ? (isDark ? AppColors.surfaceContainer : Colors.white)
+                                          : Colors.transparent,
                                       borderRadius: BorderRadius.circular(6),
+                                      boxShadow: !libraryState.isGridView && !isDark
+                                          ? [
+                                              BoxShadow(
+                                                color: Colors.black.withValues(alpha: 0.06),
+                                                blurRadius: 4,
+                                              )
+                                            ]
+                                          : null,
                                     ),
                                     child: Icon(
                                       Icons.format_list_bulleted_rounded,
                                       size: 16,
-                                      color: !libraryState.isGridView ? AppColors.primary : AppColors.outline,
+                                      color: !libraryState.isGridView
+                                          ? AppColors.primary
+                                          : (isDark ? AppColors.outline : const Color(0xFF94A3B8)),
                                     ),
                                   ),
                                 ),
@@ -262,13 +309,25 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                                   child: Container(
                                     padding: const EdgeInsets.all(4),
                                     decoration: BoxDecoration(
-                                      color: libraryState.isGridView ? AppColors.surfaceContainer : Colors.transparent,
+                                      color: libraryState.isGridView
+                                          ? (isDark ? AppColors.surfaceContainer : Colors.white)
+                                          : Colors.transparent,
                                       borderRadius: BorderRadius.circular(6),
+                                      boxShadow: libraryState.isGridView && !isDark
+                                          ? [
+                                              BoxShadow(
+                                                color: Colors.black.withValues(alpha: 0.06),
+                                                blurRadius: 4,
+                                              )
+                                            ]
+                                          : null,
                                     ),
                                     child: Icon(
                                       Icons.grid_view_rounded,
                                       size: 16,
-                                      color: libraryState.isGridView ? AppColors.primary : AppColors.outline,
+                                      color: libraryState.isGridView
+                                          ? AppColors.primary
+                                          : (isDark ? AppColors.outline : const Color(0xFF94A3B8)),
                                     ),
                                   ),
                                 ),
@@ -284,16 +343,27 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: AppColors.surfaceContainer,
+                                color: isDark ? AppColors.surfaceContainer : const Color(0xFFF1F5F9),
                                 borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: isDark ? Colors.transparent : const Color(0xFFE2E8F0),
+                                  width: 0.8,
+                                ),
                               ),
                               child: Row(
                                 children: [
                                   Text(
                                     _sortLabel(libraryState.sort),
-                                    style: TextStyle(fontSize: 11, color: AppColors.onSurface),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isDark ? AppColors.onSurface : const Color(0xFF334155),
+                                    ),
                                   ),
-                                  Icon(Icons.arrow_drop_down_rounded, size: 16, color: AppColors.outline),
+                                  Icon(
+                                    Icons.arrow_drop_down_rounded,
+                                    size: 16,
+                                    color: isDark ? AppColors.outline : const Color(0xFF64748B),
+                                  ),
                                 ],
                               ),
                             ),
@@ -324,7 +394,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                             ),
                           if (libraryState.items.isEmpty)
                             Expanded(
-                              child: Container(color: AppColors.surfaceContainerHighest),
+                              child: Container(
+                                color: isDark ? AppColors.surfaceContainerHighest : const Color(0xFFE2E8F0),
+                              ),
                             ),
                         ],
                       ),
@@ -341,27 +413,47 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 20),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceContainerLow,
+                  color: isDark ? AppColors.surfaceContainerLow : Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.stroke),
+                  border: Border.all(
+                    color: isDark ? AppColors.stroke : const Color(0xFFE2E8F0),
+                  ),
+                  boxShadow: isDark
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                 ),
                 child: Column(
                   children: [
-                    Icon(Icons.video_library_outlined, size: 48, color: AppColors.outline.withValues(alpha: 0.6)),
+                    Icon(
+                      Icons.video_library_outlined,
+                      size: 48,
+                      color: isDark
+                          ? AppColors.outline.withValues(alpha: 0.6)
+                          : const Color(0xFF94A3B8),
+                    ),
                     const SizedBox(height: 12),
                     Text(
                       'No downloaded media files yet',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.onSurface,
+                        color: isDark ? AppColors.onSurface : const Color(0xFF0F172A),
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Videos and audio tracks you download will appear here and can be played directly inside AllDown.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 12, color: AppColors.outline),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppColors.outline : const Color(0xFF64748B),
+                      ),
                     ),
                   ],
                 ),
@@ -416,6 +508,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     required IconData icon,
     required bool isSelected,
     required VoidCallback onTap,
+    required bool isDark,
   }) {
     return InkWell(
       onTap: onTap,
@@ -426,10 +519,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.primaryContainer
-              : (AppColors.isDark ? AppColors.surfaceContainer : Colors.white),
+              : (isDark ? AppColors.surfaceContainer : Colors.white),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? Colors.transparent : AppColors.stroke,
+            color: isSelected ? Colors.transparent : (isDark ? AppColors.stroke : const Color(0xFFE2E8F0)),
             width: 1,
           ),
           boxShadow: isSelected
@@ -439,11 +532,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     blurRadius: 8,
                   )
                 ]
-              : (!AppColors.isDark
+              : (!isDark
                   ? [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 4,
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 6,
                         offset: const Offset(0, 1),
                       ),
                     ]
@@ -455,7 +548,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             Icon(
               icon,
               size: 14,
-              color: isSelected ? AppColors.onPrimaryContainer : AppColors.outline,
+              color: isSelected
+                  ? AppColors.onPrimaryContainer
+                  : (isDark ? AppColors.outline : const Color(0xFF64748B)),
             ),
             const SizedBox(width: 5),
             Text(
@@ -463,7 +558,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: isSelected ? AppColors.onPrimaryContainer : AppColors.onSurfaceVariant,
+                color: isSelected
+                    ? AppColors.onPrimaryContainer
+                    : (isDark ? AppColors.onSurfaceVariant : const Color(0xFF334155)),
               ),
             ),
           ],

@@ -390,9 +390,21 @@ class LibraryItemCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.surfaceContainer,
+          color: AppColors.isDark ? AppColors.surfaceContainer : Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.stroke, width: 1),
+          border: Border.all(
+            color: AppColors.isDark ? AppColors.stroke : const Color(0xFFE2E8F0),
+            width: 1,
+          ),
+          boxShadow: AppColors.isDark
+              ? null
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

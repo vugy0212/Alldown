@@ -1226,7 +1226,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
-                color: isSelected ? AppColors.onPrimary : AppColors.onSurfaceVariant,
+                color: isSelected ? AppColors.onPrimaryContainer : AppColors.onSurfaceVariant,
               ),
             ),
           ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/download_queue_provider.dart';
 import '../providers/quick_download_provider.dart';
+import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/custom_header.dart';
 import '../widgets/mini_player_bar.dart';
@@ -75,9 +76,11 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
   @override
   Widget build(BuildContext context) {
     final activeQueueCount = ref.watch(downloadQueueProvider.notifier).activeCount;
+    final settings = ref.watch(settingsProvider);
+    final isDark = settings.isDarkMode;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: isDark ? AppColors.background : const Color(0xFFF3F4F8),
       appBar: CustomHeader(
         subtitle: _subtitles[_currentIndex],
         onSettingsTap: () {
@@ -94,13 +97,18 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
           const MiniPlayerBar(),
           Container(
             decoration: BoxDecoration(
-              color: AppColors.surfaceContainerLow.withValues(alpha: 0.95),
+              color: isDark
+                  ? AppColors.surfaceContainerLow.withValues(alpha: 0.95)
+                  : Colors.white.withValues(alpha: 0.98),
               border: Border(
-                top: BorderSide(color: AppColors.stroke, width: 1),
+                top: BorderSide(
+                  color: isDark ? AppColors.stroke : const Color(0xFFE2E8F0),
+                  width: 1,
+                ),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.5),
+                  color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.06),
                   blurRadius: 16,
                   offset: const Offset(0, -2),
                 ),
@@ -118,6 +126,7 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
                       icon: Icons.download_rounded,
                       label: 'Down',
                       isSelected: _currentIndex == 0,
+                      isDark: isDark,
                     ),
                     _buildNavItem(
                       index: 1,
@@ -125,18 +134,21 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
                       label: 'Queue',
                       badgeCount: activeQueueCount,
                       isSelected: _currentIndex == 1,
+                      isDark: isDark,
                     ),
                     _buildNavItem(
                       index: 2,
                       icon: Icons.video_library_rounded,
                       label: 'Library',
                       isSelected: _currentIndex == 2,
+                      isDark: isDark,
                     ),
                     _buildNavItem(
                       index: 3,
                       icon: Icons.settings_rounded,
                       label: 'Settings',
                       isSelected: _currentIndex == 3,
+                      isDark: isDark,
                     ),
                   ],
                 ),
@@ -154,7 +166,11 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
     required String label,
     int? badgeCount,
     required bool isSelected,
+    required bool isDark,
   }) {
+    final activeColor = isDark ? AppColors.primaryFixed : AppColors.primaryAccent;
+    final inactiveColor = isDark ? AppColors.onSurfaceVariant : const Color(0xFF64748B);
+
     return InkWell(
       onTap: () => setState(() => _currentIndex = index),
       borderRadius: BorderRadius.circular(16),
@@ -174,14 +190,16 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
                   height: 28,
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? AppColors.primaryContainer.withValues(alpha: 0.3)
+                        ? (isDark
+                            ? AppColors.primaryContainer.withValues(alpha: 0.3)
+                            : AppColors.primaryContainer.withValues(alpha: 0.5))
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(
                     icon,
                     size: 20,
-                    color: isSelected ? AppColors.primaryFixed : AppColors.onSurfaceVariant,
+                    color: isSelected ? activeColor : inactiveColor,
                   ),
                 ),
                 if (badgeCount != null && badgeCount > 0)
@@ -193,7 +211,10 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
                       decoration: BoxDecoration(
                         color: AppColors.secondaryContainer,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.surfaceContainerLow, width: 2),
+                        border: Border.all(
+                          color: isDark ? AppColors.surfaceContainerLow : Colors.white,
+                          width: 2,
+                        ),
                       ),
                       child: Text(
                         '$badgeCount',
@@ -213,7 +234,7 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? AppColors.primaryFixed : AppColors.onSurfaceVariant,
+                color: isSelected ? activeColor : inactiveColor,
               ),
             ),
           ],

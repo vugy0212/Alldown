@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/player_provider.dart';
+import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
 import 'video_player_modal.dart';
 
@@ -11,6 +12,8 @@ class MiniPlayerBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final player = ref.watch(playerProvider);
     final notifier = ref.read(playerProvider.notifier);
+    final settings = ref.watch(settingsProvider);
+    final isDark = settings.isDarkMode;
 
     final item = player.currentItem;
     if (item == null) return const SizedBox.shrink();
@@ -21,12 +24,17 @@ class MiniPlayerBar extends ConsumerWidget {
         margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: AppColors.surfaceContainerHigh.withValues(alpha: 0.96),
+          color: isDark
+              ? AppColors.surfaceContainerHigh.withValues(alpha: 0.96)
+              : Colors.white.withValues(alpha: 0.98),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.stroke, width: 1),
+          border: Border.all(
+            color: isDark ? AppColors.stroke : const Color(0xFFE2E8F0),
+            width: 1,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.5),
+              color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.08),
               blurRadius: 16,
               offset: const Offset(0, -2),
             ),

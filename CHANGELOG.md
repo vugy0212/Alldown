@@ -2,6 +2,15 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.3.9] - 2026-11-13
+
+### Fixed & Improved
+- **Reactive Light & Dark Theme Transitions:**
+  - Resolved theme state synchronization across `LibraryScreen`, `MainScaffold`, and `MiniPlayerBar` by binding them directly to Riverpod's `settingsProvider`.
+  - Fixed remaining dark surfaces in the upper 1/3 of the Library screen (search input container, category filter chips, local storage meter, sort controls, and view toggles) to dynamically switch to high-contrast `#FFFFFF` and `#F8F9FC` with subtle ambient elevations and borders.
+  - Enhanced Bottom Navigation Bar styling in light mode with high-contrast active icons and background blur.
+  - Improved codec selector tab contrast in Settings using `onPrimaryContainer` typography.
+
 ## [1.3.8] - 2026-11-13
 
 ### Fixed & Improved
