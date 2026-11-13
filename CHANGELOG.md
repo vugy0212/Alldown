@@ -2,6 +2,16 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.3.7] - 2026-11-13
+
+### Fixed & Improved
+- **Settings & Home Screen Full Synchronization:**
+  - **Unified Video Resolutions:** Aligned `Default / Max Video Resolution` in Settings (`4K Ultra HD (2160p)`, `1080p Full HD`, `720p HD`, `480p SD`) with the Home Screen quality selector so changing the default resolution in Settings immediately updates the Home Screen selection and caps stream resolution during extraction.
+  - **Synced Audio Bitrate & Codec:** Changing `Audio Quality (Bitrate)` (`320 kbps`, `256 kbps`, `192 kbps`, `128 kbps`) and `Audio Format (Codec)` (`MP3`, `M4A / AAC`, `Opus`) in Settings dynamically updates the Home Screen audio options and ensures `DownloadQueueProvider` respects per-download audio quality and codec selection.
+  - **Dynamic Video Container & Auto-Remux:** Connected `Default Video Container` (`MP4`, `MKV`, `WebM`) to the Home Screen format tab (`Video (MP4/MKV/WebM)`) and wired `Auto-remux to MP4` in the HLS segment muxer (`_downloadHlsSegments`).
+  - **Replaced Dead SponsorBlock Toggle with Organize by Platform:** Removed the unimplemented `SponsorBlock Filter` toggle and replaced it with a functional `Organize by Platform` setting that saves downloaded media into platform-specific subfolders (`/Download/AllDown/Videos/YouTube/`, `/TikTok/`, `/Reddit/`, etc.) when enabled.
+  - **Interactive Advanced Config & Updated Supported Services:** Connected the `Advanced Config` button on the Home Screen to open the Settings tab directly, and updated the `Supported Services & Extractors` list in Help to include Instagram Reels/Posts, Reddit (`v.redd.it`), and Dailymotion device-token HLS.
+
 ## [1.3.6] - 2026-11-12
 
 ### Fixed

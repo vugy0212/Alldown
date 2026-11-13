@@ -8,7 +8,9 @@ import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
-  const HomeScreen({super.key});
+  final VoidCallback? onOpenSettings;
+
+  const HomeScreen({super.key, this.onOpenSettings});
 
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
@@ -643,25 +645,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                 ),
-                Row(
-                  children: [
-                    Icon(Icons.tune_rounded, size: 14, color: AppColors.secondary),
-                    SizedBox(width: 4),
-                    Text(
-                      'Advanced Config',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.secondary,
-                        fontWeight: FontWeight.w500,
-                      ),
+                InkWell(
+                  onTap: widget.onOpenSettings,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.tune_rounded, size: 14, color: AppColors.secondary),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Advanced Config',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.secondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 10),
 
-            // Segmented Bar: [Video (MP4)] | [Audio (MP3)] | [Custom Raw]
+            // Segmented Bar: [Video (MP4/MKV/WebM)] | [Audio (MP3/M4A/Opus)] | [Custom Raw]
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
@@ -671,7 +680,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: Row(
                 children: [
                   _buildFormatTab(
-                    title: 'Video (MP4)',
+                    title: 'Video (${settings.videoContainer})',
                     icon: Icons.movie_rounded,
                     selected: state.options.format == TargetFormat.videoMp4,
                     onTap: () => notifier.setFormat(TargetFormat.videoMp4),

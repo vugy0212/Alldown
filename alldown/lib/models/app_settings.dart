@@ -5,11 +5,10 @@ enum AudioCodec {
 }
 
 enum MaxResolution {
-  noLimit,
   res4k,
-  res1440p,
   res1080p,
   res720p,
+  res480p,
 }
 
 class AppSettings {
@@ -23,7 +22,7 @@ class AppSettings {
   final bool autoRemuxToMp4;
   final AudioCodec audioCodec;
   final MaxResolution maxResolution;
-  final bool sponsorBlockEnabled;
+  final bool organizeByPlatform;
   final String ytDlpVersion;
   final String ffmpegVersion;
   final String audioBitrate;
@@ -44,7 +43,7 @@ class AppSettings {
     this.autoRemuxToMp4 = true,
     this.audioCodec = AudioCodec.mp3,
     this.maxResolution = MaxResolution.res1080p,
-    this.sponsorBlockEnabled = true,
+    this.organizeByPlatform = false,
     this.ytDlpVersion = "v2025.01.26-nightly",
     this.ffmpegVersion = "v7.1 Android-ARM64",
     this.audioBitrate = "320 kbps",
@@ -91,6 +90,14 @@ class AppSettings {
     }
   }
 
+  static MaxResolution _parseMaxResolution(String? raw) {
+    if (raw == 'noLimit' || raw == 'res4k') return MaxResolution.res4k;
+    if (raw == 'res1440p' || raw == 'res1080p') return MaxResolution.res1080p;
+    if (raw == 'res720p') return MaxResolution.res720p;
+    if (raw == 'res480p') return MaxResolution.res480p;
+    return MaxResolution.res1080p;
+  }
+
   AppSettings copyWith({
     String? downloadDirectory,
     bool? cookiesActive,
@@ -102,7 +109,7 @@ class AppSettings {
     bool? autoRemuxToMp4,
     AudioCodec? audioCodec,
     MaxResolution? maxResolution,
-    bool? sponsorBlockEnabled,
+    bool? organizeByPlatform,
     String? ytDlpVersion,
     String? ffmpegVersion,
     String? audioBitrate,
@@ -123,7 +130,7 @@ class AppSettings {
       autoRemuxToMp4: autoRemuxToMp4 ?? this.autoRemuxToMp4,
       audioCodec: audioCodec ?? this.audioCodec,
       maxResolution: maxResolution ?? this.maxResolution,
-      sponsorBlockEnabled: sponsorBlockEnabled ?? this.sponsorBlockEnabled,
+      organizeByPlatform: organizeByPlatform ?? this.organizeByPlatform,
       ytDlpVersion: ytDlpVersion ?? this.ytDlpVersion,
       ffmpegVersion: ffmpegVersion ?? this.ffmpegVersion,
       audioBitrate: audioBitrate ?? this.audioBitrate,
@@ -146,7 +153,7 @@ class AppSettings {
     'autoRemuxToMp4': autoRemuxToMp4,
     'audioCodec': audioCodec.name,
     'maxResolution': maxResolution.name,
-    'sponsorBlockEnabled': sponsorBlockEnabled,
+    'organizeByPlatform': organizeByPlatform,
     'ytDlpVersion': ytDlpVersion,
     'ffmpegVersion': ffmpegVersion,
     'audioBitrate': audioBitrate,
@@ -173,11 +180,8 @@ class AppSettings {
         (e) => e.name == json['audioCodec'],
         orElse: () => AudioCodec.mp3,
       ),
-      maxResolution: MaxResolution.values.firstWhere(
-        (e) => e.name == json['maxResolution'],
-        orElse: () => MaxResolution.res1080p,
-      ),
-      sponsorBlockEnabled: json['sponsorBlockEnabled'] as bool? ?? true,
+      maxResolution: _parseMaxResolution(json['maxResolution'] as String?),
+      organizeByPlatform: json['organizeByPlatform'] as bool? ?? false,
       ytDlpVersion: json['ytDlpVersion'] as String? ?? "v2025.01.26-nightly",
       ffmpegVersion: json['ffmpegVersion'] as String? ?? "v7.1 Android-ARM64",
       audioBitrate: json['audioBitrate'] as String? ?? "320 kbps",

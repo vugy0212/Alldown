@@ -246,15 +246,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildDropdownRow<MaxResolution>(
-                  title: 'Maximum Video Resolution',
-                  subtitle: 'Automatic upper limit for downloads',
+                  title: 'Default / Max Video Resolution',
+                  subtitle: 'Synced with Home screen & stream quality cap',
                   value: settings.maxResolution,
                   items: const [
-                    DropdownMenuItem(value: MaxResolution.noLimit, child: Text('No limit (Up to 8K)')),
                     DropdownMenuItem(value: MaxResolution.res4k, child: Text('4K Ultra HD (2160p)')),
-                    DropdownMenuItem(value: MaxResolution.res1440p, child: Text('1440p QHD')),
-                    DropdownMenuItem(value: MaxResolution.res1080p, child: Text('1080p FHD (Default)')),
+                    DropdownMenuItem(value: MaxResolution.res1080p, child: Text('1080p Full HD (Default)')),
                     DropdownMenuItem(value: MaxResolution.res720p, child: Text('720p HD')),
+                    DropdownMenuItem(value: MaxResolution.res480p, child: Text('480p SD')),
                   ],
                   onChanged: (val) {
                     if (val != null) notifier.setMaxResolution(val);
@@ -269,11 +268,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildSettingSwitch(
-                  title: 'SponsorBlock Filter',
-                  subtitle: 'Automatically skip sponsored segments and intros',
-                  badge: 'v5.8',
-                  value: settings.sponsorBlockEnabled,
-                  onChanged: (_) => notifier.toggleSponsorBlock(),
+                  title: 'Organize by Platform',
+                  subtitle: 'Save files in platform subfolders (YouTube, TikTok, Reddit...)',
+                  value: settings.organizeByPlatform,
+                  onChanged: (_) => notifier.toggleOrganizeByPlatform(),
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildSettingSwitch(
@@ -762,7 +760,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
                       ),
                       subtitle: Text(
-                        '12+ tested services & universal stream parser',
+                        '10+ major video platforms & universal stream parser',
                         style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                       ),
                       children: [
@@ -772,7 +770,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           icon: Icons.play_circle_fill_rounded,
                           iconColor: Colors.redAccent,
                           name: 'YouTube & YouTube Shorts',
-                          description: '4K, 1080p, 720p & M4A audio',
+                          description: '4K, 1080p, 720p, 480p & MP3/M4A/Opus audio',
+                          badge: 'ACTIVE',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.music_note_rounded,
+                          iconColor: Colors.cyanAccent,
+                          name: 'TikTok',
+                          description: 'Watermark-free HD video & audio downloads',
+                          badge: 'ACTIVE',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.camera_alt_rounded,
+                          iconColor: Colors.pinkAccent,
+                          name: 'Instagram Reels & Posts',
+                          description: 'Direct HD MP4 & WebView fallback extractor',
+                          badge: 'ACTIVE',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.facebook_rounded,
+                          iconColor: Colors.blueAccent,
+                          name: 'Facebook Watch & Reels',
+                          description: '1080p HD & SD video streams',
+                          badge: 'ACTIVE',
+                        ),
+                        _buildServiceRow(
+                          icon: Icons.forum_rounded,
+                          iconColor: Colors.deepOrangeAccent,
+                          name: 'Reddit (v.redd.it)',
+                          description: 'Merged HD video + audio & HLS muxing',
                           badge: 'ACTIVE',
                         ),
                         _buildServiceRow(
@@ -783,17 +809,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           badge: 'ACTIVE',
                         ),
                         _buildServiceRow(
-                          icon: Icons.music_note_rounded,
-                          iconColor: Colors.cyanAccent,
-                          name: 'TikTok',
-                          description: 'Watermark-free video downloads',
+                          icon: Icons.ondemand_video_rounded,
+                          iconColor: Colors.lightBlueAccent,
+                          name: 'Dailymotion',
+                          description: 'Device-token HLS stream & MP4 remuxer',
                           badge: 'ACTIVE',
                         ),
                         _buildServiceRow(
-                          icon: Icons.facebook_rounded,
-                          iconColor: Colors.blueAccent,
-                          name: 'Facebook Watch & Reels',
-                          description: '1080p HD & 480p SD video streams',
+                          icon: Icons.video_library_rounded,
+                          iconColor: Colors.tealAccent,
+                          name: 'Vimeo',
+                          description: 'Direct progressive MP4 stream extractor',
                           badge: 'ACTIVE',
                         ),
                         _buildServiceRow(
@@ -804,52 +830,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           badge: 'ACTIVE',
                         ),
                         _buildServiceRow(
-                          icon: Icons.account_balance_rounded,
-                          iconColor: Colors.amberAccent,
-                          name: 'Archive.org',
-                          description: 'Public domain movies and audio archive',
-                          badge: 'ACTIVE',
-                        ),
-                        _buildServiceRow(
-                          icon: Icons.public_rounded,
-                          iconColor: Colors.tealAccent,
-                          name: 'Wikimedia Commons',
-                          description: 'Free open educational media repository',
-                          badge: 'ACTIVE',
-                        ),
-                        _buildServiceRow(
-                          icon: Icons.cloud_download_rounded,
-                          iconColor: Colors.orangeAccent,
-                          name: 'Test-Videos & Global CDNs',
-                          description: 'High-speed edge content delivery network',
-                          badge: 'ACTIVE',
-                        ),
-                        _buildServiceRow(
-                          icon: Icons.html_rounded,
-                          iconColor: Colors.deepOrangeAccent,
-                          name: 'W3Schools & HTML5 Portali',
-                          description: 'HTML5 embedded video & audio media',
-                          badge: 'ACTIVE',
-                        ),
-                        _buildServiceRow(
-                          icon: Icons.code_rounded,
-                          iconColor: Colors.purpleAccent,
-                          name: 'GitHub Raw & Assets',
-                          description: 'Direct repository raw media assets',
-                          badge: 'ACTIVE',
-                        ),
-                        _buildServiceRow(
-                          icon: Icons.video_library_rounded,
-                          iconColor: Colors.blueGrey,
-                          name: 'Dailymotion & Vimeo',
-                          description: 'OpenGraph web media scraper',
-                          badge: 'ACTIVE',
-                        ),
-                        _buildServiceRow(
                           icon: Icons.link_rounded,
                           iconColor: AppColors.secondary,
                           name: 'Universal Direct Stream Links',
-                          description: '.mp4, .webm, .m4a, .mp3, .wav',
+                          description: '.mp4, .webm, .m3u8, .m4a, .mp3, .wav',
                           badge: 'ACTIVE',
                         ),
                       ],
@@ -1283,16 +1267,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   String _formatMaxRes(MaxResolution res) {
     switch (res) {
-      case MaxResolution.noLimit:
-        return '8K';
       case MaxResolution.res4k:
         return '4K';
-      case MaxResolution.res1440p:
-        return '1440p';
       case MaxResolution.res1080p:
         return '1080p';
       case MaxResolution.res720p:
         return '720p';
+      case MaxResolution.res480p:
+        return '480p';
     }
   }
 

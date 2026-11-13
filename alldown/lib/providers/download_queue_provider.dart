@@ -206,8 +206,12 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
       Stream<List<int>> byteStream;
       int totalBytes = 0;
       String actualResolution = task.resolution;
-      String actualFormat = task.isAudio ? 'M4A' : 'MP4';
-      String ext = task.isAudio ? 'm4a' : 'mp4';
+      String actualFormat = task.isAudio
+          ? (settings.audioCodec == AudioCodec.opus
+              ? 'OPUS'
+              : (settings.audioCodec == AudioCodec.aac ? 'M4A' : 'MP3'))
+          : (settings.autoRemuxToMp4 ? 'MP4' : settings.videoContainer.toUpperCase());
+      String ext = actualFormat.toLowerCase();
       String realDuration = task.duration;
       String realTitle = task.title;
       String realChannel = task.platform;
@@ -246,23 +250,31 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
           final codecFiltered = audioList.where((s) =>
               preferWebm ? s.container.name.toLowerCase().contains('webm') : !s.container.name.toLowerCase().contains('webm')).toList();
           final candidates = codecFiltered.isNotEmpty ? codecFiltered : audioList;
-          if (settings.audioBitrate.startsWith('128')) {
+          final requestedAudioRes = task.resolution.toLowerCase();
+          if (requestedAudioRes.contains('128') || (!requestedAudioRes.contains('kbps') && settings.audioBitrate.startsWith('128'))) {
             streamInfo = candidates.first;
-          } else if (settings.audioBitrate.startsWith('192') && candidates.length > 1) {
+          } else if ((requestedAudioRes.contains('192') || (!requestedAudioRes.contains('kbps') && settings.audioBitrate.startsWith('192'))) &&
+              candidates.length > 1) {
             streamInfo = candidates[candidates.length ~/ 2];
+          } else if ((requestedAudioRes.contains('256') || (!requestedAudioRes.contains('kbps') && settings.audioBitrate.startsWith('256'))) &&
+              candidates.length > 2) {
+            streamInfo = candidates[candidates.length - 2];
           } else {
             streamInfo = candidates.last;
           }
           actualResolution = '${(streamInfo.bitrate.kiloBitsPerSecond).toStringAsFixed(0)} kbps';
-          actualFormat = streamInfo.container.name.toUpperCase();
-          ext = streamInfo.container.name.toLowerCase();
+          actualFormat = settings.audioCodec == AudioCodec.opus
+              ? 'OPUS'
+              : (settings.audioCodec == AudioCodec.aac ? 'M4A' : 'MP3');
+          ext = actualFormat.toLowerCase();
         } else if (manifest.muxed.isNotEmpty) {
           // Select muxed stream matching user's chosen resolution & global maxResolution cap
           final muxedList = manifest.muxed.toList()
             ..sort((a, b) => a.bitrate.bitsPerSecond.compareTo(b.bitrate.bitsPerSecond));
           final targetRes = task.resolution.toLowerCase();
+          final cap480 = settings.maxResolution == MaxResolution.res480p;
           final cap720 = settings.maxResolution == MaxResolution.res720p;
-          if (targetRes.contains('480')) {
+          if (targetRes.contains('480') || cap480) {
             final m480 = muxedList.where((s) => s.qualityLabel.contains('480') || s.qualityLabel.contains('360')).toList();
             streamInfo = m480.isNotEmpty ? m480.last : muxedList.first;
           } else if (targetRes.contains('720') || cap720) {
@@ -804,7 +816,10 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
           String finalPath = savePath;
           if (!isCustom) {
             try {
-              final pubDir = Directory('/storage/emulated/0/Download/AllDown/$subFolder');
+              final platformDirName = settings.organizeByPlatform
+                  ? '/${_sanitizeFileName(realPlatform.replaceAll(' (Twitter)', ''))}'
+                  : '';
+              final pubDir = Directory('/storage/emulated/0/Download/AllDown/$subFolder$platformDirName');
               if (!pubDir.existsSync()) {
                 pubDir.createSync(recursive: true);
               }
@@ -1301,29 +1316,37 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
         ),
       );
 
-      final finalMp4Name = '$safeName.mp4';
+      final finalOutExt = (!task.isAudio && !settings.autoRemuxToMp4)
+          ? settings.videoContainer.toLowerCase()
+          : 'mp4';
+      final finalMp4Name = '$safeName.$finalOutExt';
       String finalPath;
       if (!isCustom) {
-        final pubDir = Directory('/storage/emulated/0/Download/AllDown/$subFolder');
+        final platformDirName = settings.organizeByPlatform
+            ? '/${_sanitizeFileName(realPlatform.replaceAll(' (Twitter)', ''))}'
+            : '';
+        final pubDir = Directory('/storage/emulated/0/Download/AllDown/$subFolder$platformDirName');
         if (!pubDir.existsSync()) {
           pubDir.createSync(recursive: true);
         }
         finalPath = '${pubDir.path}/$finalMp4Name';
       } else {
-        finalPath = '${targetDir.path}/${safeName}_$timeStamp.mp4';
+        finalPath = '${targetDir.path}/${safeName}_$timeStamp.$finalOutExt';
       }
 
       // Remux MPEG-TS chunks or fragmented MP4 into standard, cleanly indexed MP4 container
       bool remuxSuccess = false;
-      try {
-        remuxSuccess = await _nativeService.remuxTsToMp4(
-          inputPath: rawPath,
-          outputPath: finalPath,
-        );
-      } catch (_) {}
+      if (settings.autoRemuxToMp4) {
+        try {
+          remuxSuccess = await _nativeService.remuxTsToMp4(
+            inputPath: rawPath,
+            outputPath: finalPath,
+          );
+        } catch (_) {}
+      }
 
       if (!remuxSuccess || !File(finalPath).existsSync()) {
-        // Fallback: copy raw stream if remuxing fails
+        // Fallback: copy raw stream if remuxing is disabled or fails
         try {
           File(rawPath).copySync(finalPath);
         } catch (_) {}

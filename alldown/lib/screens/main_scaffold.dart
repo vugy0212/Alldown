@@ -22,11 +22,13 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
   int _currentIndex = 0;
   StreamSubscription<String>? _shareSubscription;
 
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    QueueScreen(),
-    LibraryScreen(),
-    SettingsScreen(),
+  List<Widget> get _screens => [
+    HomeScreen(
+      onOpenSettings: () => setState(() => _currentIndex = 3),
+    ),
+    const QueueScreen(),
+    const LibraryScreen(),
+    const SettingsScreen(),
   ];
 
   final List<String> _subtitles = const [

@@ -73,8 +73,8 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     _storage.saveSettings(state);
   }
 
-  void toggleSponsorBlock() {
-    state = state.copyWith(sponsorBlockEnabled: !state.sponsorBlockEnabled);
+  void toggleOrganizeByPlatform() {
+    state = state.copyWith(organizeByPlatform: !state.organizeByPlatform);
     _storage.saveSettings(state);
   }
 

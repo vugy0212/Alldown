@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/app_settings.dart';
 import '../models/download_options.dart';
 import '../models/download_task.dart';
 import '../services/metadata_fetcher_service.dart';
 import 'download_queue_provider.dart';
+import 'settings_provider.dart';
 
 class DetectedMedia {
   final String title;
@@ -117,7 +119,54 @@ final quickDownloadProvider = StateNotifierProvider<QuickDownloadNotifier, Quick
 class QuickDownloadNotifier extends StateNotifier<QuickDownloadState> {
   final Ref _ref;
 
-  QuickDownloadNotifier(this._ref) : super(const QuickDownloadState());
+  QuickDownloadNotifier(this._ref)
+      : super(
+          QuickDownloadState(
+            options: _optionsFromSettings(_ref.read(settingsProvider)),
+          ),
+        ) {
+    _ref.listen<AppSettings>(settingsProvider, (prev, next) {
+      if (prev?.maxResolution != next.maxResolution ||
+          prev?.audioBitrate != next.audioBitrate ||
+          prev?.organizeByPlatform != next.organizeByPlatform) {
+        state = state.copyWith(
+          options: state.options.copyWith(
+            quality: _mapMaxResToQuality(next.maxResolution),
+            audioQuality: _mapBitrateToAudioQuality(next.audioBitrate),
+            createSubfolder: next.organizeByPlatform,
+          ),
+        );
+      }
+    });
+  }
+
+  static VideoQuality _mapMaxResToQuality(MaxResolution res) {
+    switch (res) {
+      case MaxResolution.res4k:
+        return VideoQuality.res4k;
+      case MaxResolution.res1080p:
+        return VideoQuality.res1080p;
+      case MaxResolution.res720p:
+        return VideoQuality.res720p;
+      case MaxResolution.res480p:
+        return VideoQuality.res480p;
+    }
+  }
+
+  static AudioQuality _mapBitrateToAudioQuality(String bitrate) {
+    if (bitrate.startsWith('128')) return AudioQuality.kbps128;
+    if (bitrate.startsWith('192')) return AudioQuality.kbps192;
+    if (bitrate.startsWith('256')) return AudioQuality.kbps256;
+    return AudioQuality.kbps320;
+  }
+
+  static DownloadOptions _optionsFromSettings(AppSettings s) {
+    return DownloadOptions(
+      quality: _mapMaxResToQuality(s.maxResolution),
+      audioQuality: _mapBitrateToAudioQuality(s.audioBitrate),
+      createSubfolder: s.organizeByPlatform,
+    );
+  }
 
   void setUrl(String url) {
     final trimmed = url.trim();
@@ -130,6 +179,13 @@ class QuickDownloadNotifier extends StateNotifier<QuickDownloadState> {
         MetadataFetcherService.extractYouTubeId(trimmed) != null ||
         trimmed.contains('youtu') ||
         trimmed.contains('tiktok') ||
+        trimmed.contains('instagram') ||
+        trimmed.contains('reddit') ||
+        trimmed.contains('redd.it') ||
+        trimmed.contains('dailymotion') ||
+        trimmed.contains('dai.ly') ||
+        trimmed.contains('x.com') ||
+        trimmed.contains('twitter') ||
         trimmed.contains('facebook') ||
         trimmed.contains('fb.watch') ||
         trimmed.contains('vimeo')) {
@@ -255,6 +311,13 @@ class QuickDownloadNotifier extends StateNotifier<QuickDownloadState> {
     final thumb = media?.thumbnailUrl ?? (ytId != null ? 'https://i.ytimg.com/vi/$ytId/hqdefault.jpg' : '');
     final duration = media?.duration ?? 'Stream';
     final platform = media?.platform ?? (ytId != null ? 'YouTube' : 'Web');
+    final settings = _ref.read(settingsProvider);
+    final isCustomRaw = state.options.format == TargetFormat.customRaw;
+    final String formatLabel = isAudio
+        ? (settings.audioCodec == AudioCodec.opus
+            ? "Opus Audio"
+            : (settings.audioCodec == AudioCodec.aac ? "M4A Audio" : "MP3 Audio"))
+        : (isCustomRaw ? "Raw Stream" : "${settings.videoContainer} Video");
 
     final newTask = DownloadTask(
       id: "task_${DateTime.now().millisecondsSinceEpoch}",
@@ -262,8 +325,8 @@ class QuickDownloadNotifier extends StateNotifier<QuickDownloadState> {
       url: currentUrl,
       thumbnailUrl: thumb,
       duration: duration,
-      format: isAudio ? "M4A / Audio" : "MP4 Video",
-      resolution: resolution,
+      format: formatLabel,
+      resolution: isCustomRaw ? "Original Stream" : resolution,
       sizeFormatted: estimatedSize,
       progress: 0.01,
       speed: "Connecting...",

@@ -79,10 +79,16 @@ void main() {
       expect(settings.autoRemuxToMp4, isTrue);
       expect(settings.audioCodec, AudioCodec.mp3);
       expect(settings.maxResolution, MaxResolution.res1080p);
+      expect(settings.organizeByPlatform, isFalse);
 
       final fromEmptyJson = AppSettings.fromJson({});
       expect(fromEmptyJson.cookiesActive, isFalse);
       expect(fromEmptyJson.cookiesCount, 0);
+      expect(fromEmptyJson.maxResolution, MaxResolution.res1080p);
+
+      final legacyResJson = AppSettings.fromJson({'maxResolution': 'noLimit', 'organizeByPlatform': true});
+      expect(legacyResJson.maxResolution, MaxResolution.res4k);
+      expect(legacyResJson.organizeByPlatform, isTrue);
 
       final safNormalized = AppSettings.normalizeDirectoryPath(
         'content://com.android.externalstorage.documents/tree/primary%3ADownload%2FAllDown',
