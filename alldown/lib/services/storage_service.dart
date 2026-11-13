@@ -4,11 +4,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/app_settings.dart';
 import '../models/media_item.dart';
 import '../models/download_task.dart';
+import '../models/local_playlist.dart';
 
 class StorageService {
   static const String _keySettings = 'alldown_settings_v2';
   static const String _keyLibrary = 'alldown_library_v2';
   static const String _keyQueue = 'alldown_queue_v2';
+  static const String _keyPlaylists = 'alldown_local_playlists_v1';
 
   final SharedPreferences _prefs;
 
@@ -92,6 +94,23 @@ class StorageService {
     try {
       final decoded = jsonDecode(raw) as List;
       return decoded.map((e) => DownloadTask.fromJson(e as Map<String, dynamic>)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  // Local Playlists
+  Future<void> saveLocalPlaylists(List<LocalPlaylist> playlists) async {
+    final list = playlists.map((e) => e.toJson()).toList();
+    await _prefs.setString(_keyPlaylists, jsonEncode(list));
+  }
+
+  List<LocalPlaylist> loadLocalPlaylists() {
+    final raw = _prefs.getString(_keyPlaylists);
+    if (raw == null) return [];
+    try {
+      final decoded = jsonDecode(raw) as List;
+      return decoded.map((e) => LocalPlaylist.fromJson(e as Map<String, dynamic>)).toList();
     } catch (_) {
       return [];
     }

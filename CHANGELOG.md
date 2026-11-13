@@ -2,6 +2,35 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.5.3] - 2026-11-14
+
+### Added
+- **Full In-App Audio Playlist Playback & Queue System:**
+  - Upgraded the media player to support seamless playlist playback across all downloaded audio tracks.
+  - Automatic continuous playback: tracks now seamlessly auto-advance to the next song when finished.
+  - Dedicated **Audio Transport Controls**:
+    - **Shuffle Mode**: Randomize playback order with smart permutation preserving the current track.
+    - **Repeat Modes**: Cycle between Repeat Off, Repeat All, and Repeat One.
+    - **Previous / Next Track**: Instant track navigation via `Icons.skip_previous_rounded` and `Icons.skip_next_rounded`.
+  - **Interactive In-Player Queue Drawer ("Up Next / Red izvođenja"):**
+    - View active queue of songs with real-time playing indicators and song counts.
+    - Tap any song in the queue to jump directly to it.
+    - Remove individual songs from the active queue with a single tap.
+    - "Save Queue as Playlist" button directly within the player.
+
+### Added
+- **Library Multi-Selection & Custom Playlist Creator:**
+  - **Selective Playback Mode**: Tap "Select" in Library to enter selection mode with checkboxes on each audio card. Choose any subset of downloaded tracks and tap "Play as Playlist" to start listening immediately.
+  - **Instant "Play All"**: One-tap button on the Audio category tab to queue and play all downloaded songs sequentially.
+  - **Persistent Local Playlists**:
+    - Create, name, and manage custom playlists (e.g. "Favorites", "Gym Workout", "Rock Hits") stored locally via `StorageService`.
+    - Dedicated "Playlists" category chip in the Library toolbar.
+    - One-tap playback of entire saved playlists.
+  - **Enhanced MiniPlayer Bar**:
+    - Added Previous and Next buttons when a playlist is active.
+    - Real-time track progress indicator (e.g. "Playing (3/12) • M4A").
+  - Bilingual Croatian & English localization across all new playlist modals, queue drawers, and player controls.
+
 ## [1.5.2] - 2026-11-13
 
 ### Fixed

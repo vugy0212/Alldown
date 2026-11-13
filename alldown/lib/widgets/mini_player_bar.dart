@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/l10n.dart';
 import '../providers/player_provider.dart';
 import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
@@ -14,6 +15,7 @@ class MiniPlayerBar extends ConsumerWidget {
     final notifier = ref.read(playerProvider.notifier);
     final settings = ref.watch(settingsProvider);
     final isDark = settings.isDarkMode;
+    final l10n = L10n(settings.language);
 
     final item = player.currentItem;
     if (item == null) return const SizedBox.shrink();
@@ -83,9 +85,13 @@ class MiniPlayerBar extends ConsumerWidget {
                             ),
                       ),
                       Text(
-                        player.isPlaying
-                            ? 'Playing • ${item.format} (${item.resolution}) • Tap to expand'
-                            : 'Paused • Tap to expand',
+                        player.hasPlaylist
+                            ? (player.isPlaying
+                                ? (l10n.isHr ? 'Svira (${player.currentIndex + 1}/${player.playlistCount}) • ${item.format}' : 'Playing (${player.currentIndex + 1}/${player.playlistCount}) • ${item.format}')
+                                : (l10n.isHr ? 'Pauzirano (${player.currentIndex + 1}/${player.playlistCount})' : 'Paused (${player.currentIndex + 1}/${player.playlistCount})'))
+                            : (player.isPlaying
+                                ? 'Playing • ${item.format} (${item.resolution}) • Tap to expand'
+                                : 'Paused • Tap to expand'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -102,12 +108,20 @@ class MiniPlayerBar extends ConsumerWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.replay_10_rounded, size: 20),
-                      color: AppColors.onSurfaceVariant,
-                      visualDensity: VisualDensity.compact,
-                      onPressed: notifier.skipBackward,
-                    ),
+                    if (player.hasPlaylist)
+                      IconButton(
+                        icon: const Icon(Icons.skip_previous_rounded, size: 22),
+                        color: player.hasPrevious ? AppColors.onSurface : AppColors.onSurfaceVariant.withValues(alpha: 0.4),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: notifier.playPrevious,
+                      )
+                    else
+                      IconButton(
+                        icon: const Icon(Icons.replay_10_rounded, size: 20),
+                        color: AppColors.onSurfaceVariant,
+                        visualDensity: VisualDensity.compact,
+                        onPressed: notifier.skipBackward,
+                      ),
                     Container(
                       width: 34,
                       height: 34,
@@ -125,6 +139,13 @@ class MiniPlayerBar extends ConsumerWidget {
                         onPressed: notifier.togglePlayPause,
                       ),
                     ),
+                    if (player.hasPlaylist)
+                      IconButton(
+                        icon: const Icon(Icons.skip_next_rounded, size: 22),
+                        color: player.hasNext ? AppColors.onSurface : AppColors.onSurfaceVariant.withValues(alpha: 0.4),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: notifier.playNext,
+                      ),
                     IconButton(
                       icon: const Icon(Icons.close_rounded, size: 18),
                       color: AppColors.onSurfaceVariant,

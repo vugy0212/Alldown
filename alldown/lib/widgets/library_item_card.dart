@@ -14,6 +14,9 @@ class LibraryItemCard extends ConsumerWidget {
   final VoidCallback onPlay;
   final VoidCallback onDelete;
   final VoidCallback onToggleFavorite;
+  final bool isSelectionMode;
+  final bool isSelected;
+  final VoidCallback? onToggleSelect;
 
   const LibraryItemCard({
     super.key,
@@ -22,6 +25,9 @@ class LibraryItemCard extends ConsumerWidget {
     required this.onPlay,
     required this.onDelete,
     required this.onToggleFavorite,
+    this.isSelectionMode = false,
+    this.isSelected = false,
+    this.onToggleSelect,
   });
 
   void _showContextMenu(BuildContext context, WidgetRef ref) {
@@ -178,13 +184,18 @@ class LibraryItemCard extends ConsumerWidget {
 
   Widget _buildListCard(BuildContext context, WidgetRef ref, L10n l10n) {
     return InkWell(
-      onTap: onPlay,
+      onTap: isSelectionMode ? onToggleSelect : onPlay,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.isDark ? AppColors.surfaceContainer : Colors.white,
+          color: isSelected
+              ? AppColors.primaryAccent.withValues(alpha: 0.12)
+              : (AppColors.isDark ? AppColors.surfaceContainer : Colors.white),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.stroke, width: 1),
+          border: Border.all(
+            color: isSelected ? AppColors.primaryAccent : AppColors.stroke,
+            width: isSelected ? 1.5 : 1,
+          ),
           boxShadow: AppColors.isDark
               ? null
               : [
@@ -199,6 +210,15 @@ class LibraryItemCard extends ConsumerWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (isSelectionMode)
+              Padding(
+                padding: const EdgeInsets.only(right: 10, top: 18),
+                child: Icon(
+                  isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                  color: isSelected ? AppColors.primaryAccent : AppColors.outline,
+                  size: 24,
+                ),
+              ),
             // Thumbnail with play overlay
             Stack(
               children: [
@@ -406,15 +426,19 @@ class LibraryItemCard extends ConsumerWidget {
 
   Widget _buildGridCard(BuildContext context) {
     return InkWell(
-      onTap: onPlay,
+      onTap: isSelectionMode ? onToggleSelect : onPlay,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.isDark ? AppColors.surfaceContainer : Colors.white,
+          color: isSelected
+              ? AppColors.primaryAccent.withValues(alpha: 0.12)
+              : (AppColors.isDark ? AppColors.surfaceContainer : Colors.white),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: AppColors.isDark ? AppColors.stroke : const Color(0xFFE2E8F0),
-            width: 1,
+            color: isSelected
+                ? AppColors.primaryAccent
+                : (AppColors.isDark ? AppColors.stroke : const Color(0xFFE2E8F0)),
+            width: isSelected ? 1.5 : 1,
           ),
           boxShadow: AppColors.isDark
               ? null
@@ -451,6 +475,23 @@ class LibraryItemCard extends ConsumerWidget {
                             ),
                     ),
                   ),
+                  if (isSelectionMode)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.65),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                          color: isSelected ? AppColors.primaryAccent : Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                    ),
                   Positioned.fill(
                     child: Center(
                       child: Container(

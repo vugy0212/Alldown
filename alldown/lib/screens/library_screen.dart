@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/l10n.dart';
 import '../models/app_settings.dart';
+import '../models/local_playlist.dart';
 import '../models/media_item.dart';
 import '../providers/media_library_provider.dart';
 import '../providers/player_provider.dart';
@@ -20,6 +21,8 @@ class LibraryScreen extends ConsumerStatefulWidget {
 
 class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   final TextEditingController _searchController = TextEditingController();
+  bool _isSelectionMode = false;
+  final Set<String> _selectedItemIds = {};
 
   @override
   void dispose() {
@@ -68,11 +71,190 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     notifier.setSort(next);
   }
 
-  Future<void> _onPlayItem(MediaItem item) async {
-    await ref.read(playerProvider.notifier).playMedia(item);
+  Future<void> _onPlayItem(MediaItem item, List<MediaItem> currentList) async {
+    if (item.isAudio) {
+      final audioList = currentList.where((e) => e.isAudio).toList();
+      final idx = audioList.indexWhere((e) => e.id == item.id);
+      await ref.read(playerProvider.notifier).playPlaylist(
+            audioList.isNotEmpty ? audioList : [item],
+            initialIndex: idx >= 0 ? idx : 0,
+          );
+    } else {
+      await ref.read(playerProvider.notifier).playMedia(item);
+    }
     if (mounted) {
       VideoPlayerModal.show(context);
     }
+  }
+
+  void _playAllAudio(List<MediaItem> items) {
+    final audioList = items.where((e) => e.isAudio).toList();
+    if (audioList.isEmpty) return;
+    ref.read(playerProvider.notifier).playPlaylist(audioList, initialIndex: 0);
+    VideoPlayerModal.show(context);
+  }
+
+  void _playSelectedAsPlaylist(List<MediaItem> allItems) {
+    final selected = allItems.where((e) => _selectedItemIds.contains(e.id)).toList();
+    if (selected.isEmpty) return;
+    ref.read(playerProvider.notifier).playPlaylist(selected, initialIndex: 0);
+    setState(() {
+      _isSelectionMode = false;
+      _selectedItemIds.clear();
+    });
+    VideoPlayerModal.show(context);
+  }
+
+  void _playLocalPlaylist(LocalPlaylist pl, List<MediaItem> allItems) {
+    final tracks = pl.trackIds
+        .map((id) => allItems.where((item) => item.id == id).firstOrNull)
+        .whereType<MediaItem>()
+        .toList();
+    if (tracks.isEmpty) return;
+    ref.read(playerProvider.notifier).playPlaylist(tracks, initialIndex: 0);
+    VideoPlayerModal.show(context);
+  }
+
+  void _toggleSelectItem(String id) {
+    setState(() {
+      if (_selectedItemIds.contains(id)) {
+        _selectedItemIds.remove(id);
+      } else {
+        _selectedItemIds.add(id);
+      }
+    });
+  }
+
+  void _showCreatePlaylistDialog(
+    BuildContext context,
+    MediaLibraryNotifier notifier,
+    List<MediaItem> availableItems,
+    L10n l10n,
+  ) {
+    final titleCtrl = TextEditingController();
+    final Set<String> chosenIds = {..._selectedItemIds};
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final isDark = ref.watch(settingsProvider).isDarkMode;
+          final audioItems = availableItems.where((e) => e.isAudio).toList();
+
+          return Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.85,
+            ),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceContainerHigh : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              border: Border.all(color: isDark ? AppColors.stroke : const Color(0xFFE2E8F0)),
+            ),
+            padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.stroke : const Color(0xFFCBD5E1),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Icon(Icons.queue_music_rounded, color: AppColors.primaryAccent, size: 24),
+                    const SizedBox(width: 8),
+                    Text(
+                      l10n.newPlaylist,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: titleCtrl,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    labelText: l10n.playlistName,
+                    hintText: l10n.enterPlaylistName,
+                    filled: true,
+                    fillColor: isDark ? AppColors.surfaceContainer : const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  '${l10n.selectTracks} (${chosenIds.length}/${audioItems.length})',
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: audioItems.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (_, idx) {
+                      final item = audioItems[idx];
+                      final isSelected = chosenIds.contains(item.id);
+                      return CheckboxListTile(
+                        value: isSelected,
+                        activeColor: AppColors.primaryAccent,
+                        dense: true,
+                        title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        subtitle: Text(item.channel, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        onChanged: (val) {
+                          setModalState(() {
+                            if (val == true) {
+                              chosenIds.add(item.id);
+                            } else {
+                              chosenIds.remove(item.id);
+                            }
+                          });
+                        },
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primaryAccent,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.check_rounded),
+                    label: Text(l10n.createPlaylist),
+                    onPressed: () {
+                      final name = titleCtrl.text.trim();
+                      if (name.isEmpty) return;
+                      notifier.createPlaylist(name, chosenIds.toList());
+                      Navigator.pop(ctx);
+                      setState(() {
+                        _isSelectionMode = false;
+                        _selectedItemIds.clear();
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l10n.playlistCreated)),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 
   void _onDeleteItem(MediaItem item) {
@@ -99,6 +281,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final items = libraryState.filteredItems;
     final videoCount = libraryState.items.where((e) => !e.isAudio).length;
     final audioCount = libraryState.items.where((e) => e.isAudio).length;
+    final playlistsCount = libraryState.localPlaylists.length;
+    final isPlaylistsTab = libraryState.selectedCategory == LibraryCategory.playlists;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.background : const Color(0xFFF3F4F8),
@@ -169,7 +353,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             ),
             const SizedBox(height: 14),
 
-            // Horizontal Filter Chips Row
+            // Horizontal Filter Chips Row (All, Videos, Audio, Playlists, Favorites)
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -199,6 +383,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   ),
                   const SizedBox(width: 8),
                   _buildCategoryChip(
+                    title: l10n.categoryPlaylists(playlistsCount),
+                    icon: Icons.queue_music_rounded,
+                    isSelected: libraryState.selectedCategory == LibraryCategory.playlists,
+                    onTap: () => libraryNotifier.setCategory(LibraryCategory.playlists),
+                    isDark: isDark,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildCategoryChip(
                     title: l10n.categoryFavorites(libraryState.items.where((e) => e.isFavorite).length),
                     icon: Icons.favorite_rounded,
                     isSelected: libraryState.selectedCategory == LibraryCategory.favorites,
@@ -210,212 +402,329 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             ),
             const SizedBox(height: 14),
 
-            // Storage Meter & View Controls Deck
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.surfaceContainerLow : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isDark ? AppColors.stroke : const Color(0xFFE2E8F0),
-                  width: 1,
+            // Selection Mode Action Bar (When selecting tracks for playlist)
+            if (_isSelectionMode)
+              Container(
+                margin: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primaryAccent.withValues(alpha: isDark ? 0.25 : 0.15),
+                      AppColors.secondary.withValues(alpha: isDark ? 0.20 : 0.10),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.primaryAccent, width: 1.2),
                 ),
-                boxShadow: isDark
-                    ? null
-                    : [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+                child: Row(
+                  children: [
+                    Text(
+                      l10n.selectedCount(_selectedItemIds.length),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: isDark ? AppColors.onSurface : const Color(0xFF0F172A),
+                      ),
+                    ),
+                    const Spacer(),
+                    // Select All / Deselect All
+                    TextButton(
+                      style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                      onPressed: () {
+                        setState(() {
+                          final currentAudioIds = items.where((e) => e.isAudio).map((e) => e.id).toSet();
+                          if (_selectedItemIds.length == currentAudioIds.length) {
+                            _selectedItemIds.clear();
+                          } else {
+                            _selectedItemIds.addAll(currentAudioIds);
+                          }
+                        });
+                      },
+                      child: Text(
+                        _selectedItemIds.length == items.where((e) => e.isAudio).length
+                            ? l10n.deselectAll
+                            : l10n.selectAll,
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    // Play Selected Button
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primaryAccent,
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      ),
+                      icon: const Icon(Icons.playlist_play_rounded, size: 18),
+                      label: Text(l10n.playAsPlaylist, style: const TextStyle(fontSize: 11)),
+                      onPressed: _selectedItemIds.isNotEmpty ? () => _playSelectedAsPlaylist(items) : null,
+                    ),
+                    const SizedBox(width: 4),
+                    // Cancel Selection
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 18),
+                      color: AppColors.onSurfaceVariant,
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () {
+                        setState(() {
+                          _isSelectionMode = false;
+                          _selectedItemIds.clear();
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              )
+            // Storage Meter & Controls Deck (When not in selection mode)
+            else
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.surfaceContainerLow : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark ? AppColors.stroke : const Color(0xFFE2E8F0),
+                    width: 1,
+                  ),
+                  boxShadow: isDark
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.storage_rounded, size: 18, color: AppColors.secondary),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      l10n.localStorageUsed,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: isDark ? AppColors.onSurfaceVariant : const Color(0xFF64748B),
+                                      ),
+                                    ),
+                                    Text(
+                                      _calculateRealStorageUsed(libraryState.items, settings.language),
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? AppColors.onSurface : const Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Flexible(
-                        child: Row(
+                        const SizedBox(width: 8),
+                        Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.storage_rounded, size: 18, color: AppColors.secondary),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                            // View Toggle (List / Grid)
+                            Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: isDark ? AppColors.surfaceContainerHighest : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
                                 children: [
-                                  Text(
-                                    l10n.localStorageUsed,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: isDark ? AppColors.onSurfaceVariant : const Color(0xFF64748B),
+                                  InkWell(
+                                    onTap: () {
+                                      if (libraryState.isGridView) libraryNotifier.toggleViewMode();
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: !libraryState.isGridView
+                                            ? (isDark ? AppColors.surfaceContainer : Colors.white)
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(6),
+                                        boxShadow: !libraryState.isGridView && !isDark
+                                            ? [
+                                                BoxShadow(
+                                                  color: Colors.black.withValues(alpha: 0.06),
+                                                  blurRadius: 4,
+                                                )
+                                              ]
+                                            : null,
+                                      ),
+                                      child: Icon(
+                                        Icons.view_list_rounded,
+                                        size: 16,
+                                        color: !libraryState.isGridView
+                                            ? AppColors.primaryAccent
+                                            : (isDark ? AppColors.outline : const Color(0xFF64748B)),
+                                      ),
                                     ),
                                   ),
-                                  Text(
-                                    _calculateRealStorageUsed(libraryState.items, settings.language),
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: isDark ? AppColors.onSurface : const Color(0xFF0F172A),
+                                  InkWell(
+                                    onTap: () {
+                                      if (!libraryState.isGridView) libraryNotifier.toggleViewMode();
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: libraryState.isGridView
+                                            ? (isDark ? AppColors.surfaceContainer : Colors.white)
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(6),
+                                        boxShadow: libraryState.isGridView && !isDark
+                                            ? [
+                                                BoxShadow(
+                                                  color: Colors.black.withValues(alpha: 0.06),
+                                                  blurRadius: 4,
+                                                )
+                                              ]
+                                            : null,
+                                      ),
+                                      child: Icon(
+                                        Icons.grid_view_rounded,
+                                        size: 16,
+                                        color: libraryState.isGridView
+                                            ? AppColors.primaryAccent
+                                            : (isDark ? AppColors.outline : const Color(0xFF64748B)),
+                                      ),
                                     ),
                                   ),
                                 ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+
+                            // Sort Order Button
+                            InkWell(
+                              onTap: () => _cycleSort(libraryNotifier, libraryState.sort),
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppColors.surfaceContainer : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: isDark ? Colors.transparent : const Color(0xFFE2E8F0),
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      _sortLabel(libraryState.sort, settings.language),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: isDark ? AppColors.onSurface : const Color(0xFF334155),
+                                      ),
+                                    ),
+                                    Icon(
+                                      Icons.arrow_drop_down_rounded,
+                                      size: 16,
+                                      color: isDark ? AppColors.outline : const Color(0xFF64748B),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ],
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Visual Storage Gauge Bar
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: SizedBox(
+                        height: 6,
+                        child: Row(
+                          children: [
+                            if (videoCount > 0)
+                              Expanded(
+                                flex: videoCount * 10,
+                                child: Container(color: AppColors.primaryAccent),
+                              ),
+                            if (videoCount > 0 && audioCount > 0) const SizedBox(width: 2),
+                            if (audioCount > 0)
+                              Expanded(
+                                flex: audioCount * 10,
+                                child: Container(color: AppColors.secondary),
+                              ),
+                            if (libraryState.items.isEmpty)
+                              Expanded(
+                                child: Container(
+                                  color: isDark ? AppColors.surfaceContainerHighest : const Color(0xFFE2E8F0),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(width: 8),
+                    ),
+
+                    // Quick Audio / Playlist Bar (Play All & Select Tracks)
+                    if (audioCount > 0 && !isPlaylistsTab) ...[
+                      const SizedBox(height: 12),
                       Row(
-                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          // View Toggle (List / Grid)
-                          Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              color: isDark ? AppColors.surfaceContainerHighest : const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                InkWell(
-                                  onTap: () {
-                                    if (libraryState.isGridView) libraryNotifier.toggleViewMode();
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      color: !libraryState.isGridView
-                                          ? (isDark ? AppColors.surfaceContainer : Colors.white)
-                                          : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(6),
-                                      boxShadow: !libraryState.isGridView && !isDark
-                                          ? [
-                                              BoxShadow(
-                                                color: Colors.black.withValues(alpha: 0.06),
-                                                blurRadius: 4,
-                                              )
-                                            ]
-                                          : null,
-                                    ),
-                                    child: Icon(
-                                      Icons.format_list_bulleted_rounded,
-                                      size: 16,
-                                      color: !libraryState.isGridView
-                                          ? AppColors.primary
-                                          : (isDark ? AppColors.outline : const Color(0xFF94A3B8)),
-                                    ),
-                                  ),
-                                ),
-                                InkWell(
-                                  onTap: () {
-                                    if (!libraryState.isGridView) libraryNotifier.toggleViewMode();
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      color: libraryState.isGridView
-                                          ? (isDark ? AppColors.surfaceContainer : Colors.white)
-                                          : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(6),
-                                      boxShadow: libraryState.isGridView && !isDark
-                                          ? [
-                                              BoxShadow(
-                                                color: Colors.black.withValues(alpha: 0.06),
-                                                blurRadius: 4,
-                                              )
-                                            ]
-                                          : null,
-                                    ),
-                                    child: Icon(
-                                      Icons.grid_view_rounded,
-                                      size: 16,
-                                      color: libraryState.isGridView
-                                          ? AppColors.primary
-                                          : (isDark ? AppColors.outline : const Color(0xFF94A3B8)),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.secondary,
+                                side: BorderSide(color: AppColors.secondary.withValues(alpha: 0.5)),
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              icon: const Icon(Icons.playlist_play_rounded, size: 18),
+                              label: Text(l10n.playAll, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                              onPressed: () => _playAllAudio(items),
                             ),
                           ),
                           const SizedBox(width: 8),
-
-                          // Interactive Sort Trigger
-                          InkWell(
-                            onTap: () => _cycleSort(libraryNotifier, libraryState.sort),
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: isDark ? AppColors.surfaceContainer : const Color(0xFFF1F5F9),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: isDark ? Colors.transparent : const Color(0xFFE2E8F0),
-                                  width: 0.8,
-                                ),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.primaryAccent,
+                                side: BorderSide(color: AppColors.primaryAccent.withValues(alpha: 0.5)),
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
-                              child: Row(
-                                children: [
-                                  Text(
-                                    _sortLabel(libraryState.sort, settings.language),
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: isDark ? AppColors.onSurface : const Color(0xFF334155),
-                                    ),
-                                  ),
-                                  Icon(
-                                    Icons.arrow_drop_down_rounded,
-                                    size: 16,
-                                    color: isDark ? AppColors.outline : const Color(0xFF64748B),
-                                  ),
-                                ],
-                              ),
+                              icon: const Icon(Icons.checklist_rounded, size: 18),
+                              label: Text(l10n.selectTracksAction, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                              onPressed: () {
+                                setState(() {
+                                  _isSelectionMode = true;
+                                });
+                              },
                             ),
                           ),
                         ],
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Visual Storage Gauge Bar (Proportional to actual video vs audio count)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: SizedBox(
-                      height: 6,
-                      child: Row(
-                        children: [
-                          if (videoCount > 0)
-                            Expanded(
-                              flex: videoCount * 10,
-                              child: Container(color: AppColors.primaryAccent),
-                            ),
-                          if (videoCount > 0 && audioCount > 0) const SizedBox(width: 2),
-                          if (audioCount > 0)
-                            Expanded(
-                              flex: audioCount * 10,
-                              child: Container(color: AppColors.secondary),
-                            ),
-                          if (libraryState.items.isEmpty)
-                            Expanded(
-                              child: Container(
-                                color: isDark ? AppColors.surfaceContainerHighest : const Color(0xFFE2E8F0),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
             const SizedBox(height: 16),
 
-            // Media Items List / Grid
-            if (items.isEmpty)
+            // Main Content: Playlists Tab View vs Media Items List/Grid
+            if (isPlaylistsTab)
+              _buildPlaylistsView(context, libraryState, libraryNotifier, isDark, l10n)
+            else if (items.isEmpty)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 20),
@@ -481,7 +790,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   return LibraryItemCard(
                     item: item,
                     isGrid: true,
-                    onPlay: () => _onPlayItem(item),
+                    isSelectionMode: _isSelectionMode,
+                    isSelected: _selectedItemIds.contains(item.id),
+                    onToggleSelect: () => _toggleSelectItem(item.id),
+                    onPlay: () => _onPlayItem(item, items),
                     onDelete: () => _onDeleteItem(item),
                     onToggleFavorite: () => libraryNotifier.toggleFavorite(item.id),
                   );
@@ -498,7 +810,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   return LibraryItemCard(
                     item: item,
                     isGrid: false,
-                    onPlay: () => _onPlayItem(item),
+                    isSelectionMode: _isSelectionMode,
+                    isSelected: _selectedItemIds.contains(item.id),
+                    onToggleSelect: () => _toggleSelectItem(item.id),
+                    onPlay: () => _onPlayItem(item, items),
                     onDelete: () => _onDeleteItem(item),
                     onToggleFavorite: () => libraryNotifier.toggleFavorite(item.id),
                   );
@@ -507,6 +822,157 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPlaylistsView(
+    BuildContext context,
+    LibraryState state,
+    MediaLibraryNotifier notifier,
+    bool isDark,
+    L10n l10n,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Top Action: + Nova Playlista
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primaryAccent,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            icon: const Icon(Icons.add_rounded, size: 20),
+            label: Text(l10n.newPlaylist, style: const TextStyle(fontWeight: FontWeight.bold)),
+            onPressed: () => _showCreatePlaylistDialog(context, notifier, state.items, l10n),
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        if (state.localPlaylists.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceContainerLow : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: isDark ? AppColors.stroke : const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.queue_music_rounded, size: 48, color: AppColors.secondary),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.noPlaylistsYet,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? AppColors.onSurface : const Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  l10n.noPlaylistsSub,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? AppColors.outline : const Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: state.localPlaylists.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
+            itemBuilder: (ctx, idx) {
+              final pl = state.localPlaylists[idx];
+              final matchingTracks = pl.trackIds
+                  .map((id) => state.items.where((e) => e.id == id).firstOrNull)
+                  .whereType<MediaItem>()
+                  .toList();
+
+              return Container(
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.surfaceContainer : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: isDark ? AppColors.stroke : const Color(0xFFE2E8F0)),
+                ),
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    // Playlist Icon Box
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        gradient: AppColors.primaryGradient,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Center(
+                        child: Icon(Icons.queue_music_rounded, color: Colors.white, size: 26),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+
+                    // Info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            pl.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${pl.trackIds.length} pjesama (${matchingTracks.length} dostupno)',
+                            style: TextStyle(fontSize: 12, color: AppColors.secondary),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Play Button
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryAccent.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        icon: const Icon(Icons.play_arrow_rounded, color: AppColors.primaryAccent, size: 22),
+                        onPressed: matchingTracks.isNotEmpty ? () => _playLocalPlaylist(pl, state.items) : null,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+
+                    // Delete Playlist
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                      color: AppColors.errorAccent.withValues(alpha: 0.7),
+                      onPressed: () {
+                        notifier.deletePlaylist(pl.id);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(l10n.playlistDeleted)),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+      ],
     );
   }
 

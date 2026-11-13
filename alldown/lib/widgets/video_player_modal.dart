@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
+import '../l10n/l10n.dart';
+import '../models/media_item.dart';
+import '../providers/media_library_provider.dart';
 import '../providers/player_provider.dart';
+import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
 import 'video_editor_modal.dart';
 
@@ -19,12 +23,57 @@ class VideoPlayerModal extends ConsumerWidget {
     );
   }
 
+  void _showSavePlaylistDialog(BuildContext context, WidgetRef ref, List<MediaItem> playlist, L10n l10n) {
+    final textCtrl = TextEditingController(text: 'Playlist ${DateTime.now().month}/${DateTime.now().day}');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceContainerHigh,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text(l10n.saveAsPlaylist, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: TextField(
+          controller: textCtrl,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: l10n.enterPlaylistName,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.cancelSelection),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primaryAccent),
+            onPressed: () {
+              final name = textCtrl.text.trim();
+              if (name.isNotEmpty) {
+                ref.read(mediaLibraryProvider.notifier).createPlaylist(
+                      name,
+                      playlist.map((e) => e.id).toList(),
+                    );
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.playlistCreated)),
+                );
+              }
+            },
+            child: Text(l10n.createPlaylist),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final playerState = ref.watch(playerProvider);
     final notifier = ref.read(playerProvider.notifier);
     final controller = notifier.controller;
     final item = playerState.currentItem;
+    final settings = ref.watch(settingsProvider);
+    final l10n = L10n(settings.language);
 
     if (item == null) {
       return const SizedBox.shrink();
@@ -40,14 +89,17 @@ class VideoPlayerModal extends ConsumerWidget {
         : 16 / 9;
 
     return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.90,
+      ),
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLow,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         border: Border(top: BorderSide(color: AppColors.stroke, width: 1)),
       ),
       child: SafeArea(
         top: false,
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -86,7 +138,9 @@ class VideoPlayerModal extends ConsumerWidget {
                                 isGif
                                     ? 'Animated GIF Player'
                                     : item.isAudio
-                                        ? 'Audio Player'
+                                        ? (playerState.hasPlaylist
+                                            ? '${l10n.playlist} (${playerState.currentIndex + 1}/${playerState.playlistCount})'
+                                            : 'Audio Player')
                                         : 'Video Player (${item.resolution})',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -169,12 +223,12 @@ class VideoPlayerModal extends ConsumerWidget {
                 child: Container(
                   width: double.infinity,
                   constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.45,
+                    maxHeight: MediaQuery.of(context).size.height * 0.35,
                   ),
                   color: Colors.black,
                   child: isGif
                       ? Container(
-                          constraints: const BoxConstraints(minHeight: 180, maxHeight: 300),
+                          constraints: const BoxConstraints(minHeight: 180, maxHeight: 260),
                           alignment: Alignment.center,
                           padding: const EdgeInsets.all(8),
                           child: Image.file(
@@ -206,7 +260,7 @@ class VideoPlayerModal extends ConsumerWidget {
                             )
                           : !playerState.isInitialized || controller == null
                               ? const SizedBox(
-                                  height: 200,
+                                  height: 180,
                                   child: Center(
                                     child: CircularProgressIndicator(color: AppColors.primaryAccent),
                                   ),
@@ -223,12 +277,27 @@ class VideoPlayerModal extends ConsumerWidget {
                                               fit: BoxFit.cover,
                                               errorBuilder: (_, _, _) => const SizedBox.shrink(),
                                             ),
-                                          Container(color: Colors.black.withValues(alpha: 0.55)),
+                                          Container(color: Colors.black.withValues(alpha: 0.65)),
                                           Center(
-                                            child: Icon(
-                                              Icons.graphic_eq_rounded,
-                                              size: 64,
-                                              color: AppColors.secondary,
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  Icons.music_note_rounded,
+                                                  size: 54,
+                                                  color: AppColors.secondary,
+                                                ),
+                                                const SizedBox(height: 6),
+                                                Text(
+                                                  item.format,
+                                                  style: TextStyle(
+                                                    color: Colors.white.withValues(alpha: 0.8),
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                    letterSpacing: 1.2,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ],
@@ -276,7 +345,7 @@ class VideoPlayerModal extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.all_inclusive_rounded, size: 18, color: AppColors.secondary),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Text(
                         'Infinite GIF Loop Animation',
                         style: TextStyle(
@@ -331,45 +400,262 @@ class VideoPlayerModal extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
 
-                // Transport Controls Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.replay_10_rounded, size: 28),
-                      color: AppColors.onSurface,
-                      onPressed: notifier.skipBackward,
-                    ),
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        gradient: AppColors.primaryGradient,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primaryAccent.withValues(alpha: 0.4),
-                            blurRadius: 12,
+                // Transport Controls Row (Audio: Shuffle, Prev, Play/Pause, Next, Repeat)
+                if (item.isAudio) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      // Shuffle Button
+                      IconButton(
+                        tooltip: playerState.isShuffle ? l10n.shuffleEnabled : l10n.shuffleDisabled,
+                        icon: Icon(
+                          Icons.shuffle_rounded,
+                          size: 22,
+                          color: playerState.isShuffle
+                              ? AppColors.primaryAccent
+                              : AppColors.onSurfaceVariant.withValues(alpha: 0.5),
+                        ),
+                        onPressed: notifier.toggleShuffle,
+                      ),
+
+                      // Previous Track
+                      IconButton(
+                        tooltip: 'Previous Track',
+                        icon: const Icon(Icons.skip_previous_rounded, size: 30),
+                        color: playerState.hasPrevious
+                            ? AppColors.onSurface
+                            : AppColors.onSurfaceVariant.withValues(alpha: 0.3),
+                        onPressed: notifier.playPrevious,
+                      ),
+
+                      // Play / Pause Circle
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          gradient: AppColors.primaryGradient,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primaryAccent.withValues(alpha: 0.4),
+                              blurRadius: 12,
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            playerState.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                            size: 32,
+                            color: Colors.white,
+                          ),
+                          onPressed: notifier.togglePlayPause,
+                        ),
+                      ),
+
+                      // Next Track
+                      IconButton(
+                        tooltip: 'Next Track',
+                        icon: const Icon(Icons.skip_next_rounded, size: 30),
+                        color: playerState.hasNext
+                            ? AppColors.onSurface
+                            : AppColors.onSurfaceVariant.withValues(alpha: 0.3),
+                        onPressed: notifier.playNext,
+                      ),
+
+                      // Repeat Button
+                      IconButton(
+                        tooltip: switch (playerState.repeatMode) {
+                          AudioRepeatMode.off => l10n.repeatModeOff,
+                          AudioRepeatMode.all => l10n.repeatModeAll,
+                          AudioRepeatMode.one => l10n.repeatModeOne,
+                        },
+                        icon: Icon(
+                          playerState.repeatMode == AudioRepeatMode.one
+                              ? Icons.repeat_one_rounded
+                              : Icons.repeat_rounded,
+                          size: 22,
+                          color: playerState.repeatMode != AudioRepeatMode.off
+                              ? AppColors.primaryAccent
+                              : AppColors.onSurfaceVariant.withValues(alpha: 0.5),
+                        ),
+                        onPressed: notifier.toggleRepeat,
+                      ),
+                    ],
+                  ),
+                ] else ...[
+                  // Video Transport: Replay 10, Play/Pause, Forward 10
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.replay_10_rounded, size: 28),
+                        color: AppColors.onSurface,
+                        onPressed: notifier.skipBackward,
+                      ),
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          gradient: AppColors.primaryGradient,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primaryAccent.withValues(alpha: 0.4),
+                              blurRadius: 12,
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            playerState.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                            size: 32,
+                            color: Colors.white,
+                          ),
+                          onPressed: notifier.togglePlayPause,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.forward_10_rounded, size: 28),
+                        color: AppColors.onSurface,
+                        onPressed: notifier.skipForward,
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 14),
+              ],
+
+              // Playlist Queue Section (if active playlist has items)
+              if (playerState.playlist.isNotEmpty) ...[
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainer,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.stroke, width: 1),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.queue_music_rounded, size: 18, color: AppColors.secondary),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${l10n.upNextQueue} (${playerState.playlist.length})',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.onSurface,
+                                ),
+                              ),
+                            ],
+                          ),
+                          InkWell(
+                            onTap: () => _showSavePlaylistDialog(context, ref, playerState.playlist, l10n),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.bookmark_add_outlined, size: 16, color: AppColors.primaryAccent),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    l10n.saveAsPlaylist,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primaryAccent,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                      child: IconButton(
-                        icon: Icon(
-                          playerState.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                          size: 32,
-                          color: Colors.white,
+                      const SizedBox(height: 8),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 180),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: playerState.playlist.length,
+                          separatorBuilder: (_, _) => Divider(height: 1, color: AppColors.stroke),
+                          itemBuilder: (ctx, idx) {
+                            final track = playerState.playlist[idx];
+                            final isCurrent = idx == playerState.currentIndex;
+                            return InkWell(
+                              onTap: () => notifier.playTrackAtIndex(idx),
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+                                decoration: BoxDecoration(
+                                  color: isCurrent
+                                      ? AppColors.primaryAccent.withValues(alpha: 0.12)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 24,
+                                      child: isCurrent
+                                          ? Icon(Icons.volume_up_rounded, size: 18, color: AppColors.primaryAccent)
+                                          : Text(
+                                              '${idx + 1}',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            track.title,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
+                                              color: isCurrent ? AppColors.primaryAccent : AppColors.onSurface,
+                                            ),
+                                          ),
+                                          Text(
+                                            track.channel,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(fontSize: 10, color: AppColors.secondary),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.close_rounded, size: 16),
+                                      color: AppColors.onSurfaceVariant.withValues(alpha: 0.5),
+                                      visualDensity: VisualDensity.compact,
+                                      onPressed: () => notifier.removeFromQueue(idx),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                        onPressed: notifier.togglePlayPause,
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.forward_10_rounded, size: 28),
-                      color: AppColors.onSurface,
-                      onPressed: notifier.skipForward,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 14),
               ],
 
               // Share / Open Externally Button
