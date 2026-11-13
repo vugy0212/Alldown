@@ -2,7 +2,19 @@
 
 All notable changes to **AllDown** are documented in this file.
 
-## [1.3.9] - 2026-11-13
+## [1.4.0] - 2026-11-13
+
+### Added
+- **Višejezična podrška (Croatian & English Multilingual Architecture):**
+  - Dodana potpuna podrška za hrvatski (`hr`) i engleski (`en`) jezik kroz cjelokupnu aplikaciju (`L10n`).
+  - Dinamički prekidač jezika s emoji zastavicama (`🇭🇷 HR` / `🇬🇧 EN`) integriran izravno u gornji `CustomHeader` pored prekidača za tamnu/svijetlu temu.
+  - Trenutna (reaktivna) promjena jezika bez potrebe za ponovnim pokretanjem aplikacije, uz perzistenciju postavke jezika u `AppSettings` i `StorageService`.
+  - Potpuno lokalizirani svi ekrani:
+    - **Početni zaslon (Preuzmi):** unos poveznica, status analize toka, odabir formata (`Video (MP4)`, `Audio (M4A)`, `Izvorni Tok`), rezolucija i gumb preuzimanja.
+    - **Red Čekanja:** filtarske kartice (`Aktivno`, `Dovršeno`, `Pauzirano`), telemetrija brzine, kontrolne tipke (`Pauziraj sve`, `Očisti`) i limit istovremenih zadataka.
+    - **Biblioteka:** tražilica, kategorije (`Sve`, `Videozapisi`, `Zvuk`, `Favoriti`), mjerač zauzeća memorije, padajući izbornik sortiranja (`Najnovije`, `Najstarije`, `Najveće`, `Naziv A-Z`) te kontekstualni izbornik datoteka.
+    - **Postavke:** sve sekcije, padajući izbornici, dijalozi za uvoz kolačića, odabir mapa, korisnički vodič i prozor s informacijama o aplikaciji.
+
 
 ### Fixed & Improved
 - **Reactive Light & Dark Theme Transitions:**

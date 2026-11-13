@@ -10,6 +10,11 @@ enum MaxResolution {
   res480p,
 }
 
+enum AppLanguage {
+  hr,
+  en,
+}
+
 class AppSettings {
   final String downloadDirectory;
   final bool cookiesActive;
@@ -30,6 +35,7 @@ class AppSettings {
   final int connectionTimeout;
   final bool notifyOnComplete;
   final bool isDarkMode;
+  final AppLanguage language;
 
   const AppSettings({
     this.downloadDirectory = "/storage/emulated/0/Download/AllDown",
@@ -51,6 +57,7 @@ class AppSettings {
     this.connectionTimeout = 15,
     this.notifyOnComplete = true,
     this.isDarkMode = true,
+    this.language = AppLanguage.hr,
   });
 
   /// Converts Android SAF tree URIs (e.g. content://.../primary%3ADownload...) into standard POSIX paths.
@@ -117,6 +124,7 @@ class AppSettings {
     int? connectionTimeout,
     bool? notifyOnComplete,
     bool? isDarkMode,
+    AppLanguage? language,
   }) {
     return AppSettings(
       downloadDirectory: downloadDirectory ?? this.downloadDirectory,
@@ -138,6 +146,7 @@ class AppSettings {
       connectionTimeout: connectionTimeout ?? this.connectionTimeout,
       notifyOnComplete: notifyOnComplete ?? this.notifyOnComplete,
       isDarkMode: isDarkMode ?? this.isDarkMode,
+      language: language ?? this.language,
     );
   }
 
@@ -161,6 +170,7 @@ class AppSettings {
     'connectionTimeout': connectionTimeout,
     'notifyOnComplete': notifyOnComplete,
     'isDarkMode': isDarkMode,
+    'language': language.name,
   };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -189,6 +199,10 @@ class AppSettings {
       connectionTimeout: json['connectionTimeout'] as int? ?? 15,
       notifyOnComplete: json['notifyOnComplete'] as bool? ?? true,
       isDarkMode: json['isDarkMode'] as bool? ?? true,
+      language: AppLanguage.values.firstWhere(
+        (e) => e.name == json['language'],
+        orElse: () => AppLanguage.hr,
+      ),
     );
   }
 }

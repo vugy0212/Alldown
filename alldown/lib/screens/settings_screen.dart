@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../l10n/l10n.dart';
 import '../models/app_settings.dart';
 import '../models/media_item.dart';
 import '../providers/media_library_provider.dart';
@@ -47,6 +48,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final settings = ref.watch(settingsProvider);
     final notifier = ref.read(settingsProvider.notifier);
     final libraryState = ref.watch(mediaLibraryProvider);
+    final l10n = L10n(settings.language);
 
     final videoBytes = _calculateCategoryBytes(libraryState.items, isAudio: false);
     final audioBytes = _calculateCategoryBytes(libraryState.items, isAudio: true);
@@ -64,11 +66,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _buildExpandableCard(
               icon: Icons.vpn_key_rounded,
               iconColor: AppColors.primary,
-              title: 'Browser Cookies & Auth',
+              title: l10n.cookiesAndAuth,
               subtitle: hasCookies
-                  ? 'Cookies active • ${settings.cookiesCount} entries loaded'
-                  : 'No cookies loaded • Public streams active',
-              badge: hasCookies ? 'ACTIVE' : 'OPTIONAL',
+                  ? l10n.cookiesActive(settings.cookiesCount)
+                  : l10n.noCookiesLoaded,
+              badge: hasCookies ? (l10n.isHr ? 'AKTIVNO' : 'ACTIVE') : (l10n.isHr ? 'OPCIJA' : 'OPTIONAL'),
               badgeColor: hasCookies ? AppColors.tertiary : AppColors.outline,
               initiallyExpanded: false,
               children: [
@@ -96,8 +98,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       Flexible(
                         child: Text(
                           hasCookies
-                              ? 'Cookies Active (${settings.cookiesCount} entries loaded)'
-                              : 'No cookies loaded (Public streams active)',
+                              ? l10n.cookiesActive(settings.cookiesCount)
+                              : l10n.noCookiesLoaded,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 11,
@@ -111,7 +113,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Bypass 18+ age restrictions, private member-only channels, and login walls safely without re-authenticating repeatedly.',
+                  l10n.cookiesDescription,
                   style: TextStyle(
                     fontSize: 13,
                     height: 1.4,
@@ -141,15 +143,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             SnackBar(
                               content: Text(
                                 success
-                                    ? 'Cookies imported & saved'
-                                    : 'Import cancelled',
+                                    ? l10n.cookiesLoadedSuccess
+                                    : (l10n.isHr ? 'Uvoz prekinut' : 'Import cancelled'),
                               ),
                             ),
                           );
                         },
                         icon: Icon(Icons.folder_open_rounded, size: 18, color: AppColors.primary),
                         label: Text(
-                          'Import cookies.txt',
+                          l10n.importCookies,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
                         ),
@@ -169,14 +171,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         onPressed: () {
                           notifier.clearCookies();
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Imported cookies cleared')),
+                            SnackBar(content: Text(l10n.cookiesClearedMsg)),
                           );
                         },
                         icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                        label: const Text(
-                          'Clear Cookies',
+                        label: Text(
+                          l10n.clearCookies,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
@@ -195,10 +197,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Icon(Icons.verified_user_rounded, size: 16, color: AppColors.secondary),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Cookies are stored locally in app storage and never uploaded to remote servers.',
+                          l10n.isHr
+                              ? 'Kolačići se pohranjuju lokalno u aplikaciji i nikad se ne šalju na vanjske poslužitelje.'
+                              : 'Cookies are stored locally in app storage and never uploaded to remote servers.',
                           style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant, height: 1.3),
                         ),
                       ),
@@ -211,7 +215,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
             // SECTION: DOWNLOAD & MEDIA SETTINGS
             Text(
-              'DOWNLOAD & MEDIA SETTINGS',
+              l10n.sectionDownloadMedia,
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
@@ -225,15 +229,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _buildExpandableCard(
               icon: Icons.video_settings_rounded,
               iconColor: AppColors.secondary,
-              title: 'Video & Container Settings',
-              subtitle: 'Format: ${settings.videoContainer} • Max Resolution: ${_formatMaxRes(settings.maxResolution)}',
+              title: l10n.videoContainerSettings,
+              subtitle: l10n.videoSettingsSummary(settings.videoContainer, _formatMaxRes(settings.maxResolution)),
               badge: settings.videoContainer,
               badgeColor: AppColors.secondary,
               initiallyExpanded: false,
               children: [
                 _buildDropdownRow<String>(
-                  title: 'Default Video Container',
-                  subtitle: 'Output video container format',
+                  title: l10n.defaultVideoContainer,
+                  subtitle: l10n.defaultVideoContainerSub,
                   value: settings.videoContainer,
                   items: const [
                     DropdownMenuItem(value: 'MP4', child: Text('MP4 (H.264 / AAC)')),
@@ -246,14 +250,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildDropdownRow<MaxResolution>(
-                  title: 'Default / Max Video Resolution',
-                  subtitle: 'Synced with Home screen & stream quality cap',
+                  title: l10n.defaultMaxRes,
+                  subtitle: l10n.defaultMaxResSub,
                   value: settings.maxResolution,
-                  items: const [
-                    DropdownMenuItem(value: MaxResolution.res4k, child: Text('4K Ultra HD (2160p)')),
-                    DropdownMenuItem(value: MaxResolution.res1080p, child: Text('1080p Full HD (Default)')),
-                    DropdownMenuItem(value: MaxResolution.res720p, child: Text('720p HD')),
-                    DropdownMenuItem(value: MaxResolution.res480p, child: Text('480p SD')),
+                  items: [
+                    const DropdownMenuItem(value: MaxResolution.res4k, child: Text('4K Ultra HD (2160p)')),
+                    DropdownMenuItem(
+                      value: MaxResolution.res1080p,
+                      child: Text('1080p Full HD (${l10n.isHr ? "Zadano" : "Default"})'),
+                    ),
+                    const DropdownMenuItem(value: MaxResolution.res720p, child: Text('720p HD')),
+                    const DropdownMenuItem(value: MaxResolution.res480p, child: Text('480p SD')),
                   ],
                   onChanged: (val) {
                     if (val != null) notifier.setMaxResolution(val);
@@ -261,29 +268,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildSettingSwitch(
-                  title: 'Auto-remux to MP4',
-                  subtitle: 'Ensures compatibility with all Android media players',
+                  title: l10n.autoRemuxMp4,
+                  subtitle: l10n.autoRemuxMp4Sub,
                   value: settings.autoRemuxToMp4,
                   onChanged: (_) => notifier.toggleAutoRemux(),
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildSettingSwitch(
-                  title: 'Organize by Platform',
-                  subtitle: 'Save files in platform subfolders (YouTube, TikTok, Reddit...)',
+                  title: l10n.organizeByPlatform,
+                  subtitle: l10n.organizeByPlatformSub,
                   value: settings.organizeByPlatform,
                   onChanged: (_) => notifier.toggleOrganizeByPlatform(),
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildSettingSwitch(
-                  title: 'Download on Wi-Fi Only',
-                  subtitle: 'Pause download tasks on mobile cellular data',
+                  title: l10n.wifiOnly,
+                  subtitle: l10n.wifiOnlySub,
                   value: settings.wifiOnly,
                   onChanged: (_) => notifier.toggleWifiOnly(),
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildSettingSwitch(
-                  title: 'Automatic Retry',
-                  subtitle: '3 attempts with exponential backoff on network drop',
+                  title: l10n.autoRetry,
+                  subtitle: l10n.autoRetrySub,
                   value: settings.autoRetry,
                   onChanged: (_) => notifier.toggleAutoRetry(),
                 ),
@@ -294,14 +301,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _buildExpandableCard(
               icon: Icons.graphic_eq_rounded,
               iconColor: AppColors.tertiary,
-              title: 'Audio Extraction & Quality',
-              subtitle: 'Codec: ${settings.audioCodec.name.toUpperCase()} • Bitrate: ${settings.audioBitrate}',
+              title: l10n.audioExtractionAndQuality,
+              subtitle: l10n.audioSettingsSummary(settings.audioCodec.name.toUpperCase(), settings.audioBitrate),
               badge: settings.audioBitrate,
               badgeColor: AppColors.tertiary,
               initiallyExpanded: false,
               children: [
                 Text(
-                  'Audio Format (Codec)',
+                  l10n.audioFormatCodec,
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
                 ),
                 const SizedBox(height: 8),
@@ -314,12 +321,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: Row(
                     children: [
                       _buildCodecTab(
-                        title: 'M4A / AAC (Standard & Best Quality)',
+                        title: l10n.audioCodecM4aLabel,
                         isSelected: settings.audioCodec == AudioCodec.aac,
                         onTap: () => notifier.setAudioCodec(AudioCodec.aac),
                       ),
                       _buildCodecTab(
-                        title: 'Opus (High Efficiency)',
+                        title: l10n.audioCodecOpusLabel,
                         isSelected: settings.audioCodec == AudioCodec.opus,
                         onTap: () => notifier.setAudioCodec(AudioCodec.opus),
                       ),
@@ -328,14 +335,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildDropdownRow<String>(
-                  title: 'Audio Quality (Bitrate)',
-                  subtitle: 'Target bitrate for extracted audio',
+                  title: l10n.audioQualityBitrate,
+                  subtitle: l10n.audioQualityBitrateSub,
                   value: settings.audioBitrate,
-                  items: const [
-                    DropdownMenuItem(value: '320 kbps', child: Text('320 kbps (Studio Master)')),
-                    DropdownMenuItem(value: '256 kbps', child: Text('256 kbps (High Quality)')),
-                    DropdownMenuItem(value: '192 kbps', child: Text('192 kbps (Standard CD)')),
-                    DropdownMenuItem(value: '128 kbps', child: Text('128 kbps (Voice / Podcast)')),
+                  items: [
+                    const DropdownMenuItem(value: '320 kbps', child: Text('320 kbps (Studio Master)')),
+                    DropdownMenuItem(
+                      value: '256 kbps',
+                      child: Text('256 kbps (${l10n.isHr ? "Visoka kvaliteta" : "High Quality"})'),
+                    ),
+                    const DropdownMenuItem(value: '192 kbps', child: Text('192 kbps (Standard CD)')),
+                    DropdownMenuItem(
+                      value: '128 kbps',
+                      child: Text('128 kbps (${l10n.isHr ? "Glas / Podcast" : "Voice / Podcast"})'),
+                    ),
                   ],
                   onChanged: (val) {
                     if (val != null) notifier.setAudioBitrate(val);
@@ -348,8 +361,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _buildExpandableCard(
               icon: Icons.folder_copy_rounded,
               iconColor: AppColors.secondary,
-              title: 'Storage & Directory Management',
-              subtitle: 'Storage: ${_formatBytes(totalBytes)} • ${settings.downloadDirectory}',
+              title: l10n.storageDirectoryManagement,
+              subtitle: l10n.storageSummary(_formatBytes(totalBytes), settings.downloadDirectory),
               badge: _formatBytes(totalBytes),
               badgeColor: AppColors.secondary,
               initiallyExpanded: false,
@@ -359,7 +372,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Storage Allocation',
+                      l10n.isHr ? 'Zauzeće memorije' : 'Storage Allocation',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -367,7 +380,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                     ),
                     Text(
-                      '${_formatBytes(totalBytes)} Total',
+                      '${_formatBytes(totalBytes)} ${l10n.isHr ? "Ukupno" : "Total"}',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -417,7 +430,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         const Icon(Icons.circle, size: 7, color: AppColors.primaryAccent),
                         const SizedBox(width: 4),
                         Text(
-                          'Videos (${_formatBytes(videoBytes)})',
+                          '${l10n.isHr ? "Videozapisi" : "Videos"} (${_formatBytes(videoBytes)})',
                           style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                         ),
                       ],
@@ -428,7 +441,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         Icon(Icons.circle, size: 7, color: AppColors.secondary),
                         const SizedBox(width: 4),
                         Text(
-                          'Audio (${_formatBytes(audioBytes)})',
+                          '${l10n.isHr ? "Zvuk" : "Audio"} (${_formatBytes(audioBytes)})',
                           style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                         ),
                       ],
@@ -439,7 +452,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         Icon(Icons.circle, size: 7, color: AppColors.tertiary),
                         const SizedBox(width: 4),
                         Text(
-                          'Cache (${_cacheCleared ? "0.0 MB" : "Temp"})',
+                          '${l10n.isHr ? "Privremeno" : "Cache"} (${_cacheCleared ? "0.0 MB" : (l10n.isHr ? "Privremeno" : "Temp")})',
                           style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                         ),
                       ],
@@ -456,7 +469,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     if (!mounted) return;
                     setState(() => _cacheCleared = true);
                     messenger.showSnackBar(
-                      const SnackBar(content: Text('Temporary stream cache cleared')),
+                      SnackBar(content: Text(l10n.cacheClearedMsg)),
                     );
                   },
                   borderRadius: BorderRadius.circular(10),
@@ -477,7 +490,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'Clear App Cache',
+                                  l10n.clearAppCache,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 13,
@@ -496,7 +509,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            _cacheCleared ? '0.0 MB' : 'Clean',
+                            _cacheCleared ? '0.0 MB' : (l10n.isHr ? 'Očisti' : 'Clean'),
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
@@ -516,7 +529,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        'Default Download Directory',
+                        l10n.downloadLocation,
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
                       ),
                     ),
@@ -529,7 +542,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             final picked = await notifier.pickDownloadDirectory();
                             if (mounted && picked != null) {
                               messenger.showSnackBar(
-                                SnackBar(content: Text('Download directory updated to: $picked')),
+                                SnackBar(
+                                  content: Text(
+                                    l10n.isHr
+                                        ? 'Mapa za preuzimanje ažurirana na: $picked'
+                                        : 'Download directory updated to: $picked',
+                                  ),
+                                ),
                               );
                             }
                           },
@@ -546,7 +565,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 Icon(Icons.drive_file_move_rounded, size: 13, color: AppColors.primary),
                                 const SizedBox(width: 4),
                                 Text(
-                                  'Change',
+                                  l10n.changeDirectory,
                                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
                                 ),
                               ],
@@ -558,7 +577,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           onTap: () {
                             notifier.resetDownloadDirectory();
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Reset to default: /storage/emulated/0/Download/AllDown')),
+                              SnackBar(
+                                content: Text(
+                                  l10n.isHr
+                                      ? 'Vraćeno na zadano: /storage/emulated/0/Download/AllDown'
+                                      : 'Reset to default: /storage/emulated/0/Download/AllDown',
+                                ),
+                              ),
                             );
                           },
                           borderRadius: BorderRadius.circular(6),
@@ -569,7 +594,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              'Reset',
+                              l10n.isHr ? 'Zadano' : 'Reset',
                               style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.secondary),
                             ),
                           ),
@@ -620,11 +645,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     onPressed: () {
                       notifier.resetAllSettings();
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('All settings have been reset to factory defaults.')),
+                        SnackBar(content: Text(l10n.settingsResetMsg)),
                       );
                     },
                     icon: const Icon(Icons.restore_rounded, size: 16),
-                    label: const Text('Reset All Settings to Defaults', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    label: Text(
+                      l10n.resetSettings,
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ],
@@ -634,15 +662,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _buildExpandableCard(
               icon: Icons.notifications_active_rounded,
               iconColor: AppColors.tertiary,
-              title: 'Notifications & Background Service',
-              subtitle: 'Android Foreground Service with active notification',
-              badge: 'Active',
+              title: l10n.notificationsAndBackground,
+              subtitle: l10n.notificationsSummary,
+              badge: l10n.isHr ? 'Aktivno' : 'Active',
               badgeColor: AppColors.tertiary,
               initiallyExpanded: false,
               children: [
                 _buildSettingSwitch(
-                  title: 'Notification on Complete',
-                  subtitle: 'Show popup alert when a download finishes',
+                  title: l10n.completionNotifications,
+                  subtitle: l10n.completionNotificationsSub,
                   value: settings.notifyOnComplete,
                   onChanged: (_) => notifier.toggleNotifyOnComplete(),
                 ),
@@ -650,10 +678,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Row(
                   children: [
                     Icon(Icons.shield_outlined, size: 18, color: AppColors.tertiary),
-                    SizedBox(width: 8),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Foreground service keeps downloads running smoothly in background when screen is off or while using other apps.',
+                        l10n.isHr
+                            ? 'Pozadinska usluga održava preuzimanja aktivnima i stabilnima kada je zaslon isključen ili dok koristite druge aplikacije.'
+                            : 'Foreground service keeps downloads running smoothly in background when screen is off or while using other apps.',
                         style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant, height: 1.3),
                       ),
                     ),
@@ -665,7 +695,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
             // SECTION: HELP, SYSTEM & ABOUT
             Text(
-              'INFORMATION, HELP & SYSTEM',
+              l10n.sectionInfoHelp,
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
@@ -679,58 +709,64 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _buildExpandableCard(
               icon: Icons.help_outline_rounded,
               iconColor: AppColors.tertiary,
-              title: 'Help & User Guide',
-              subtitle: 'Complete guide for downloads, Video Studio & GIF creation',
-              badge: 'Guide',
+              title: l10n.helpAndUserGuide,
+              subtitle: l10n.helpSummary,
+              badge: l10n.isHr ? 'Vodič' : 'Guide',
               badgeColor: AppColors.tertiary,
               initiallyExpanded: false,
               children: [
                 _buildHelpStep(
                   icon: Icons.download_rounded,
                   iconColor: AppColors.primary,
-                  title: '1. How to download videos or music',
-                  description:
-                      'Copy any video or music link (YouTube, TikTok, X, Facebook, Streamable...) and paste it on the home screen, or tap "Share" in any other app and select AllDown.',
+                  title: l10n.isHr ? '1. Kako preuzeti videozapise ili glazbu' : '1. How to download videos or music',
+                  description: l10n.isHr
+                      ? 'Kopirajte poveznicu na video ili glazbu (YouTube, TikTok, X, Facebook, Streamable...) i zalijepite je na početnom zaslonu, ili dodirnite "Podijeli" u bilo kojoj drugoj aplikaciji i odaberite AllDown.'
+                      : 'Copy any video or music link (YouTube, TikTok, X, Facebook, Streamable...) and paste it on the home screen, or tap "Share" in any other app and select AllDown.',
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildHelpStep(
                   icon: Icons.content_cut_rounded,
                   iconColor: AppColors.secondary,
-                  title: '2. Using Video Studio (Trimmer & Cropper)',
-                  description:
-                      'After downloading, open the video in the "Library" tab, tap options (...) and select "Trim, Crop & Make GIF". Precisely set start and end timestamps, adjust aspect ratios (16:9, 9:16 Shorts/Reels, 1:1 Square, 4:5, 21:9), and drag video to pan or zoom.',
+                  title: l10n.isHr ? '2. Korištenje Video Studija (Obrezivanje & Izrezivanje)' : '2. Using Video Studio (Trimmer & Cropper)',
+                  description: l10n.isHr
+                      ? 'Nakon preuzimanja otvorite videozapis u kartici "Biblioteka", dodirnite opcije (...) i odaberite "Uredi / Stvori GIF". Precizno postavite vremenske oznake, podesite omjer slike (16:9, 9:16 Shorts/Reels, 1:1, 4:5, 21:9) te zumirajte ili premještajte kadar.'
+                      : 'After downloading, open the video in the "Library" tab, tap options (...) and select "Trim, Crop & Make GIF". Precisely set start and end timestamps, adjust aspect ratios (16:9, 9:16 Shorts/Reels, 1:1 Square, 4:5, 21:9), and drag video to pan or zoom.',
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildHelpStep(
                   icon: Icons.gif_box_rounded,
                   iconColor: AppColors.tertiary,
-                  title: '3. Creating High-Definition Animated GIFs',
-                  description:
-                      'Inside Video Studio, tap "Generate GIF". AllDown uses an advanced 256-color median-cut palette with Floyd-Steinberg dithering for crisp images. GIFs are automatically indexed in your device Gallery under Pictures/AllDown.',
+                  title: l10n.isHr ? '3. Stvaranje animiranih GIF-ova visoke razlučivosti' : '3. Creating High-Definition Animated GIFs',
+                  description: l10n.isHr
+                      ? 'Unutar Video Studija dodirnite "Stvori HD GIF". AllDown koristi naprednu 256-bojnu median-cut paletu uz Floyd-Steinberg dithering. GIF-ovi se automatski spremaju u Galeriju uređaja unutar Pictures/AllDown.'
+                      : 'Inside Video Studio, tap "Generate GIF". AllDown uses an advanced 256-color median-cut palette with Floyd-Steinberg dithering for crisp images. GIFs are automatically indexed in your device Gallery under Pictures/AllDown.',
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildHelpStep(
                   icon: Icons.audiotrack_rounded,
                   iconColor: Colors.pinkAccent,
-                  title: '4. Audio Extraction',
-                  description:
-                      'When downloading, select the "Audio (MP3)" tab to extract clean MP3 (up to 320 kbps), M4A, or Opus audio files without video overhead.',
+                  title: l10n.isHr ? '4. Ekstrakcija zvuka' : '4. Audio Extraction',
+                  description: l10n.isHr
+                      ? 'Prilikom preuzimanja odaberite karticu "Audio (M4A)" ili "Audio (Opus)" za izdvajanje čistog zvuka (do 320 kbps) bez video toka.'
+                      : 'When downloading, select the "Audio (M4A)" tab to extract clean M4A or Opus audio files without video overhead.',
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildHelpStep(
                   icon: Icons.vpn_key_rounded,
                   iconColor: Colors.amberAccent,
-                  title: '5. Age-Restricted & Protected Media',
-                  description:
-                      'Import a "cookies.txt" file from your browser under the "Browser Cookies & Auth" tab to download streams that require sign-in or age confirmation.',
+                  title: l10n.isHr ? '5. Zaštićeni i dobno ograničeni mediji (18+)' : '5. Age-Restricted & Protected Media',
+                  description: l10n.isHr
+                      ? 'Uvezite "cookies.txt" datoteku iz svog preglednika pod "Kolačići preglednika i prijava" za preuzimanje tokova koji zahtijevaju prijavu ili potvrdu dobi.'
+                      : 'Import a "cookies.txt" file from your browser under the "Browser Cookies & Auth" tab to download streams that require sign-in or age confirmation.',
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 _buildHelpStep(
                   icon: Icons.folder_special_rounded,
                   iconColor: Colors.tealAccent,
-                  title: '6. Saved File Storage Locations',
-                  description:
-                      'Downloaded videos are saved to Download/AllDown, edited clips in Movies/AllDown, and animated GIFs in Pictures/AllDown. All files immediately appear in your device Gallery.',
+                  title: l10n.isHr ? '6. Lokacije spremljenih datoteka' : '6. Saved File Storage Locations',
+                  description: l10n.isHr
+                      ? 'Preuzeti videozapisi spremaju se u Download/AllDown, obrađeni isječci u Movies/AllDown, a animirani GIF-ovi u Pictures/AllDown. Sve datoteke odmah su vidljive u Galeriji.'
+                      : 'Downloaded videos are saved to Download/AllDown, edited clips in Movies/AllDown, and animated GIFs in Pictures/AllDown. All files immediately appear in your device Gallery.',
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 const SizedBox(height: 4),
@@ -751,11 +787,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                       leading: Icon(Icons.hub_rounded, size: 20, color: AppColors.primary),
                       title: Text(
-                        'Supported Services & Extractors',
+                        l10n.isHr ? 'Podržani servisi i platforme' : 'Supported Services & Extractors',
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
                       ),
                       subtitle: Text(
-                        '10+ major video platforms & universal stream parser',
+                        l10n.isHr
+                            ? '10+ glavnih video platformi i univerzalni parser streamova'
+                            : '10+ major video platforms & universal stream parser',
                         style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                       ),
                       children: [
@@ -842,8 +880,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _buildExpandableCard(
               icon: Icons.info_outline_rounded,
               iconColor: AppColors.primary,
-              title: 'About AllDown',
-              subtitle: 'Project details, license and supported extractors',
+              title: l10n.aboutAllDown,
+              subtitle: l10n.aboutSummary,
               initiallyExpanded: false,
               children: [
                 // App Logo Header
@@ -910,7 +948,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Media Downloader & Video Studio',
+                            l10n.isHr ? 'Preuzimanje medija & Video Studio' : 'Media Downloader & Video Studio',
                             style: TextStyle(
                               fontSize: 12,
                               color: AppColors.onSurfaceVariant,
@@ -929,21 +967,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 _buildAboutRow(
                   icon: Icons.verified_rounded,
                   iconColor: AppColors.secondary,
-                  label: 'Version',
+                  label: l10n.isHr ? 'Verzija' : 'Version',
                   value: 'v${AppUpdateService.currentVersion}',
                 ),
                 const SizedBox(height: 10),
                 _buildAboutRow(
                   icon: Icons.person_rounded,
                   iconColor: AppColors.primary,
-                  label: 'Author',
+                  label: l10n.isHr ? 'Autor' : 'Author',
                   value: 'Allen',
                 ),
                 const SizedBox(height: 10),
                 _buildAboutRow(
                   icon: Icons.code_rounded,
                   iconColor: AppColors.tertiary,
-                  label: 'License',
+                  label: l10n.isHr ? 'Licenca' : 'License',
                   value: 'GNU General Public License v3.0',
                 ),
                 const SizedBox(height: 14),
@@ -975,7 +1013,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               }
                             } else {
                               messenger.showSnackBar(
-                                const SnackBar(content: Text('AllDown is already up to date!')),
+                                SnackBar(content: Text(l10n.appUpToDate)),
                               );
                             }
                           },
@@ -987,7 +1025,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           )
                         : const Icon(Icons.sync_rounded, size: 18),
                     label: Text(
-                      _isCheckingUpdate ? 'Checking for updates...' : 'Check for Updates',
+                      _isCheckingUpdate ? l10n.checkingUpdates : l10n.checkForUpdates,
                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -1005,9 +1043,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       );
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Support page coming soon! Thank you for supporting AllDown.'),
-                          duration: Duration(seconds: 2),
+                        SnackBar(
+                          content: Text(
+                            l10n.isHr
+                                ? 'Stranica za podršku stiže uskoro! Hvala što podržavate AllDown.'
+                                : 'Support page coming soon! Thank you for supporting AllDown.',
+                          ),
+                          duration: const Duration(seconds: 2),
                         ),
                       );
                     }
@@ -1058,7 +1100,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Support Project',
+                                l10n.isHr ? 'Podrži projekt' : 'Support Project',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
@@ -1068,7 +1110,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Buy me a coffee & keep AllDown ad-free',
+                                l10n.isHr
+                                    ? 'Kupi mi kavu i podrži AllDown bez reklama'
+                                    : 'Buy me a coffee & keep AllDown ad-free',
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: AppColors.onSurfaceVariant,
@@ -1084,18 +1128,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             color: const Color(0xFFFFDD00).withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.favorite_rounded,
                                 size: 12,
                                 color: Color(0xFFFFDD00),
                               ),
-                              SizedBox(width: 4),
+                              const SizedBox(width: 4),
                               Text(
-                                'Donate',
-                                style: TextStyle(
+                                l10n.isHr ? 'Doniraj' : 'Donate',
+                                style: const TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   color: Color(0xFFFFDD00),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/l10n.dart';
+import '../models/app_settings.dart';
 import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
 
@@ -21,6 +23,7 @@ class CustomHeader extends ConsumerWidget implements PreferredSizeWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
     final isDark = settings.isDarkMode;
+    final l10n = L10n(settings.language);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
@@ -87,15 +90,54 @@ class CustomHeader extends ConsumerWidget implements PreferredSizeWidget {
 
                 const Spacer(),
 
+                // Language Switch (HR / EN)
+                GestureDetector(
+                  onTap: () => ref.read(settingsProvider.notifier).toggleLanguage(),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.surfaceContainerHigh : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isDark ? AppColors.stroke : const Color(0xFFE2E8F0),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          settings.language == AppLanguage.hr ? '🇭🇷' : '🇬🇧',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          settings.language == AppLanguage.hr ? 'HR' : 'EN',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? AppColors.onSurface : const Color(0xFF0F172A),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
                 // Theme Switch (Dark / Light) in top right corner
                 GestureDetector(
                   onTap: () => ref.read(settingsProvider.notifier).toggleTheme(),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceContainerHigh,
+                      color: isDark ? AppColors.surfaceContainerHigh : const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.stroke, width: 0.8),
+                      border: Border.all(
+                        color: isDark ? AppColors.stroke : const Color(0xFFE2E8F0),
+                        width: 0.8,
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -107,11 +149,11 @@ class CustomHeader extends ConsumerWidget implements PreferredSizeWidget {
                         ),
                         const SizedBox(width: 5),
                         Text(
-                          isDark ? 'Dark' : 'Light',
+                          isDark ? l10n.themeDark : l10n.themeLight,
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.onSurface,
+                            color: isDark ? AppColors.onSurface : const Color(0xFF0F172A),
                           ),
                         ),
                         const SizedBox(width: 5),

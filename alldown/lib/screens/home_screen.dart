@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/l10n.dart';
 import '../models/app_settings.dart';
 import '../models/download_options.dart';
 import '../providers/quick_download_provider.dart';
@@ -136,10 +137,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final state = ref.watch(quickDownloadProvider);
     final notifier = ref.read(quickDownloadProvider.notifier);
     final settings = ref.watch(settingsProvider);
+    final l10n = L10n(settings.language);
 
     final audioTabTitle = settings.audioCodec == AudioCodec.opus
-        ? 'Audio (Opus)'
-        : 'Audio (M4A)';
+        ? l10n.audioOpus
+        : l10n.audioM4a;
 
     if (_urlController.text != state.url) {
       _urlController.value = TextEditingValue(
@@ -181,9 +183,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       Row(
                         children: [
                           Icon(Icons.link_rounded, size: 18, color: AppColors.secondary),
-                          SizedBox(width: 6),
+                          const SizedBox(width: 6),
                           Text(
-                            'Media URL or Direct Stream Link',
+                            l10n.mediaUrlOrStream,
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -205,9 +207,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.content_paste_rounded, size: 13, color: AppColors.primary),
-                              SizedBox(width: 4),
+                              const SizedBox(width: 4),
                               Text(
-                                'Paste',
+                                l10n.paste,
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
@@ -247,7 +249,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               fontSize: 13,
                             ),
                             decoration: InputDecoration(
-                              hintText: 'Paste link from YouTube, Vimeo, TikTok, Bilibili...',
+                              hintText: l10n.pasteLinkHint,
                               hintStyle: TextStyle(color: AppColors.outline, fontSize: 13),
                               border: InputBorder.none,
                               isDense: true,
@@ -318,7 +320,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ],
                             Flexible(
                               child: Text(
-                                state.analyzeButtonText,
+                                state.isAnalyzing ? l10n.analyzingMedia : l10n.fetchAndAnalyze,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 14,
@@ -358,7 +360,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Fetching Video Metadata...',
+                        l10n.analyzingMedia,
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: AppColors.onSurface,
@@ -406,7 +408,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'No media link detected',
+                      l10n.noMediaDetected,
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
@@ -415,7 +417,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Paste a YouTube, Shorts, TikTok, or video link above to view metadata, format options, and start downloading.',
+                      l10n.noMediaSub,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 12,
@@ -432,7 +434,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                       onPressed: _onPaste,
                       icon: const Icon(Icons.content_paste_rounded, size: 16),
-                      label: const Text('Paste from Clipboard'),
+                      label: Text(l10n.pasteFromClipboard),
                     ),
                   ],
                 ),
@@ -640,7 +642,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Target Format',
+                  l10n.targetFormat,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -655,7 +657,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         Icon(Icons.tune_rounded, size: 14, color: AppColors.secondary),
                         const SizedBox(width: 4),
                         Text(
-                          'Advanced Config',
+                          l10n.advancedConfig,
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.secondary,
@@ -692,7 +694,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     onTap: () => notifier.setFormat(TargetFormat.audioMp3),
                   ),
                   _buildFormatTab(
-                    title: 'Custom Raw',
+                    title: l10n.customRaw,
                     icon: Icons.terminal_rounded,
                     selected: state.options.format == TargetFormat.customRaw,
                     onTap: () => notifier.setFormat(TargetFormat.customRaw),
@@ -747,8 +749,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               children: [
                                 Text(
                                   state.options.format == TargetFormat.audioMp3
-                                      ? 'Audio Bitrate & Quality'
-                                      : 'Resolution & Stream Quality',
+                                      ? (settings.language == AppLanguage.hr ? 'Kvaliteta i bitrate zvuka' : 'Audio Bitrate & Quality')
+                                      : l10n.resolutionAndQuality,
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,
@@ -951,15 +953,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           final started = notifier.startDownload();
                           if (!started) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Please paste a valid video or audio link first!'),
+                              SnackBar(
+                                content: Text(
+                                  settings.language == AppLanguage.hr
+                                      ? 'Prvo zalijepite ispravnu video ili audio poveznicu!'
+                                      : 'Please paste a valid video or audio link first!',
+                                ),
                               ),
                             );
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Download started! Open Queue tab to view live progress.'),
-                                duration: Duration(seconds: 2),
+                              SnackBar(
+                                content: Text(
+                                  settings.language == AppLanguage.hr
+                                      ? 'Preuzimanje pokrenuto! Otvorite Red za praćenje napretka.'
+                                      : 'Download started! Open Queue tab to view live progress.',
+                                ),
+                                duration: const Duration(seconds: 2),
                               ),
                             );
                           }
@@ -978,8 +988,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       Flexible(
                         child: Text(
                           state.isDownloadAdded
-                              ? 'Added to Transfer Queue'
-                              : 'Start Download (${_selectedActionLabel(state.options, settings)})',
+                              ? l10n.addedToQueue
+                              : l10n.startDownload(_selectedActionLabel(state.options, settings)),
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 16,

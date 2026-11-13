@@ -166,6 +166,17 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     _storage.saveSettings(state);
   }
 
+  void toggleLanguage() {
+    final next = state.language == AppLanguage.hr ? AppLanguage.en : AppLanguage.hr;
+    state = state.copyWith(language: next);
+    _storage.saveSettings(state);
+  }
+
+  void setLanguage(AppLanguage language) {
+    state = state.copyWith(language: language);
+    _storage.saveSettings(state);
+  }
+
   void setDarkMode(bool isDark) {
     state = state.copyWith(isDarkMode: isDark);
     _storage.saveSettings(state);

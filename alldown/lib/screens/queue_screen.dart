@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/l10n.dart';
+import '../models/app_settings.dart';
 import '../models/download_task.dart';
 import '../providers/download_queue_provider.dart';
 import '../providers/settings_provider.dart';
@@ -28,6 +30,7 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
     final tasks = ref.watch(downloadQueueProvider);
     final queueNotifier = ref.read(downloadQueueProvider.notifier);
     final settings = ref.watch(settingsProvider);
+    final l10n = L10n(settings.language);
 
     final activeCount = tasks.where((t) => t.status == DownloadStatus.active || t.status == DownloadStatus.converting || t.status == DownloadStatus.queued).length;
     final completedCount = tasks.where((t) => t.status == DownloadStatus.completed).length;
@@ -69,19 +72,19 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
                   child: Row(
                     children: [
                       _buildTabButton(
-                        title: 'Active',
+                        title: l10n.active,
                         badge: '$activeCount',
                         isSelected: _currentTab == QueueFilterTab.active,
                         onTap: () => setState(() => _currentTab = QueueFilterTab.active),
                       ),
                       _buildTabButton(
-                        title: 'Completed',
+                        title: l10n.completed,
                         badge: '$completedCount',
                         isSelected: _currentTab == QueueFilterTab.completed,
                         onTap: () => setState(() => _currentTab = QueueFilterTab.completed),
                       ),
                       _buildTabButton(
-                        title: 'Paused',
+                        title: l10n.paused,
                         badge: '$pausedCount',
                         isSelected: _currentTab == QueueFilterTab.paused,
                         onTap: () => setState(() => _currentTab = QueueFilterTab.paused),
@@ -173,14 +176,16 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              '$activeCount Active • ${queueNotifier.queuedCount} Queued',
+                              settings.language == AppLanguage.hr
+                                  ? '$activeCount Aktivno • ${queueNotifier.queuedCount} Na čekanju'
+                                  : '$activeCount Active • ${queueNotifier.queuedCount} Queued',
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            activeCount > 0 ? 'Engine: Active' : 'Status: Idle',
+                            activeCount > 0 ? (settings.language == AppLanguage.hr ? 'Status: Preuzimanje' : 'Engine: Active') : l10n.speedIdle,
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -204,7 +209,7 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
                     Row(
                       children: [
                         Text(
-                          'Queue Pipeline',
+                          l10n.queuePipeline,
                           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
@@ -217,7 +222,7 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            'High Priority',
+                            l10n.highPriority,
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
@@ -231,11 +236,17 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
                       onPressed: () {
                         queueNotifier.autoOrderQueue();
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Queue ordered by priority & status')),
+                          SnackBar(
+                            content: Text(
+                              settings.language == AppLanguage.hr
+                                  ? 'Red je posložen po prioritetu i statusu'
+                                  : 'Queue ordered by priority & status',
+                            ),
+                          ),
                         );
                       },
                       icon: Text(
-                        'Auto-Order',
+                        l10n.autoOrder,
                         style: TextStyle(fontSize: 12, color: AppColors.secondary),
                       ),
                       label: Icon(
@@ -262,7 +273,7 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
                         Icon(Icons.inbox_rounded, size: 48, color: AppColors.outline.withValues(alpha: 0.5)),
                         const SizedBox(height: 12),
                         Text(
-                          'No tasks in this category',
+                          l10n.noTasksInCategory,
                           style: TextStyle(color: AppColors.outline),
                         ),
                       ],
@@ -332,7 +343,7 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
                           ),
                           onPressed: () => queueNotifier.pauseAll(),
                           icon: const Icon(Icons.pause_circle_rounded, size: 18),
-                          label: Text('Pause All ($activeCount)'),
+                          label: Text('${l10n.pauseAll} ($activeCount)'),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -349,7 +360,7 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
                         ),
                         onPressed: () => queueNotifier.clearFinished(),
                         icon: const Icon(Icons.cleaning_services_rounded, size: 18),
-                        label: const Text('Clean'),
+                        label: Text(l10n.clean),
                       ),
                       const SizedBox(width: 8),
 
@@ -366,7 +377,13 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
                           padding: EdgeInsets.zero,
                           onPressed: () {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Concurrency set to max ${settings.maxConcurrentDownloads} tasks')),
+                              SnackBar(
+                                content: Text(
+                                  settings.language == AppLanguage.hr
+                                      ? 'Istovremeni zadaci postavljeni na maks. ${settings.maxConcurrentDownloads}'
+                                      : 'Concurrency set to max ${settings.maxConcurrentDownloads} tasks',
+                                ),
+                              ),
                             );
                           },
                         ),
@@ -380,7 +397,7 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
                       Icon(Icons.check_circle_rounded, size: 12, color: AppColors.tertiary),
                       const SizedBox(width: 4),
                       Text(
-                        'Concurrency Limit: Max ${settings.maxConcurrentDownloads} Parallel Tasks Enabled',
+                        l10n.concurrencyLimit(settings.maxConcurrentDownloads),
                         style: TextStyle(fontSize: 10, color: AppColors.onSurfaceVariant),
                       ),
                     ],

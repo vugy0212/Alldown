@@ -3,6 +3,7 @@ import 'package:alldown/models/download_task.dart';
 import 'package:alldown/models/download_options.dart';
 import 'package:alldown/models/media_item.dart';
 import 'package:alldown/models/app_settings.dart';
+import 'package:alldown/l10n/l10n.dart';
 import 'package:alldown/theme/app_colors.dart';
 
 void main() {
@@ -95,6 +96,15 @@ void main() {
       );
       expect(safNormalized, '/storage/emulated/0/Download/AllDown');
       expect(settings.resolvedUserAgent, contains('Mozilla/5.0'));
+      expect(settings.language, AppLanguage.hr);
+
+      final englishSettings = settings.copyWith(language: AppLanguage.en);
+      expect(englishSettings.language, AppLanguage.en);
+
+      final englishJson = englishSettings.toJson();
+      expect(englishJson['language'], 'en');
+      final restoredEnglish = AppSettings.fromJson(englishJson);
+      expect(restoredEnglish.language, AppLanguage.en);
     });
 
     test('AppColors brand guidelines compliance', () {
@@ -102,6 +112,37 @@ void main() {
       expect(AppColors.primaryAccent.toARGB32(), 0xFF6366F1); // Electric Indigo
       expect(AppColors.secondary.toARGB32(), 0xFF4CD7F6);     // Tactical Cyan
       expect(AppColors.tertiary.toARGB32(), 0xFF4EDEA3);      // Cyber Emerald
+    });
+
+    test('L10n translations cover Croatian and English', () {
+      const hr = L10n(AppLanguage.hr);
+      const en = L10n(AppLanguage.en);
+
+      expect(hr.quickDownload, 'Brzo Preuzimanje');
+      expect(en.quickDownload, 'Quick Download');
+
+      expect(hr.navDown, 'Preuzmi');
+      expect(en.navDown, 'Down');
+      expect(hr.navQueue, 'Red');
+      expect(en.navQueue, 'Queue');
+      expect(hr.navLibrary, 'Biblioteka');
+      expect(en.navLibrary, 'Library');
+      expect(hr.navSettings, 'Postavke');
+      expect(en.navSettings, 'Settings');
+
+      expect(hr.themeDark, 'Tamno');
+      expect(en.themeDark, 'Dark');
+      expect(hr.themeLight, 'Svijetlo');
+      expect(en.themeLight, 'Light');
+
+      expect(hr.active, 'Aktivno');
+      expect(en.active, 'Active');
+
+      expect(hr.sortNewest, 'Najnovije');
+      expect(en.sortNewest, 'Newest');
+
+      expect(hr.aboutAllDown, 'O aplikaciji AllDown');
+      expect(en.aboutAllDown, 'About AllDown');
     });
   });
 }

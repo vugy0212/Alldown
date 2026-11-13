@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
+import '../l10n/l10n.dart';
 import '../models/media_item.dart';
+import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
 import 'video_editor_modal.dart';
 
-class LibraryItemCard extends StatelessWidget {
+class LibraryItemCard extends ConsumerWidget {
   final MediaItem item;
   final bool isGrid;
   final VoidCallback onPlay;
@@ -21,9 +24,10 @@ class LibraryItemCard extends StatelessWidget {
     required this.onToggleFavorite,
   });
 
-  void _showContextMenu(BuildContext context) {
+  void _showContextMenu(BuildContext context, WidgetRef ref) {
     final isGif = item.format == 'GIF' || item.localPath.toLowerCase().endsWith('.gif');
     final bottomNavPadding = MediaQuery.of(context).padding.bottom;
+    final l10n = L10n(ref.read(settingsProvider).language);
 
     showModalBottomSheet(
       context: context,
@@ -60,7 +64,9 @@ class LibraryItemCard extends StatelessWidget {
                     color: isGif ? AppColors.secondary : AppColors.primary,
                     size: isGif ? 26 : 22,
                   ),
-                  title: Text(isGif ? 'Pregledaj GIF animaciju' : 'Play with In-App Player'),
+                  title: Text(isGif
+                      ? (l10n.isHr ? 'Pregledaj GIF animaciju' : 'View GIF Animation')
+                      : (l10n.isHr ? 'Pokreni u playeru' : 'Play with In-App Player')),
                   onTap: () {
                     Navigator.pop(ctx);
                     onPlay();
@@ -69,8 +75,10 @@ class LibraryItemCard extends StatelessWidget {
                 if (!item.isAudio && !isGif) ...[
                   ListTile(
                     leading: Icon(Icons.content_cut_rounded, color: AppColors.secondary),
-                    title: const Text('Edit Video & Framing'),
-                    subtitle: const Text('Trim, crop, CapCut pinch-zoom & GIF'),
+                    title: Text(l10n.isHr ? 'Uredi video i kadar' : 'Edit Video & Framing'),
+                    subtitle: Text(l10n.isHr
+                        ? 'Obreži, izreži, zumiraj i napravi GIF'
+                        : 'Trim, crop, CapCut pinch-zoom & GIF'),
                     onTap: () {
                       Navigator.pop(ctx);
                       VideoEditorModal.show(context, item);
@@ -78,8 +86,10 @@ class LibraryItemCard extends StatelessWidget {
                   ),
                   ListTile(
                     leading: Icon(Icons.music_note_rounded, color: AppColors.primary),
-                    title: const Text('Extract & Trim Audio'),
-                    subtitle: const Text('Convert video segment to M4A audio'),
+                    title: Text(l10n.isHr ? 'Izdvoji i obreži zvuk' : 'Extract & Trim Audio'),
+                    subtitle: Text(l10n.isHr
+                        ? 'Pretvori video isječak u M4A zvuk'
+                        : 'Convert video segment to M4A audio'),
                     onTap: () {
                       Navigator.pop(ctx);
                       VideoEditorModal.show(context, item);
@@ -88,7 +98,7 @@ class LibraryItemCard extends StatelessWidget {
                 ],
                 ListTile(
                   leading: Icon(Icons.share_outlined, color: AppColors.outline),
-                  title: const Text('Share / Open Externally'),
+                  title: Text(l10n.isHr ? 'Podijeli / Otvori izvana' : 'Share / Open Externally'),
                   onTap: () {
                     Navigator.pop(ctx);
                     SharePlus.instance.share(
@@ -101,22 +111,26 @@ class LibraryItemCard extends StatelessWidget {
                 ),
                 ListTile(
                   leading: Icon(Icons.folder_open_outlined, color: AppColors.outline),
-                  title: const Text('Show File Path'),
+                  title: Text(l10n.isHr ? 'Prikaži putanju datoteke' : 'Show File Path'),
                   onTap: () {
                     Navigator.pop(ctx);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Saved at: ${item.localPath}')),
+                      SnackBar(content: Text('${l10n.isHr ? "Spremljeno u:" : "Saved at:"} ${item.localPath}')),
                     );
                   },
                 ),
                 ListTile(
                   leading: Icon(Icons.content_copy_rounded, color: AppColors.outline),
-                  title: const Text('Copy Path'),
+                  title: Text(l10n.isHr ? 'Kopiraj putanju' : 'Copy Path'),
                   onTap: () {
                     Clipboard.setData(ClipboardData(text: item.localPath));
                     Navigator.pop(ctx);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Path copied to clipboard')),
+                      SnackBar(
+                        content: Text(
+                          l10n.isHr ? 'Putanja kopirana u međuspremnik' : 'Path copied to clipboard',
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -125,7 +139,9 @@ class LibraryItemCard extends StatelessWidget {
                     item.isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
                     color: item.isFavorite ? AppColors.errorAccent : AppColors.outline,
                   ),
-                  title: Text(item.isFavorite ? 'Remove from Favorites' : 'Add to Favorites'),
+                  title: Text(item.isFavorite
+                      ? (l10n.isHr ? 'Ukloni iz favorita' : 'Remove from Favorites')
+                      : (l10n.isHr ? 'Dodaj u favorite' : 'Add to Favorites')),
                   onTap: () {
                     Navigator.pop(ctx);
                     onToggleFavorite();
@@ -134,7 +150,10 @@ class LibraryItemCard extends StatelessWidget {
                 Divider(color: AppColors.stroke),
                 ListTile(
                   leading: const Icon(Icons.delete_outline_rounded, color: AppColors.errorAccent),
-                  title: const Text('Delete File', style: TextStyle(color: AppColors.errorAccent)),
+                  title: Text(
+                    l10n.isHr ? 'Obriši datoteku' : 'Delete File',
+                    style: const TextStyle(color: AppColors.errorAccent),
+                  ),
                   onTap: () {
                     Navigator.pop(ctx);
                     onDelete();
@@ -149,14 +168,15 @@ class LibraryItemCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = L10n(ref.watch(settingsProvider).language);
     if (isGrid) {
       return _buildGridCard(context);
     }
-    return _buildListCard(context);
+    return _buildListCard(context, ref, l10n);
   }
 
-  Widget _buildListCard(BuildContext context) {
+  Widget _buildListCard(BuildContext context, WidgetRef ref, L10n l10n) {
     return InkWell(
       onTap: onPlay,
       borderRadius: BorderRadius.circular(16),
@@ -277,7 +297,7 @@ class LibraryItemCard extends StatelessWidget {
                           padding: EdgeInsets.zero,
                           minimumSize: const Size(28, 28),
                         ),
-                        onPressed: () => _showContextMenu(context),
+                        onPressed: () => _showContextMenu(context, ref),
                       ),
                     ],
                   ),
@@ -365,7 +385,7 @@ class LibraryItemCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          '${item.completedDateFormatted} • Tap to play',
+                          '${item.completedDateFormatted.replaceAll('Completed Just Now', l10n.completedJustNow)} • ${l10n.tapToPlay}',
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 fontSize: 11,

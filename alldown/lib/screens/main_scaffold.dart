@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/l10n.dart';
 import '../providers/download_queue_provider.dart';
 import '../providers/quick_download_provider.dart';
 import '../providers/settings_provider.dart';
@@ -30,13 +31,6 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
     const QueueScreen(),
     const LibraryScreen(),
     const SettingsScreen(),
-  ];
-
-  final List<String> _subtitles = const [
-    'Quick Download',
-    'Transfers Queue',
-    'Media Library',
-    'App Settings',
   ];
 
   @override
@@ -78,11 +72,19 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
     final activeQueueCount = ref.watch(downloadQueueProvider.notifier).activeCount;
     final settings = ref.watch(settingsProvider);
     final isDark = settings.isDarkMode;
+    final l10n = L10n(settings.language);
+
+    final subtitles = [
+      l10n.quickDownload,
+      l10n.transfersQueue,
+      l10n.mediaLibrary,
+      l10n.appSettings,
+    ];
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.background : const Color(0xFFF3F4F8),
       appBar: CustomHeader(
-        subtitle: _subtitles[_currentIndex],
+        subtitle: subtitles[_currentIndex],
         onSettingsTap: () {
           setState(() => _currentIndex = 3);
         },
@@ -124,14 +126,14 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
                     _buildNavItem(
                       index: 0,
                       icon: Icons.download_rounded,
-                      label: 'Down',
+                      label: l10n.navDown,
                       isSelected: _currentIndex == 0,
                       isDark: isDark,
                     ),
                     _buildNavItem(
                       index: 1,
                       icon: Icons.sync_alt_rounded,
-                      label: 'Queue',
+                      label: l10n.navQueue,
                       badgeCount: activeQueueCount,
                       isSelected: _currentIndex == 1,
                       isDark: isDark,
@@ -139,14 +141,14 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
                     _buildNavItem(
                       index: 2,
                       icon: Icons.video_library_rounded,
-                      label: 'Library',
+                      label: l10n.navLibrary,
                       isSelected: _currentIndex == 2,
                       isDark: isDark,
                     ),
                     _buildNavItem(
                       index: 3,
                       icon: Icons.settings_rounded,
-                      label: 'Settings',
+                      label: l10n.navSettings,
                       isSelected: _currentIndex == 3,
                       isDark: isDark,
                     ),

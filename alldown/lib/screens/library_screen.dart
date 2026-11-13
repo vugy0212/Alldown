@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/l10n.dart';
+import '../models/app_settings.dart';
 import '../models/media_item.dart';
 import '../providers/media_library_provider.dart';
 import '../providers/player_provider.dart';
@@ -25,8 +27,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     super.dispose();
   }
 
-  String _calculateRealStorageUsed(List<MediaItem> items) {
-    if (items.isEmpty) return '0.0 MB used';
+  String _calculateRealStorageUsed(List<MediaItem> items, AppLanguage lang) {
+    final isHr = lang == AppLanguage.hr;
+    if (items.isEmpty) return isHr ? '0.0 MB iskorišteno' : '0.0 MB used';
     int totalBytes = 0;
     for (final item in items) {
       try {
@@ -38,21 +41,24 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     }
     final mb = totalBytes / (1024 * 1024);
     if (mb >= 1024) {
-      return '${(mb / 1024).toStringAsFixed(2)} GB used (${items.length} files)';
+      final gb = (mb / 1024).toStringAsFixed(2);
+      return isHr ? '$gb GB iskorišteno (${items.length} datoteka)' : '$gb GB used (${items.length} files)';
     }
-    return '${mb.toStringAsFixed(1)} MB used (${items.length} files)';
+    final mbStr = mb.toStringAsFixed(1);
+    return isHr ? '$mbStr MB iskorišteno (${items.length} datoteka)' : '$mbStr MB used (${items.length} files)';
   }
 
-  String _sortLabel(LibrarySort sort) {
+  String _sortLabel(LibrarySort sort, AppLanguage lang) {
+    final isHr = lang == AppLanguage.hr;
     switch (sort) {
       case LibrarySort.newest:
-        return 'Newest';
+        return isHr ? 'Najnovije' : 'Newest';
       case LibrarySort.oldest:
-        return 'Oldest';
+        return isHr ? 'Najstarije' : 'Oldest';
       case LibrarySort.largest:
-        return 'Largest';
+        return isHr ? 'Najveće' : 'Largest';
       case LibrarySort.title:
-        return 'Title A-Z';
+        return isHr ? 'Naziv A-Z' : 'Title A-Z';
     }
   }
 
@@ -88,6 +94,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final libraryNotifier = ref.read(mediaLibraryProvider.notifier);
     final settings = ref.watch(settingsProvider);
     final isDark = settings.isDarkMode;
+    final l10n = L10n(settings.language);
 
     final items = libraryState.filteredItems;
     final videoCount = libraryState.items.where((e) => !e.isAudio).length;
@@ -138,7 +145,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         fontSize: 13,
                       ),
                       decoration: InputDecoration(
-                        hintText: 'Search ${libraryState.items.length} downloaded media files...',
+                        hintText: l10n.searchDownloaded(libraryState.items.length),
                         hintStyle: TextStyle(
                           color: isDark ? AppColors.outline : const Color(0xFF94A3B8),
                           fontSize: 13,
@@ -168,7 +175,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               child: Row(
                 children: [
                   _buildCategoryChip(
-                    title: 'All (${libraryState.items.length})',
+                    title: l10n.categoryAll(libraryState.items.length),
                     icon: Icons.check_rounded,
                     isSelected: libraryState.selectedCategory == LibraryCategory.all,
                     onTap: () => libraryNotifier.setCategory(LibraryCategory.all),
@@ -176,7 +183,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   ),
                   const SizedBox(width: 8),
                   _buildCategoryChip(
-                    title: 'Videos ($videoCount)',
+                    title: l10n.categoryVideos(videoCount),
                     icon: Icons.movie_rounded,
                     isSelected: libraryState.selectedCategory == LibraryCategory.videos,
                     onTap: () => libraryNotifier.setCategory(LibraryCategory.videos),
@@ -184,7 +191,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   ),
                   const SizedBox(width: 8),
                   _buildCategoryChip(
-                    title: 'Audio ($audioCount)',
+                    title: l10n.categoryAudio(audioCount),
                     icon: Icons.headphones_rounded,
                     isSelected: libraryState.selectedCategory == LibraryCategory.audio,
                     onTap: () => libraryNotifier.setCategory(LibraryCategory.audio),
@@ -192,7 +199,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   ),
                   const SizedBox(width: 8),
                   _buildCategoryChip(
-                    title: 'Favorites (${libraryState.items.where((e) => e.isFavorite).length})',
+                    title: l10n.categoryFavorites(libraryState.items.where((e) => e.isFavorite).length),
                     icon: Icons.favorite_rounded,
                     isSelected: libraryState.selectedCategory == LibraryCategory.favorites,
                     onTap: () => libraryNotifier.setCategory(LibraryCategory.favorites),
@@ -239,14 +246,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Local Storage Used',
+                                    l10n.localStorageUsed,
                                     style: TextStyle(
                                       fontSize: 11,
                                       color: isDark ? AppColors.onSurfaceVariant : const Color(0xFF64748B),
                                     ),
                                   ),
                                   Text(
-                                    _calculateRealStorageUsed(libraryState.items),
+                                    _calculateRealStorageUsed(libraryState.items, settings.language),
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       fontSize: 13,
@@ -353,7 +360,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                               child: Row(
                                 children: [
                                   Text(
-                                    _sortLabel(libraryState.sort),
+                                    _sortLabel(libraryState.sort, settings.language),
                                     style: TextStyle(
                                       fontSize: 11,
                                       color: isDark ? AppColors.onSurface : const Color(0xFF334155),
@@ -439,7 +446,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'No downloaded media files yet',
+                      l10n.noMediaYet,
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
@@ -448,7 +455,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Videos and audio tracks you download will appear here and can be played directly inside AllDown.',
+                      l10n.noMediaYetSub,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 12,
