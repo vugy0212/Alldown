@@ -187,3 +187,4 @@ class L10n {
   String get exportVideo => isHr ? 'Izvezi video' : 'Export Video';
   String get processingVideo => isHr ? 'Obrada u tijeku...' : 'Processing video...';
 }
+
