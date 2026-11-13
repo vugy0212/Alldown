@@ -2,6 +2,16 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.5.2] - 2026-11-13
+
+### Fixed
+- **YouTube Audio Download 1MB Buffer Hang & 403 Forbidden:**
+  - Resolved an issue where YouTube audio downloads stalled indefinitely at "Connecting..." or failed with HTTP 403 after downloading 1 MB. YouTube recently enforced strict 1 MB buffer limits on adaptive audio-only streams (`audioOnly`) for mobile clients when playback authorization tokens are missing.
+  - Implemented automatic fallback to high-speed muxed streams (`itag 18`, 360p MP4 with AAC stereo audio) containing `ratebypass=yes`. This bypasses YouTube's adaptive audio throttling entirely, downloading at full network speed (15-20+ MB/s) without bot checks or rate limits.
+  - Preserved lossless audio playback: saved files are extracted directly into the `Music/` folder as `.m4a` containers, fully recognized and indexed as native audio tracks by Android MediaStore, ExoPlayer, and third-party media players.
+  - Added an 8-second manifest timeout to prevent background downloads from hanging indefinitely in silent retry loops.
+  - Switched InnerTube client discovery to pure `YoutubeApiClient.androidSdkless` with `requireWatchPage: false` for instant stream metadata extraction.
+
 ## [1.5.1] - 2026-11-13
 
 ### Fixed & Improved

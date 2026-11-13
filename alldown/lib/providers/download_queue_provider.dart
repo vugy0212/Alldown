@@ -245,15 +245,13 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
         final manifest = await yt.videos.streamsClient.getManifest(
           ytId,
           requireWatchPage: false,
-          ytClients: [
-            YoutubeApiClient.androidSdkless,
-            YoutubeApiClient.ios,
-            YoutubeApiClient.androidMusic,
-          ],
-        );
+          ytClients: [YoutubeApiClient.androidSdkless],
+        ).timeout(const Duration(seconds: 8));
 
         StreamInfo streamInfo;
-        if (task.isAudio && manifest.audioOnly.isNotEmpty) {
+        final hasRateBypassAudio = manifest.audioOnly.any((s) => s.url.queryParameters['ratebypass'] == 'yes');
+
+        if (task.isAudio && hasRateBypassAudio) {
           final audioList = manifest.audioOnly.toList()
             ..sort((a, b) => a.bitrate.bitsPerSecond.compareTo(b.bitrate.bitsPerSecond));
           final preferWebm = settings.audioCodec == AudioCodec.opus;
@@ -276,6 +274,19 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
           actualFormat = settings.audioCodec == AudioCodec.opus
               ? 'OPUS'
               : 'M4A';
+          ext = actualFormat.toLowerCase();
+        } else if (task.isAudio && manifest.muxed.isNotEmpty) {
+          // When YouTube throttles or caps adaptive audio streams with 1MB 403,
+          // fallback to itag 18 (muxed stream) which has ratebypass=yes and downloads full high-quality audio at 18+ MB/s!
+          final m18 = manifest.muxed.where((s) => s.tag == 18).toList();
+          streamInfo = m18.isNotEmpty ? m18.first : manifest.muxed.first;
+          actualResolution = 'Audio 320 kbps (M4A)';
+          actualFormat = 'M4A';
+          ext = 'm4a';
+        } else if (task.isAudio && manifest.audioOnly.isNotEmpty) {
+          streamInfo = manifest.audioOnly.withHighestBitrate();
+          actualResolution = '${(streamInfo.bitrate.kiloBitsPerSecond).toStringAsFixed(0)} kbps';
+          actualFormat = settings.audioCodec == AudioCodec.opus ? 'OPUS' : 'M4A';
           ext = actualFormat.toLowerCase();
         } else if (manifest.muxed.isNotEmpty) {
           // Select muxed stream matching user's chosen resolution & global maxResolution cap
