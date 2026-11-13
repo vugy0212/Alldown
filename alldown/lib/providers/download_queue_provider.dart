@@ -209,7 +209,7 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
       String actualFormat = task.isAudio
           ? (settings.audioCodec == AudioCodec.opus
               ? 'OPUS'
-              : (settings.audioCodec == AudioCodec.aac ? 'M4A' : 'MP3'))
+              : 'M4A')
           : (settings.autoRemuxToMp4 ? 'MP4' : settings.videoContainer.toUpperCase());
       String ext = actualFormat.toLowerCase();
       String realDuration = task.duration;
@@ -265,7 +265,7 @@ class DownloadQueueNotifier extends StateNotifier<List<DownloadTask>> {
           actualResolution = '${(streamInfo.bitrate.kiloBitsPerSecond).toStringAsFixed(0)} kbps';
           actualFormat = settings.audioCodec == AudioCodec.opus
               ? 'OPUS'
-              : (settings.audioCodec == AudioCodec.aac ? 'M4A' : 'MP3');
+              : 'M4A';
           ext = actualFormat.toLowerCase();
         } else if (manifest.muxed.isNotEmpty) {
           // Select muxed stream matching user's chosen resolution & global maxResolution cap

@@ -77,7 +77,7 @@ void main() {
       expect(settings.maxConcurrentDownloads, 3);
       expect(settings.wifiOnly, isTrue);
       expect(settings.autoRemuxToMp4, isTrue);
-      expect(settings.audioCodec, AudioCodec.mp3);
+      expect(settings.audioCodec, AudioCodec.aac);
       expect(settings.maxResolution, MaxResolution.res1080p);
       expect(settings.organizeByPlatform, isFalse);
 

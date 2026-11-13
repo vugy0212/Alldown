@@ -1,5 +1,4 @@
 enum AudioCodec {
-  mp3,
   aac,
   opus,
 }
@@ -41,7 +40,7 @@ class AppSettings {
     this.wifiOnly = true,
     this.autoRetry = true,
     this.autoRemuxToMp4 = true,
-    this.audioCodec = AudioCodec.mp3,
+    this.audioCodec = AudioCodec.aac,
     this.maxResolution = MaxResolution.res1080p,
     this.organizeByPlatform = false,
     this.ytDlpVersion = "v2025.01.26-nightly",
@@ -178,7 +177,7 @@ class AppSettings {
       autoRemuxToMp4: json['autoRemuxToMp4'] as bool? ?? true,
       audioCodec: AudioCodec.values.firstWhere(
         (e) => e.name == json['audioCodec'],
-        orElse: () => AudioCodec.mp3,
+        orElse: () => AudioCodec.aac,
       ),
       maxResolution: _parseMaxResolution(json['maxResolution'] as String?),
       organizeByPlatform: json['organizeByPlatform'] as bool? ?? false,

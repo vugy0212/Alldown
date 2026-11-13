@@ -101,9 +101,18 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             Container(
               height: 48,
               decoration: BoxDecoration(
-                color: AppColors.surfaceContainer,
+                color: AppColors.isDark ? AppColors.surfaceContainer : Colors.white,
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: AppColors.stroke, width: 1),
+                boxShadow: AppColors.isDark
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
               ),
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Row(
@@ -415,7 +424,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryContainer : AppColors.surfaceContainer,
+          color: isSelected
+              ? AppColors.primaryContainer
+              : (AppColors.isDark ? AppColors.surfaceContainer : Colors.white),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected ? Colors.transparent : AppColors.stroke,
@@ -428,7 +439,15 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     blurRadius: 8,
                   )
                 ]
-              : null,
+              : (!AppColors.isDark
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ]
+                  : null),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

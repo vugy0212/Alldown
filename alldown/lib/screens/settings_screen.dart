@@ -314,17 +314,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: Row(
                     children: [
                       _buildCodecTab(
-                        title: 'MP3 (Universal)',
-                        isSelected: settings.audioCodec == AudioCodec.mp3,
-                        onTap: () => notifier.setAudioCodec(AudioCodec.mp3),
-                      ),
-                      _buildCodecTab(
-                        title: 'M4A / AAC',
+                        title: 'M4A / AAC (Standard & Best Quality)',
                         isSelected: settings.audioCodec == AudioCodec.aac,
                         onTap: () => notifier.setAudioCodec(AudioCodec.aac),
                       ),
                       _buildCodecTab(
-                        title: 'Opus / FLAC',
+                        title: 'Opus (High Efficiency)',
                         isSelected: settings.audioCodec == AudioCodec.opus,
                         onTap: () => notifier.setAudioCodec(AudioCodec.opus),
                       ),
@@ -770,7 +765,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           icon: Icons.play_circle_fill_rounded,
                           iconColor: Colors.redAccent,
                           name: 'YouTube & YouTube Shorts',
-                          description: '4K, 1080p, 720p, 480p & MP3/M4A/Opus audio',
+                          description: '4K, 1080p, 720p, 480p & M4A/Opus audio',
                           badge: 'ACTIVE',
                         ),
                         _buildServiceRow(
@@ -1110,31 +1105,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                         ),
                       ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // GitHub Repo Link Button
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.onSurface,
-                      side: BorderSide(color: AppColors.stroke, width: 1.2),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: () => launchUrl(
-                      Uri.parse('https://github.com/vugy0212/Alldown'),
-                      mode: LaunchMode.externalApplication,
-                    ),
-                    icon: Icon(Icons.open_in_browser_rounded, size: 18, color: AppColors.primary),
-                    label: const Text(
-                      'Visit GitHub Repository',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),

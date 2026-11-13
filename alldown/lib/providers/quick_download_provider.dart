@@ -316,7 +316,7 @@ class QuickDownloadNotifier extends StateNotifier<QuickDownloadState> {
     final String formatLabel = isAudio
         ? (settings.audioCodec == AudioCodec.opus
             ? "Opus Audio"
-            : (settings.audioCodec == AudioCodec.aac ? "M4A Audio" : "MP3 Audio"))
+            : "M4A Audio")
         : (isCustomRaw ? "Raw Stream" : "${settings.videoContainer} Video");
 
     final newTask = DownloadTask(

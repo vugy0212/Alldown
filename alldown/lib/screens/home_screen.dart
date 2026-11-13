@@ -50,7 +50,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   String _selectedActionLabel(DownloadOptions options, AppSettings settings) {
     if (options.format == TargetFormat.audioMp3) {
-      final codecName = settings.audioCodec == AudioCodec.opus ? 'Opus' : (settings.audioCodec == AudioCodec.aac ? 'M4A' : 'MP3/M4A');
+      final codecName = settings.audioCodec == AudioCodec.opus ? 'Opus' : 'M4A';
       switch (options.audioQuality) {
         case AudioQuality.kbps320:
           return '320 kbps $codecName';
@@ -107,7 +107,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (options.format == TargetFormat.audioMp3) {
       final codecDesc = settings.audioCodec == AudioCodec.opus
           ? 'Opus / WebM Audio'
-          : (settings.audioCodec == AudioCodec.aac ? 'M4A / AAC (Lossless Stream)' : 'M4A / MP3 Audio');
+          : 'M4A / AAC (Lossless Stream)';
       switch (options.audioQuality) {
         case AudioQuality.kbps320:
           return 'Master Studio • 320 kbps • $codecDesc';
@@ -139,7 +139,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final audioTabTitle = settings.audioCodec == AudioCodec.opus
         ? 'Audio (Opus)'
-        : (settings.audioCodec == AudioCodec.aac ? 'Audio (M4A)' : 'Audio (M4A/MP3)');
+        : 'Audio (M4A)';
 
     if (_urlController.text != state.url) {
       _urlController.value = TextEditingValue(
@@ -807,9 +807,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               title: '320 kbps (High Quality)',
                               subtitle: settings.audioCodec == AudioCodec.opus
                                   ? 'Opus / WebM • Pristine Audio • ~2.4 MB/min'
-                                  : (settings.audioCodec == AudioCodec.aac
-                                      ? 'M4A / AAC • Pristine Audio • ~2.4 MB/min'
-                                      : 'M4A / MP3 • Pristine Audio • ~2.4 MB/min'),
+                                  : 'M4A / AAC • Pristine Audio • ~2.4 MB/min',
                               size: media?.estimateSizeForQuality(VideoQuality.res1080p, true, AudioQuality.kbps320) ?? 'Auto',
                               badge: 'Recommended',
                               tag: '320k',
@@ -822,9 +820,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               title: '256 kbps (Standard)',
                               subtitle: settings.audioCodec == AudioCodec.opus
                                   ? 'Opus • High Fidelity VBR • ~1.9 MB/min'
-                                  : (settings.audioCodec == AudioCodec.aac
-                                      ? 'M4A / AAC • High Fidelity VBR • ~1.9 MB/min'
-                                      : 'M4A / MP3 • High Fidelity VBR • ~1.9 MB/min'),
+                                  : 'M4A / AAC • High Fidelity VBR • ~1.9 MB/min',
                               size: media?.estimateSizeForQuality(VideoQuality.res1080p, true, AudioQuality.kbps256) ?? 'Auto',
                               tag: '256k',
                               icon: Icons.graphic_eq_rounded,
@@ -836,9 +832,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               title: '192 kbps (Medium)',
                               subtitle: settings.audioCodec == AudioCodec.opus
                                   ? 'Opus • Balanced Quality • ~1.4 MB/min'
-                                  : (settings.audioCodec == AudioCodec.aac
-                                      ? 'M4A / AAC • Balanced Quality • ~1.4 MB/min'
-                                      : 'M4A / MP3 • Balanced Quality • ~1.4 MB/min'),
+                                  : 'M4A / AAC • Balanced Quality • ~1.4 MB/min',
                               size: media?.estimateSizeForQuality(VideoQuality.res1080p, true, AudioQuality.kbps192) ?? 'Auto',
                               tag: '192k',
                               icon: Icons.audiotrack_rounded,
@@ -850,9 +844,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               title: '128 kbps (Saver)',
                               subtitle: settings.audioCodec == AudioCodec.opus
                                   ? 'Opus • Voice/Podcast • ~1.0 MB/min'
-                                  : (settings.audioCodec == AudioCodec.aac
-                                      ? 'M4A / AAC • Voice/Podcast • ~1.0 MB/min'
-                                      : 'M4A / MP3 • Voice/Podcast • ~1.0 MB/min'),
+                                  : 'M4A / AAC • Voice/Podcast • ~1.0 MB/min',
                               size: media?.estimateSizeForQuality(VideoQuality.res1080p, true, AudioQuality.kbps128) ?? 'Auto',
                               tag: '128k',
                               icon: Icons.music_note_rounded,

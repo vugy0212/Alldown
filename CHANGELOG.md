@@ -2,6 +2,17 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.3.8] - 2026-11-13
+
+### Fixed & Improved
+- **Library Screen Full Light Theme Support:**
+  - Fixed dark elements remaining in Light Mode by updating header, status bar, search inputs, filter category chips, and media cards to crisp, high-contrast light surfaces (`#FFFFFF` cards with subtle ambient elevation).
+- **Settings UI Decluttering:**
+  - Removed "Visit GitHub Repository" button from the About section to keep the UI clean, distraction-free, and end-user friendly.
+- **Audio Extraction Streamlining (M4A / AAC Standard):**
+  - Unified audio options into lossless stream **M4A / AAC** (the modern standard supported across 100% of Android, iOS, Windows, and car infotainment systems) and high-efficiency **Opus**.
+  - Eliminated redundant and lossy re-encoded MP3 toggles since online media platforms stream in native AAC.
+
 ## [1.3.7] - 2026-11-13
 
 ### Fixed & Improved
