@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/app_settings.dart';
 import '../models/download_options.dart';
 import '../models/download_task.dart';
+import '../models/playlist_info.dart';
 import '../services/metadata_fetcher_service.dart';
 import 'download_queue_provider.dart';
 import 'settings_provider.dart';
@@ -77,6 +78,7 @@ class QuickDownloadState {
   final bool isReady;
   final String analyzeButtonText;
   final DetectedMedia? detectedMedia;
+  final PlaylistInfo? detectedPlaylist;
   final DownloadOptions options;
   final bool isDownloadAdded;
 
@@ -86,6 +88,7 @@ class QuickDownloadState {
     this.isReady = false,
     this.analyzeButtonText = "Fetch & Analyze Media",
     this.detectedMedia,
+    this.detectedPlaylist,
     this.options = const DownloadOptions(),
     this.isDownloadAdded = false,
   });
@@ -96,7 +99,9 @@ class QuickDownloadState {
     bool? isReady,
     String? analyzeButtonText,
     DetectedMedia? detectedMedia,
+    PlaylistInfo? detectedPlaylist,
     bool clearMedia = false,
+    bool clearPlaylist = false,
     DownloadOptions? options,
     bool? isDownloadAdded,
   }) {
@@ -106,6 +111,7 @@ class QuickDownloadState {
       isReady: isReady ?? this.isReady,
       analyzeButtonText: analyzeButtonText ?? this.analyzeButtonText,
       detectedMedia: clearMedia ? null : (detectedMedia ?? this.detectedMedia),
+      detectedPlaylist: clearPlaylist ? null : (detectedPlaylist ?? this.detectedPlaylist),
       options: options ?? this.options,
       isDownloadAdded: isDownloadAdded ?? this.isDownloadAdded,
     );
@@ -172,11 +178,12 @@ class QuickDownloadNotifier extends StateNotifier<QuickDownloadState> {
     final trimmed = url.trim();
     state = state.copyWith(url: url);
     if (trimmed.isEmpty) {
-      state = state.copyWith(clearMedia: true, isReady: false);
+      state = state.copyWith(clearMedia: true, clearPlaylist: true, isReady: false);
       return;
     }
     if (trimmed.startsWith('http') ||
         MetadataFetcherService.extractYouTubeId(trimmed) != null ||
+        MetadataFetcherService.extractPlaylistId(trimmed) != null ||
         trimmed.contains('youtu') ||
         trimmed.contains('tiktok') ||
         trimmed.contains('instagram') ||
@@ -194,17 +201,45 @@ class QuickDownloadNotifier extends StateNotifier<QuickDownloadState> {
   }
 
   void clearUrl() {
-    state = state.copyWith(url: "", clearMedia: true, isReady: false);
+    state = state.copyWith(url: "", clearMedia: true, clearPlaylist: true, isReady: false);
   }
 
   Future<void> fetchMetadata() async {
     final currentUrl = state.url.trim();
-    if (currentUrl.isEmpty) return;
+    if (currentUrl.isEmpty || state.isAnalyzing) return;
 
     state = state.copyWith(
       isAnalyzing: true,
       analyzeButtonText: "Analyzing video & streams...",
     );
+
+    // 1. Check if URL contains YouTube Playlist ID
+    final playlistId = MetadataFetcherService.extractPlaylistId(currentUrl);
+    if (playlistId != null) {
+      try {
+        final playlist = await MetadataFetcherService.fetchPlaylistInfo(playlistId);
+        if (playlist != null && playlist.items.isNotEmpty) {
+          if (mounted) {
+            state = state.copyWith(
+              isAnalyzing: false,
+              isReady: true,
+              detectedPlaylist: playlist,
+              clearMedia: true,
+              options: state.options.copyWith(
+                format: TargetFormat.audioMp3,
+                audioQuality: AudioQuality.kbps320,
+              ),
+              analyzeButtonText: "Playlist Loaded!",
+            );
+          }
+          await Future.delayed(const Duration(milliseconds: 1500));
+          if (mounted) {
+            state = state.copyWith(analyzeButtonText: "Fetch & Analyze Media");
+          }
+          return;
+        }
+      } catch (_) {}
+    }
 
     try {
       final realInfo = await MetadataFetcherService.fetchMediaInfo(currentUrl);
@@ -213,6 +248,7 @@ class QuickDownloadNotifier extends StateNotifier<QuickDownloadState> {
           isAnalyzing: false,
           isReady: true,
           detectedMedia: realInfo,
+          clearPlaylist: true,
           analyzeButtonText: "Metadata Loaded!",
         );
       }
@@ -220,7 +256,7 @@ class QuickDownloadNotifier extends StateNotifier<QuickDownloadState> {
       if (mounted) {
         state = state.copyWith(
           isAnalyzing: false,
-          isReady: state.detectedMedia != null,
+          isReady: state.detectedMedia != null || state.detectedPlaylist != null,
           analyzeButtonText: "Fetch & Analyze Media",
         );
       }
@@ -347,5 +383,70 @@ class QuickDownloadNotifier extends StateNotifier<QuickDownloadState> {
       }
     });
     return true;
+  }
+
+  void togglePlaylistItem(String itemId, bool isSelected) {
+    if (state.detectedPlaylist == null) return;
+    final updatedItems = state.detectedPlaylist!.items.map((item) {
+      if (item.id == itemId) {
+        return item.copyWith(isSelected: isSelected);
+      }
+      return item;
+    }).toList();
+    state = state.copyWith(
+      detectedPlaylist: state.detectedPlaylist!.copyWith(items: updatedItems),
+    );
+  }
+
+  void selectAllPlaylistItems(bool selectAll) {
+    if (state.detectedPlaylist == null) return;
+    final updatedItems = state.detectedPlaylist!.items.map((item) {
+      return item.copyWith(isSelected: selectAll);
+    }).toList();
+    state = state.copyWith(
+      detectedPlaylist: state.detectedPlaylist!.copyWith(items: updatedItems),
+    );
+  }
+
+  int enqueueSelectedPlaylistItems() {
+    final playlist = state.detectedPlaylist;
+    if (playlist == null) return 0;
+    final selected = playlist.items.where((i) => i.isSelected).toList();
+    if (selected.isEmpty) return 0;
+
+    final queueNotifier = _ref.read(downloadQueueProvider.notifier);
+    final settings = _ref.read(settingsProvider);
+    final audioFormatLabel = settings.audioCodec == AudioCodec.opus ? "Opus Audio" : "M4A Audio";
+
+    for (int i = 0; i < selected.length; i++) {
+      final item = selected[i];
+      final task = DownloadTask(
+        id: "pl_${item.id}_${DateTime.now().millisecondsSinceEpoch}_$i",
+        title: item.title,
+        url: 'https://www.youtube.com/watch?v=${item.id}',
+        thumbnailUrl: item.thumbnailUrl,
+        duration: item.duration,
+        format: audioFormatLabel,
+        resolution: "Audio 320 kbps (HQ)",
+        sizeFormatted: item.estimateSize(state.options.audioQuality),
+        progress: 0.0,
+        speed: "Queued",
+        eta: "Waiting slot",
+        downloadedBytes: "0.0 MB",
+        totalBytes: item.estimateSize(state.options.audioQuality),
+        status: DownloadStatus.queued,
+        isAudio: true,
+        platform: "YouTube",
+      );
+      queueNotifier.addTask(task);
+    }
+
+    state = state.copyWith(isDownloadAdded: true);
+    Future.delayed(const Duration(milliseconds: 2200), () {
+      if (mounted) {
+        state = state.copyWith(isDownloadAdded: false);
+      }
+    });
+    return selected.length;
   }
 }

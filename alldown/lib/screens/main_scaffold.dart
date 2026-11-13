@@ -58,7 +58,6 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
   void _handleSharedUrl(String url) {
     setState(() => _currentIndex = 0);
     ref.read(quickDownloadProvider.notifier).setUrl(url);
-    ref.read(quickDownloadProvider.notifier).fetchMetadata();
   }
 
   @override

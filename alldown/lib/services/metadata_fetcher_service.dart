@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
+import '../models/playlist_info.dart';
 import '../providers/quick_download_provider.dart';
 import 'remote_rules_service.dart';
 
@@ -72,6 +73,274 @@ class MetadataFetcherService {
     } catch (_) {}
 
     return null;
+  }
+
+  static final RegExp _playlistRegex = RegExp(
+    r'[?&]list=([a-zA-Z0-9_-]+)',
+    caseSensitive: false,
+  );
+
+  /// Extracts YouTube Playlist ID if present
+  static String? extractPlaylistId(String input) {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty) return null;
+
+    final match = _playlistRegex.firstMatch(trimmed);
+    if (match != null && match.group(1) != null) {
+      final id = match.group(1)!;
+      if (id.length >= 2 && id != 'WL') {
+        return id;
+      }
+    }
+
+    try {
+      final uri = Uri.parse(trimmed.startsWith('http') ? trimmed : 'https://$trimmed');
+      final listParam = uri.queryParameters['list'];
+      if (listParam != null && listParam.isNotEmpty && listParam != 'WL') {
+        return listParam;
+      }
+    } catch (_) {}
+
+    return null;
+  }
+
+  static int _parseDurationSeconds(String durationStr) {
+    try {
+      final parts = durationStr.trim().split(':').map((p) => int.tryParse(p) ?? 0).toList();
+      if (parts.length == 2) {
+        return parts[0] * 60 + parts[1];
+      } else if (parts.length == 3) {
+        return parts[0] * 3600 + parts[1] * 60 + parts[2];
+      }
+    } catch (_) {}
+    return 210;
+  }
+
+  /// Fetches playlist metadata and track items
+  static Future<PlaylistInfo?> fetchPlaylistInfo(String playlistId) async {
+    final cleanId = playlistId.trim();
+    if (cleanId.isEmpty) return null;
+
+    final browseId = cleanId.startsWith('VL') ? cleanId : 'VL$cleanId';
+
+    // 1. High-speed YouTube InnerTube JSON API (works across mobile & emulator networks)
+    try {
+      final apiUrl = Uri.parse('https://www.youtube.com/youtubei/v1/browse?prettyPrint=false');
+      final payload = jsonEncode({
+        'context': {
+          'client': {
+            'hl': 'en',
+            'gl': 'US',
+            'clientName': 'WEB',
+            'clientVersion': '2.20240101.00.00',
+          }
+        },
+        'browseId': browseId,
+      });
+
+      final resp = await http.post(
+        apiUrl,
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+        },
+        body: payload,
+      ).timeout(const Duration(seconds: 8));
+
+      if (resp.statusCode == 200 && resp.body.isNotEmpty) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final parsed = _parsePlaylistJson(cleanId, data);
+        // ignore: avoid_print
+        print('[fetchPlaylistInfo InnerTube] parsed: ${parsed?.title}, count: ${parsed?.items.length}');
+        if (parsed != null && parsed.items.isNotEmpty) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print('[fetchPlaylistInfo InnerTube] Error: $e');
+    }
+
+    // 2. Direct HTML scraping fallback
+    final url = 'https://www.youtube.com/playlist?list=$cleanId&hl=en&persist_hl=1';
+    try {
+      final resp = await http.get(
+        Uri.parse(url),
+        headers: {
+          'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      if (resp.statusCode == 200 && resp.body.isNotEmpty) {
+        final match = RegExp(r'var ytInitialData\s*=\s*(\{.+?\});<\/script>').firstMatch(resp.body);
+        if (match != null) {
+          final data = jsonDecode(match.group(1)!) as Map<String, dynamic>;
+          final parsed = _parsePlaylistJson(cleanId, data);
+          // ignore: avoid_print
+          print('[fetchPlaylistInfo HTML] parsed: ${parsed?.title}, count: ${parsed?.items.length}');
+          if (parsed != null && parsed.items.isNotEmpty) {
+            return parsed;
+          }
+        }
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print('[fetchPlaylistInfo HTML] Error: $e');
+    }
+
+    return null;
+  }
+
+  static PlaylistInfo? _parsePlaylistJson(String cleanId, Map<String, dynamic> data) {
+    try {
+      // 1. Playlist Title
+      String title = 'YouTube Playlist';
+      final metaRenderer = data['metadata']?['playlistMetadataRenderer'] as Map<String, dynamic>?;
+      if (metaRenderer?['title'] != null && (metaRenderer!['title'] as String).trim().isNotEmpty) {
+        title = (metaRenderer['title'] as String).trim();
+      } else {
+        final sidebar = data['sidebar']?['playlistSidebarRenderer'] as Map<String, dynamic>?;
+        final items = sidebar?['items'] as List?;
+        if (items != null && items.isNotEmpty) {
+          final pir = (items[0] as Map<String, dynamic>)['playlistSidebarPrimaryInfoRenderer'] as Map<String, dynamic>?;
+          final runs = pir?['title']?['runs'] as List?;
+          if (runs != null && runs.isNotEmpty) {
+            title = (runs[0]['text'] as String? ?? title).trim();
+          }
+        }
+      }
+
+      // 2. Author / Owner
+      String author = 'YouTube';
+      final sidebar = data['sidebar']?['playlistSidebarRenderer'] as Map<String, dynamic>?;
+      final sbItems = sidebar?['items'] as List?;
+      if (sbItems != null && sbItems.length > 1) {
+        final sir = (sbItems[1] as Map<String, dynamic>)['playlistSidebarSecondaryInfoRenderer'] as Map<String, dynamic>?;
+        final vor = sir?['videoOwner']?['videoOwnerRenderer'] as Map<String, dynamic>?;
+        final runs = vor?['title']?['runs'] as List?;
+        if (runs != null && runs.isNotEmpty) {
+          author = (runs[0]['text'] as String? ?? author).trim();
+        }
+      }
+
+      // 3. Tracks
+      final List<PlaylistItem> trackItems = [];
+      final contents = data['contents']?['twoColumnBrowseResultsRenderer']?['tabs'] as List?;
+      if (contents != null && contents.isNotEmpty) {
+        final tab0 = contents[0] as Map<String, dynamic>;
+        final sectionContents = tab0['tabRenderer']?['content']?['sectionListRenderer']?['contents'] as List?;
+        if (sectionContents != null && sectionContents.isNotEmpty) {
+          final s0 = sectionContents[0] as Map<String, dynamic>;
+          final itemContents = s0['itemSectionRenderer']?['contents'] as List?;
+          if (itemContents != null && itemContents.isNotEmpty) {
+            for (final rawItem in itemContents) {
+              if (rawItem is! Map<String, dynamic>) continue;
+
+              // Modern YouTube: lockupViewModel
+              if (rawItem.containsKey('lockupViewModel')) {
+                final lockup = rawItem['lockupViewModel'] as Map<String, dynamic>;
+                final videoId = lockup['contentId'] as String?;
+                if (videoId == null || videoId.isEmpty) continue;
+
+                // Title
+                String itemTitle = 'Track';
+                final meta = lockup['metadata']?['lockupMetadataViewModel'] as Map<String, dynamic>?;
+                if (meta?['title']?['content'] != null) {
+                  itemTitle = (meta!['title']['content'] as String).trim();
+                } else {
+                  final a11y = lockup['rendererContext']?['accessibilityContext']?['label'] as String?;
+                  if (a11y != null && a11y.isNotEmpty) {
+                    itemTitle = a11y;
+                  }
+                }
+
+                // Author
+                String itemAuthor = author;
+                final metaRows = meta?['metadata']?['contentMetadataViewModel']?['metadataRows'] as List?;
+                if (metaRows != null && metaRows.isNotEmpty) {
+                  final parts = (metaRows[0] as Map<String, dynamic>)['metadataParts'] as List?;
+                  if (parts != null && parts.isNotEmpty) {
+                    final txt = (parts[0] as Map<String, dynamic>)['text']?['content'] as String?;
+                    if (txt != null && txt.trim().isNotEmpty) {
+                      itemAuthor = txt.trim();
+                    }
+                  }
+                }
+
+                // Duration
+                String duration = '3:30';
+                final overlays = lockup['contentImage']?['thumbnailViewModel']?['overlays'] as List?;
+                if (overlays != null && overlays.isNotEmpty) {
+                  final badges = (overlays[0] as Map<String, dynamic>)['thumbnailBottomOverlayViewModel']?['badges'] as List?;
+                  if (badges != null && badges.isNotEmpty) {
+                    final badgeText = (badges[0] as Map<String, dynamic>)['thumbnailBadgeViewModel']?['text'] as String?;
+                    if (badgeText != null && badgeText.trim().isNotEmpty) {
+                      duration = badgeText.trim();
+                    }
+                  }
+                }
+
+                final durSec = _parseDurationSeconds(duration);
+                final thumb = 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg';
+
+                trackItems.add(PlaylistItem(
+                  id: videoId,
+                  title: itemTitle,
+                  author: itemAuthor,
+                  duration: duration,
+                  durationSeconds: durSec,
+                  thumbnailUrl: thumb,
+                  isSelected: true,
+                ));
+              }
+              // Legacy YouTube: playlistVideoRenderer
+              else if (rawItem.containsKey('playlistVideoRenderer')) {
+                final pvr = rawItem['playlistVideoRenderer'] as Map<String, dynamic>;
+                final videoId = pvr['videoId'] as String?;
+                if (videoId == null || videoId.isEmpty) continue;
+
+                final titleRuns = pvr['title']?['runs'] as List?;
+                final itemTitle = titleRuns != null && titleRuns.isNotEmpty ? titleRuns[0]['text'] as String : 'Track';
+                final authorRuns = pvr['shortBylineText']?['runs'] as List?;
+                final itemAuthor = authorRuns != null && authorRuns.isNotEmpty ? authorRuns[0]['text'] as String : author;
+                final duration = pvr['lengthText']?['simpleText'] as String? ?? '3:30';
+                final durSec = _parseDurationSeconds(duration);
+
+                trackItems.add(PlaylistItem(
+                  id: videoId,
+                  title: itemTitle,
+                  author: itemAuthor,
+                  duration: duration,
+                  durationSeconds: durSec,
+                  thumbnailUrl: 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
+                  isSelected: true,
+                ));
+              }
+            }
+          }
+        }
+      }
+
+      if (trackItems.isEmpty) {
+        return null;
+      }
+
+      final playlistThumb = trackItems.first.thumbnailUrl;
+
+      return PlaylistInfo(
+        id: cleanId,
+        title: title,
+        author: author,
+        thumbnailUrl: playlistThumb,
+        totalTracks: trackItems.length,
+        items: trackItems,
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Extracts X / Twitter Status ID if present

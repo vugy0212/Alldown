@@ -54,6 +54,23 @@ class L10n {
   String get duration => isHr ? 'Trajanje' : 'Duration';
   String get views => isHr ? 'Pregleda' : 'Views';
 
+  // Playlist Strings
+  String get playlist => isHr ? 'Playlista' : 'Playlist';
+  String get youtubePlaylist => isHr ? 'YouTube Playlista' : 'YouTube Playlist';
+  String playlistTracksCount(int count) => isHr ? '$count pjesama' : '$count tracks';
+  String get audioModeBadge => 'Audio (M4A) • 320 kbps';
+  String downloadAllCount(int count) => isHr ? 'Preuzmi svih $count pjesama' : 'Download all $count tracks';
+  String get selectTracks => isHr ? 'Odaberi pjesme' : 'Select tracks';
+  String get selectTracksTitle => isHr ? 'Odaberi pjesme za preuzimanje' : 'Select tracks to download';
+  String get searchTracks => isHr ? 'Pretraži pjesme u playlisti...' : 'Search playlist tracks...';
+  String get selectAll => isHr ? 'Označi sve' : 'Select all';
+  String get deselectAll => isHr ? 'Odznači sve' : 'Deselect all';
+  String selectedTracksSummary(int sel, int total) => isHr ? 'Odabrano: $sel od $total pjesama' : 'Selected: $sel of $total tracks';
+  String downloadSelectedCount(int count) => isHr ? 'Preuzmi odabrano ($count)' : 'Download selected ($count)';
+  String playlistQueuedMessage(int count) => isHr ? 'Dodano $count pjesama u red čekanja' : 'Added $count tracks to queue';
+  String get noTracksSelected => isHr ? 'Nijedna pjesma nije odabrana' : 'No tracks selected';
+  String get audioOnlyPlaylistNotice => isHr ? 'Automatski M4A (320 kbps) za vrhunsku kvalitetu zvuka' : 'Default M4A (320 kbps) for crystal-clear audio';
+
   // Queue Screen
   String get active => isHr ? 'Aktivno' : 'Active';
   String get completed => isHr ? 'Dovršeno' : 'Completed';

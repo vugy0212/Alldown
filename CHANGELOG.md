@@ -2,7 +2,25 @@
 
 All notable changes to **AllDown** are documented in this file.
 
-## [1.4.0] - 2026-11-13
+## [1.5.0] - 2026-11-13
+
+### Added
+- **YouTube Playlist Audio Download Engine:**
+  - Full support for detecting, parsing, and extracting YouTube playlists (`/playlist?list=...` and `&list=...`).
+  - High-speed YouTube InnerTube API integration (`youtubei/v1/browse`) parsing complete playlist tracklists (100+ songs, titles, artists, thumbnails, durations) in under 200 ms with robust HTML fallback.
+  - Dedicated **Playlist Intake Card** on the Home screen showing playlist thumbnail banner, track count badge, audio-only format constraint badge (`Audio (M4A) • 320 kbps`), and dual action buttons: **Download All** and **Select Songs**.
+  - **Selective Track Picker Bottom Sheet (`PlaylistSelectionModal`):**
+    - Instant live search and filtering through all playlist songs.
+    - Global "Select All / Deselect All" toggle.
+    - Individual rounded checkboxes with track numbers, artwork thumbnails, duration tags, and estimated audio file size.
+    - Sticky bottom control bar showing live selected count and total download size calculation in megabytes.
+  - One-tap batch queuing of all or selected songs directly into the background download queue with lossless M4A / AAC 320 kbps audio settings.
+  - Bilingual Croatian & English localization across all playlist intake banners, modals, and notifications.
+
+### Changed & Improved
+- Auto-constrained playlist downloads to high-fidelity audio mode to ensure minimal bandwidth usage, instant queuing, and clean separation from single video downloads.
+- Clean Home Screen layout: hides video resolution accordions and single-video format selectors whenever a playlist is detected.
+
 
 ### Added
 - **Višejezična podrška (Croatian & English Multilingual Architecture):**
