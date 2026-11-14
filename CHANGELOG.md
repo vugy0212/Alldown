@@ -2,6 +2,15 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.6.5] - 2026-11-14
+
+### Fixed
+- **Equalizer Volume Booster / Loudness Enhancer Fix (Samsung One UI & Android 14+):**
+  - Resolved an issue where the Volume Booster (+0.0 to +30.0 dB) failed to amplify audio on Samsung Galaxy devices (including Galaxy S25 Ultra) due to Android 14/15 restrictions blocking `LoudnessEnhancer` attachment to global audio session 0.
+  - Linked `AudioFxManager` directly with active Media3 `ExoPlayer` instances via `VideoPlayerPlugin` reflection and `Player.Listener.onAudioSessionIdChanged(audioSessionId)`.
+  - Dynamically binds `LoudnessEnhancer`, `Equalizer`, and `BassBoost` to the true hardware audio session ID of the playback track, enabling full, crystal-clear hardware-accelerated volume amplification up to +30 dB.
+  - Initialized a default boost of +10 dB when toggling on the Volume Booster switch if gain was at 0 dB for immediate audible response.
+
 ## [1.6.4] - 2026-11-14
 
 ### Added

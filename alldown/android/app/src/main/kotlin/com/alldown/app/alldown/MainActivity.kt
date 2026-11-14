@@ -14,6 +14,14 @@ import com.alldown.app.alldown.video.VideoEditorHelper
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import androidx.media3.common.Player
+import androidx.media3.common.C
+import androidx.media3.exoplayer.ExoPlayer
+import io.flutter.plugins.videoplayer.VideoPlayerPlugin
+import io.flutter.plugins.videoplayer.VideoPlayer
+import android.util.LongSparseArray
+import java.util.Collections
+import java.util.WeakHashMap
 import java.io.File
 import java.io.FileOutputStream
 import java.net.CookieHandler
@@ -32,6 +40,45 @@ class MainActivity : FlutterActivity() {
     private var headlessWebView: WebView? = null
     private val audioFxManager = AudioFxManager()
     private var mediaSessionManager: MediaSessionManager? = null
+    private val listenedExoPlayers = Collections.newSetFromMap(WeakHashMap<ExoPlayer, Boolean>())
+
+    private fun syncActiveAudioSession(): Int {
+        try {
+            val engine = flutterEngine ?: return 0
+            val plugin = engine.plugins.get(VideoPlayerPlugin::class.java) ?: return 0
+            val field = VideoPlayerPlugin::class.java.getDeclaredField("videoPlayers")
+            field.isAccessible = true
+            val players = field.get(plugin) as? LongSparseArray<*> ?: return 0
+            if (players.size() > 0) {
+                for (i in 0 until players.size()) {
+                    val vp = players.valueAt(i) ?: continue
+                    val exoField = VideoPlayer::class.java.getDeclaredField("exoPlayer")
+                    exoField.isAccessible = true
+                    val exo = exoField.get(vp) as? ExoPlayer ?: continue
+
+                    if (!listenedExoPlayers.contains(exo)) {
+                        listenedExoPlayers.add(exo)
+                        exo.addListener(object : Player.Listener {
+                            override fun onAudioSessionIdChanged(audioSessionId: Int) {
+                                if (audioSessionId != 0 && audioSessionId != C.AUDIO_SESSION_ID_UNSET) {
+                                    audioFxManager.updateAudioSessionId(audioSessionId)
+                                }
+                            }
+                        })
+                    }
+
+                    val sessionId = exo.audioSessionId
+                    if (sessionId != 0 && sessionId != C.AUDIO_SESSION_ID_UNSET) {
+                        audioFxManager.updateAudioSessionId(sessionId)
+                        return sessionId
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MainActivity", "syncActiveAudioSession error: ${e.message}")
+        }
+        return 0
+    }
 
     inner class HeadlessWebBridge {
         private var callback: ((Int, String) -> Unit)? = null
@@ -473,6 +520,7 @@ class MainActivity : FlutterActivity() {
                         }
                     }
                     "updateMediaNotification" -> {
+                        syncActiveAudioSession()
                         val title = call.argument<String>("title") ?: "AllDown Audio"
                         val artist = call.argument<String>("artist") ?: ""
                         val isPlaying = call.argument<Boolean>("isPlaying") ?: false
@@ -488,27 +536,33 @@ class MainActivity : FlutterActivity() {
                         result.success(true)
                     }
                     "getEqualizerParams" -> {
+                        syncActiveAudioSession()
                         result.success(audioFxManager.getEqualizerParams())
                     }
                     "setEqualizerEnabled" -> {
+                        syncActiveAudioSession()
                         val enabled = call.argument<Boolean>("enabled") ?: false
                         result.success(audioFxManager.setEqualizerEnabled(enabled))
                     }
                     "setEqualizerBandLevel" -> {
+                        syncActiveAudioSession()
                         val band = call.argument<Int>("band") ?: 0
                         val level = call.argument<Int>("level") ?: 0
                         result.success(audioFxManager.setBandLevel(band, level))
                     }
                     "useEqualizerPreset" -> {
+                        syncActiveAudioSession()
                         val preset = call.argument<Int>("presetIndex") ?: 0
                         result.success(audioFxManager.usePreset(preset))
                     }
                     "setBassBoost" -> {
+                        syncActiveAudioSession()
                         val enabled = call.argument<Boolean>("enabled") ?: false
                         val strength = call.argument<Int>("strength") ?: 0
                         result.success(audioFxManager.setBassBoost(enabled, strength))
                     }
                     "setLoudness" -> {
+                        syncActiveAudioSession()
                         val enabled = call.argument<Boolean>("enabled") ?: false
                         val gainMb = call.argument<Int>("gainMb") ?: 0
                         result.success(audioFxManager.setLoudness(enabled, gainMb))

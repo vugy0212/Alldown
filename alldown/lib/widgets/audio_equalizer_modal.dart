@@ -375,8 +375,12 @@ class _AudioEqualizerModalState extends ConsumerState<AudioEqualizerModal> {
                                 activeThumbColor: AppColors.tertiary,
                                 onChanged: (val) async {
                                   HapticService.selection();
-                                  setState(() => _loudnessEnabled = val);
-                                  await _native.setLoudness(val, _loudnessGain);
+                                  final newGain = (val && _loudnessGain == 0) ? 1000 : _loudnessGain;
+                                  setState(() {
+                                    _loudnessEnabled = val;
+                                    _loudnessGain = newGain;
+                                  });
+                                  await _native.setLoudness(val, newGain);
                                 },
                               ),
                             ],
