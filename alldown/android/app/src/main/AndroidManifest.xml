@@ -46,11 +46,17 @@
             </intent-filter>
         </activity>
 
-        <!-- Foreground Service for background media downloads and audio playback -->
+        <!-- Foreground Service for background media downloads -->
         <service
             android:name=".service.DownloadForegroundService"
             android:exported="false"
             android:foregroundServiceType="dataSync|mediaPlayback" />
+
+        <!-- Foreground Service for background audio playback with lockscreen controls -->
+        <service
+            android:name=".service.AudioPlaybackService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
 
         <!-- Secure FileProvider for opening downloaded media externally on Android 7.0+ -->
         <provider

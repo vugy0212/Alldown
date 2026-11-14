@@ -280,7 +280,10 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
         }
       } catch (_) {}
 
-      final ctrl = VideoPlayerController.file(targetFile);
+      final ctrl = VideoPlayerController.file(
+        targetFile,
+        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+      );
       _controller = ctrl;
 
       await ctrl.initialize();

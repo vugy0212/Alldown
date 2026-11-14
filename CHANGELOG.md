@@ -2,6 +2,15 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.6.2] - 2026-11-14
+
+### Fixed
+- **Screen Lock Background Audio Playback & Battery Optimization (MIUI/HyperOS & Android 12-14):**
+  - Implemented dedicated `AudioPlaybackService` foreground service bound with `FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK` to prevent Android's process cgroup freezer from suspending audio decoding threads when the screen is locked or display turns off.
+  - Added CPU `PARTIAL_WAKE_LOCK` held continuously during active playback (`isPlaying == true`), guaranteeing zero stutter, pauses, or audio dropouts when device enters deep sleep. WakeLock is automatically released on pause or stop to conserve battery.
+  - Configured Flutter `VideoPlayerController.file` with `VideoPlayerOptions(mixWithOthers: true)` to avoid audio interruptions on surface destruction or lockscreen status bar transitions.
+  - Seamless lockscreen notification transport controls (`Previous`, `Play/Pause`, `Next`, `Close`) dynamically synchronized with the foreground service.
+
 ## [1.6.1] - 2026-11-14
 
 ### Fixed

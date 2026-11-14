@@ -15,6 +15,7 @@ import android.media.session.PlaybackState
 import android.os.Build
 import android.util.Log
 import com.alldown.app.alldown.MainActivity
+import com.alldown.app.alldown.service.AudioPlaybackService
 import io.flutter.plugin.common.MethodChannel
 
 class MediaSessionManager(
@@ -308,14 +309,16 @@ class MediaSessionManager(
                 }
             }
 
-            manager.notify(NOTIFICATION_ID, builder.build())
+            val notification = builder.build()
+            AudioPlaybackService.startOrUpdateService(context, notification, isPlaying)
         } catch (e: Exception) {
-            Log.w(TAG, "NotificationManager notify failed: ${e.message}")
+            Log.w(TAG, "Notification or AudioPlaybackService update failed: ${e.message}")
         }
     }
 
     fun stopMedia() {
         isPlaying = false
+        AudioPlaybackService.stopService(context)
         if (isReceiverRegistered) {
             try {
                 context.unregisterReceiver(becomingNoisyReceiver)
