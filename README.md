@@ -4,7 +4,7 @@
   <p><b>Universal Media Downloader, Pro Audio Studio & HD Video/GIF Editor for Android</b></p>
 
   <p>
-    <a href="https://github.com/vugy0212/Alldown/releases"><img src="https://img.shields.io/badge/Version-1.6.5-6366F1?style=for-the-badge&logo=android&logoColor=white" alt="Version 1.6.5" /></a>
+    <a href="https://github.com/vugy0212/Alldown/releases"><img src="https://img.shields.io/badge/Version-1.6.6-6366F1?style=for-the-badge&logo=android&logoColor=white" alt="Version 1.6.6" /></a>
     <a href="https://flutter.dev"><img src="https://img.shields.io/badge/Flutter-3.x-06B6D4?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter" /></a>
     <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Platform-Android%208.0%2B-10B981?style=for-the-badge&logo=android&logoColor=white" alt="Platform Android" /></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-F59E0B?style=for-the-badge" alt="License GPLv3" /></a>
@@ -203,7 +203,7 @@ Compiled APKs will be located in: `alldown/build/app/outputs/flutter-apk/`.
 ## 👤 About
 
 - **Project:** AllDown
-- **Current Version:** 1.6.5 (`v1.6.5+27`)
+- **Current Version:** 1.6.6 (`v1.6.6+28`)
 - **Author:** **Allen**
 - **Repository:** [https://github.com/vugy0212/Alldown](https://github.com/vugy0212/Alldown)
 

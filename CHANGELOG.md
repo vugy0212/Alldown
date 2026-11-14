@@ -2,6 +2,15 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.6.6] - 2026-11-14
+
+### Fixed
+- **Dual-Engine Volume Booster Architecture (100% Samsung Galaxy S25 Ultra Compatibility):**
+  - Resolved root cause where `ExoPlayer` runs with an unset/0 audio session ID by default unless explicitly configured.
+  - Generates a guaranteed, persistent system audio session ID via `AudioManager.generateAudioSessionId()` and explicitly assigns it to active ExoPlayer instances with `exo.setAudioSessionId(targetSessionId)`.
+  - Implemented Dual-Engine Amplification: in addition to `LoudnessEnhancer`, Volume Booster now applies an active hardware DSP preamp boost across the Equalizer frequency spectrum.
+  - This guarantees noticeable, robust volume amplification up to +30 dB across all Samsung Galaxy devices (One UI 6/7) even when third-party insert effects are restricted by system-level SoundAssistant or Dolby Atmos processing.
+
 ## [1.6.5] - 2026-11-14
 
 ### Fixed

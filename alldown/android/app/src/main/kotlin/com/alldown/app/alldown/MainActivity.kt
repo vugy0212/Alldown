@@ -41,20 +41,42 @@ class MainActivity : FlutterActivity() {
     private val audioFxManager = AudioFxManager()
     private var mediaSessionManager: MediaSessionManager? = null
     private val listenedExoPlayers = Collections.newSetFromMap(WeakHashMap<ExoPlayer, Boolean>())
+    private var appAudioSessionId: Int = 0
+
+    private fun getOrCreateAudioSessionId(): Int {
+        if (appAudioSessionId == 0) {
+            val am = getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+            appAudioSessionId = am?.generateAudioSessionId() ?: 0
+        }
+        return appAudioSessionId
+    }
 
     private fun syncActiveAudioSession(): Int {
+        val targetSessionId = getOrCreateAudioSessionId()
+        if (targetSessionId > 0) {
+            audioFxManager.updateAudioSessionId(targetSessionId)
+        }
         try {
-            val engine = flutterEngine ?: return 0
-            val plugin = engine.plugins.get(VideoPlayerPlugin::class.java) ?: return 0
+            val engine = flutterEngine ?: return targetSessionId
+            val plugin = engine.plugins.get(VideoPlayerPlugin::class.java) ?: return targetSessionId
             val field = VideoPlayerPlugin::class.java.getDeclaredField("videoPlayers")
             field.isAccessible = true
-            val players = field.get(plugin) as? LongSparseArray<*> ?: return 0
+            val players = field.get(plugin) as? LongSparseArray<*> ?: return targetSessionId
             if (players.size() > 0) {
                 for (i in 0 until players.size()) {
                     val vp = players.valueAt(i) ?: continue
                     val exoField = VideoPlayer::class.java.getDeclaredField("exoPlayer")
                     exoField.isAccessible = true
                     val exo = exoField.get(vp) as? ExoPlayer ?: continue
+
+                    if (targetSessionId > 0 && exo.audioSessionId != targetSessionId) {
+                        try {
+                            exo.setAudioSessionId(targetSessionId)
+                            android.util.Log.d("MainActivity", "Explicitly set ExoPlayer audioSessionId to $targetSessionId")
+                        } catch (e: Exception) {
+                            android.util.Log.w("MainActivity", "Failed to setAudioSessionId: ${e.message}")
+                        }
+                    }
 
                     if (!listenedExoPlayers.contains(exo)) {
                         listenedExoPlayers.add(exo)
@@ -67,17 +89,21 @@ class MainActivity : FlutterActivity() {
                         })
                     }
 
-                    val sessionId = exo.audioSessionId
-                    if (sessionId != 0 && sessionId != C.AUDIO_SESSION_ID_UNSET) {
-                        audioFxManager.updateAudioSessionId(sessionId)
-                        return sessionId
+                    val activeId = if (exo.audioSessionId != 0 && exo.audioSessionId != C.AUDIO_SESSION_ID_UNSET) {
+                        exo.audioSessionId
+                    } else {
+                        targetSessionId
+                    }
+                    if (activeId > 0) {
+                        audioFxManager.updateAudioSessionId(activeId)
+                        return activeId
                     }
                 }
             }
         } catch (e: Exception) {
             android.util.Log.w("MainActivity", "syncActiveAudioSession error: ${e.message}")
         }
-        return 0
+        return targetSessionId
     }
 
     inner class HeadlessWebBridge {

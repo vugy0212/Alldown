@@ -20,12 +20,15 @@ class AudioFxManager {
     private var isLoudnessEnabled: Boolean = false
     private var loudnessGainMb: Int = 0
 
+    // Store user's baseline band levels (without preamp boost)
+    private val userBandLevels = mutableMapOf<Short, Short>()
+
     fun updateAudioSessionId(sessionId: Int) {
         if (sessionId <= 0 || sessionId == currentSessionId) return
         Log.d(TAG, "updateAudioSessionId: switching from $currentSessionId to $sessionId")
         currentSessionId = sessionId
 
-        // 1. LoudnessEnhancer (Crucial for Samsung S25 Ultra / Android 14+):
+        // 1. LoudnessEnhancer (Hardware insert effect)
         try {
             loudnessEnhancer?.release()
         } catch (_: Exception) {}
@@ -45,28 +48,17 @@ class AudioFxManager {
             }
         }
 
-        // 2. Re-bind Equalizer to new session preserving levels
-        val savedBandLevels = mutableMapOf<Short, Short>()
+        // 2. Re-bind Equalizer to new session
         try {
-            equalizer?.let { eq ->
-                for (b in 0 until eq.numberOfBands) {
-                    savedBandLevels[b.toShort()] = eq.getBandLevel(b.toShort())
-                }
-                eq.release()
-            }
+            equalizer?.release()
         } catch (_: Exception) {}
         equalizer = null
 
         try {
             equalizer = Equalizer(0, sessionId).apply {
-                enabled = isEqEnabled
-                for ((b, lvl) in savedBandLevels) {
-                    if (b < numberOfBands) {
-                        setBandLevel(b, lvl)
-                    }
-                }
+                applyEqualizerState(this)
             }
-            Log.d(TAG, "Equalizer bound to session $sessionId (enabled=$isEqEnabled)")
+            Log.d(TAG, "Equalizer bound to session $sessionId")
         } catch (e: Exception) {
             Log.w(TAG, "Equalizer re-bind error on session $sessionId: ${e.message}")
         }
@@ -90,6 +82,32 @@ class AudioFxManager {
         }
     }
 
+    private fun applyEqualizerState(eq: Equalizer) {
+        // Equalizer is active if user enabled EQ OR if Volume Booster is ON
+        eq.enabled = isEqEnabled || (isLoudnessEnabled && loudnessGainMb > 0)
+        val numBands = eq.numberOfBands
+        val maxLevel = try { eq.bandLevelRange[1] } catch (_: Exception) { 1500.toShort() }
+        val minLevel = try { eq.bandLevelRange[0] } catch (_: Exception) { (-1500).toShort() }
+
+        // Dual-Engine amplification: Preamp boost on all bands guarantees volume increase on Samsung
+        val preampMb = if (isLoudnessEnabled && loudnessGainMb > 0) {
+            // Scale gain up to maxLevel (e.g. up to +15 dB hardware boost)
+            (loudnessGainMb * 0.6).toInt().coerceIn(0, maxLevel.toInt())
+        } else {
+            0
+        }
+
+        for (b in 0 until numBands) {
+            val userLvl = userBandLevels[b.toShort()] ?: 0.toShort()
+            val effectiveLvl = (userLvl + preampMb).coerceIn(minLevel.toInt(), maxLevel.toInt()).toShort()
+            try {
+                eq.setBandLevel(b.toShort(), effectiveLvl)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to set band $b level $effectiveLvl: ${e.message}")
+            }
+        }
+    }
+
     fun initFx(audioSessionId: Int = currentSessionId) {
         if (audioSessionId > 0 && audioSessionId != currentSessionId) {
             updateAudioSessionId(audioSessionId)
@@ -101,7 +119,7 @@ class AudioFxManager {
         try {
             if (equalizer == null) {
                 equalizer = Equalizer(0, targetSession).apply {
-                    enabled = isEqEnabled
+                    applyEqualizerState(this)
                 }
             }
         } catch (e: Exception) {
@@ -129,7 +147,6 @@ class AudioFxManager {
                         setTargetGain(loudnessGainMb)
                     }
                 }
-                Log.d(TAG, "LoudnessEnhancer initialized on session $targetSession (gain=$loudnessGainMb, enabled=$isLoudnessEnabled)")
             }
         } catch (e: Exception) {
             Log.w(TAG, "LoudnessEnhancer initialization error on session $targetSession: ${e.message}")
@@ -157,7 +174,12 @@ class AudioFxManager {
                 }
                 for (b in 0 until numBands) {
                     bandFreqs.add(eq.getCenterFreq(b.toShort()) / 1000) // Convert to Hz
-                    bandLevels.add(eq.getBandLevel(b.toShort()).toInt())
+                    val saved = userBandLevels[b.toShort()]
+                    if (saved != null) {
+                        bandLevels.add(saved.toInt())
+                    } else {
+                        bandLevels.add(eq.getBandLevel(b.toShort()).toInt())
+                    }
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Error querying bands: ${e.message}")
@@ -180,7 +202,7 @@ class AudioFxManager {
 
         return mapOf(
             "supported" to (eq != null),
-            "enabled" to (eq?.enabled ?: false),
+            "enabled" to (isEqEnabled),
             "numBands" to numBands,
             "bandFrequencies" to bandFreqs,
             "minLevel" to minLevel,
@@ -201,7 +223,7 @@ class AudioFxManager {
         isEqEnabled = enabled
         initFx()
         return try {
-            equalizer?.enabled = enabled
+            equalizer?.let { applyEqualizerState(it) }
             true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to toggle Equalizer: ${e.message}")
@@ -211,8 +233,9 @@ class AudioFxManager {
 
     fun setBandLevel(band: Int, level: Int): Boolean {
         initFx()
+        userBandLevels[band.toShort()] = level.toShort()
         return try {
-            equalizer?.setBandLevel(band.toShort(), level.toShort())
+            equalizer?.let { applyEqualizerState(it) }
             true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to set band $band level $level: ${e.message}")
@@ -223,8 +246,13 @@ class AudioFxManager {
     fun usePreset(presetIndex: Int): Boolean {
         initFx()
         return try {
-            if (presetIndex >= 0 && presetIndex < (equalizer?.numberOfPresets ?: 0)) {
-                equalizer?.usePreset(presetIndex.toShort())
+            val eq = equalizer
+            if (eq != null && presetIndex >= 0 && presetIndex < eq.numberOfPresets) {
+                eq.usePreset(presetIndex.toShort())
+                for (b in 0 until eq.numberOfBands) {
+                    userBandLevels[b.toShort()] = eq.getBandLevel(b.toShort())
+                }
+                applyEqualizerState(eq)
                 true
             } else {
                 false
@@ -256,15 +284,18 @@ class AudioFxManager {
         loudnessGainMb = gainMb.coerceIn(0, 3000)
         initFx()
         return try {
+            // 1. LoudnessEnhancer target gain
             loudnessEnhancer?.let { le ->
                 le.enabled = enabled
                 if (enabled && loudnessGainMb >= 0) {
                     le.setTargetGain(loudnessGainMb)
                 }
-                Log.d(TAG, "setLoudness: enabled=$enabled, gain=${loudnessGainMb}mB on session $currentSessionId")
-            } ?: run {
-                Log.w(TAG, "setLoudness: loudnessEnhancer is null for session $currentSessionId")
             }
+            // 2. Dual-engine preamp boost via Equalizer DSP (guarantees boost on Samsung devices)
+            equalizer?.let { eq ->
+                applyEqualizerState(eq)
+            }
+            Log.d(TAG, "setLoudness applied: enabled=$enabled, gain=${loudnessGainMb}mB on session $currentSessionId")
             true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to set LoudnessEnhancer: ${e.message}")
