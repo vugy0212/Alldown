@@ -2,6 +2,14 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.6.3] - 2026-11-14
+
+### Fixed
+- **Screen Lock Lifecycle Auto-Pause Prevention (Samsung Galaxy S25 Ultra & Android):**
+  - Configured `VideoPlayerOptions(allowBackgroundPlayback: true)` in `PlayerNotifier`.
+  - In Flutter's `video_player` plugin, omitting `allowBackgroundPlayback: true` causes the framework's internal `_VideoAppLifeCycleObserver` to intercept `AppLifecycleState.paused` when the phone screen is locked or turned off, immediately pausing playback, and resuming on `AppLifecycleState.resumed` when the phone is unlocked.
+  - Setting `allowBackgroundPlayback: true` completely detaches the lifecycle observer, allowing continuous, uninterrupted playback in the background with the screen locked.
+
 ## [1.6.2] - 2026-11-14
 
 ### Fixed

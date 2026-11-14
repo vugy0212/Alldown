@@ -282,7 +282,10 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
 
       final ctrl = VideoPlayerController.file(
         targetFile,
-        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+        videoPlayerOptions: VideoPlayerOptions(
+          mixWithOthers: true,
+          allowBackgroundPlayback: true,
+        ),
       );
       _controller = ctrl;
 
