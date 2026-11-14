@@ -9,6 +9,8 @@ import '../providers/media_library_provider.dart';
 import '../providers/player_provider.dart';
 import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
+import 'audio_equalizer_modal.dart';
+import 'audio_trimmer_modal.dart';
 import 'video_editor_modal.dart';
 
 class VideoPlayerModal extends ConsumerWidget {
@@ -66,6 +68,128 @@ class VideoPlayerModal extends ConsumerWidget {
     );
   }
 
+  void _showSleepTimerDialog(BuildContext context, PlayerState playerState, PlayerNotifier notifier, L10n l10n) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surfaceContainerHigh,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.bedtime_rounded, color: AppColors.secondary, size: 22),
+                  const SizedBox(width: 8),
+                  Text(l10n.isHr ? 'Mjerač spavanja (Sleep Timer)' : 'Sleep Timer', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.timer_10_rounded),
+                title: Text(l10n.isHr ? '15 minuta' : '15 minutes'),
+                onTap: () {
+                  notifier.setSleepTimer(const Duration(minutes: 15));
+                  Navigator.pop(ctx);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.timer_rounded),
+                title: Text(l10n.isHr ? '30 minuta' : '30 minutes'),
+                onTap: () {
+                  notifier.setSleepTimer(const Duration(minutes: 30));
+                  Navigator.pop(ctx);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.timer_rounded),
+                title: Text(l10n.isHr ? '45 minuta' : '45 minutes'),
+                onTap: () {
+                  notifier.setSleepTimer(const Duration(minutes: 45));
+                  Navigator.pop(ctx);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.timer_rounded),
+                title: Text(l10n.isHr ? '60 minuta (1 sat)' : '60 minutes (1 hour)'),
+                onTap: () {
+                  notifier.setSleepTimer(const Duration(hours: 1));
+                  Navigator.pop(ctx);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.music_off_rounded),
+                title: Text(l10n.isHr ? 'Zaustavi na kraju pjesme' : 'End of current track'),
+                onTap: () {
+                  notifier.setSleepAtEndOfTrack();
+                  Navigator.pop(ctx);
+                },
+              ),
+              if (playerState.isSleepTimerActive)
+                ListTile(
+                  leading: const Icon(Icons.cancel_rounded, color: AppColors.errorAccent),
+                  title: Text(l10n.isHr ? 'Isključi mjerač spavanja' : 'Cancel Sleep Timer', style: const TextStyle(color: AppColors.errorAccent)),
+                  onTap: () {
+                    notifier.cancelSleepTimer();
+                    Navigator.pop(ctx);
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showSpeedDialog(BuildContext context, PlayerState playerState, PlayerNotifier notifier, L10n l10n) {
+    final speeds = [0.5, 0.75, 0.85, 1.0, 1.25, 1.5, 1.75, 2.0];
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surfaceContainerHigh,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.speed_rounded, color: AppColors.primaryAccent, size: 22),
+                  const SizedBox(width: 8),
+                  Text(l10n.isHr ? 'Brzina reprodukcije' : 'Playback Speed', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: speeds.map((s) {
+                  final isSelected = (playerState.playbackSpeed - s).abs() < 0.01;
+                  return ChoiceChip(
+                    label: Text('${s}x', style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                    selected: isSelected,
+                    selectedColor: AppColors.primaryAccent.withValues(alpha: 0.25),
+                    onSelected: (val) {
+                      if (val) {
+                        notifier.setPlaybackSpeed(s);
+                        Navigator.pop(ctx);
+                      }
+                    },
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final playerState = ref.watch(playerProvider);
@@ -90,7 +214,7 @@ class VideoPlayerModal extends ConsumerWidget {
 
     return Container(
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.90,
+        maxHeight: MediaQuery.of(context).size.height * 0.92,
       ),
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLow,
@@ -140,7 +264,7 @@ class VideoPlayerModal extends ConsumerWidget {
                                     : item.isAudio
                                         ? (playerState.hasPlaylist
                                             ? '${l10n.playlist} (${playerState.currentIndex + 1}/${playerState.playlistCount})'
-                                            : 'Audio Player')
+                                            : 'Pro Audio Player')
                                         : 'Video Player (${item.resolution})',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -217,7 +341,7 @@ class VideoPlayerModal extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
 
-              // Viewport: Animated GIF vs Video vs Audio
+              // Viewport: Animated GIF vs Video vs Audio with Visualizer Glow
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
@@ -267,7 +391,7 @@ class VideoPlayerModal extends ConsumerWidget {
                                 )
                               : item.isAudio
                                   ? SizedBox(
-                                      height: 180,
+                                      height: 190,
                                       child: Stack(
                                         fit: StackFit.expand,
                                         children: [
@@ -277,24 +401,50 @@ class VideoPlayerModal extends ConsumerWidget {
                                               fit: BoxFit.cover,
                                               errorBuilder: (_, _, _) => const SizedBox.shrink(),
                                             ),
-                                          Container(color: Colors.black.withValues(alpha: 0.65)),
+                                          Container(
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                begin: Alignment.topCenter,
+                                                end: Alignment.bottomCenter,
+                                                colors: [
+                                                  Colors.black.withValues(alpha: 0.45),
+                                                  Colors.black.withValues(alpha: 0.85),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
                                           Center(
                                             child: Column(
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
-                                                Icon(
-                                                  Icons.music_note_rounded,
-                                                  size: 54,
-                                                  color: AppColors.secondary,
+                                                // Ambient Glow Ring
+                                                Container(
+                                                  padding: const EdgeInsets.all(16),
+                                                  decoration: BoxDecoration(
+                                                    shape: BoxShape.circle,
+                                                    color: AppColors.primaryAccent.withValues(alpha: 0.15),
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: AppColors.primaryAccent.withValues(alpha: playerState.isPlaying ? 0.4 : 0.1),
+                                                        blurRadius: 24,
+                                                        spreadRadius: 4,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  child: Icon(
+                                                    playerState.isPlaying ? Icons.graphic_eq_rounded : Icons.music_note_rounded,
+                                                    size: 48,
+                                                    color: AppColors.secondary,
+                                                  ),
                                                 ),
-                                                const SizedBox(height: 6),
+                                                const SizedBox(height: 10),
                                                 Text(
-                                                  item.format,
+                                                  '${item.format} • ${item.resolution}',
                                                   style: TextStyle(
-                                                    color: Colors.white.withValues(alpha: 0.8),
+                                                    color: Colors.white.withValues(alpha: 0.85),
                                                     fontSize: 12,
                                                     fontWeight: FontWeight.bold,
-                                                    letterSpacing: 1.2,
+                                                    letterSpacing: 1.1,
                                                   ),
                                                 ),
                                               ],
@@ -332,7 +482,7 @@ class VideoPlayerModal extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
 
-              // If GIF: show animated loop badge. If Video/Audio: show Seekbar & Transport Controls
+              // Interactive Seekbar & Transport
               if (isGif) ...[
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -359,7 +509,7 @@ class VideoPlayerModal extends ConsumerWidget {
                 ),
                 const SizedBox(height: 14),
               ] else ...[
-                // Interactive Seekbar
+                // Seekbar
                 SliderTheme(
                   data: SliderTheme.of(context).copyWith(
                     trackHeight: 4,
@@ -387,6 +537,18 @@ class VideoPlayerModal extends ConsumerWidget {
                           color: AppColors.onSurfaceVariant,
                         ),
                       ),
+                      if (playerState.isABActive)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.tertiary.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'A-B Loop (${Duration(milliseconds: playerState.aMs!).inSeconds}s - ${Duration(milliseconds: playerState.bMs!).inSeconds}s)',
+                            style: TextStyle(fontSize: 10, color: AppColors.tertiary, fontWeight: FontWeight.bold),
+                          ),
+                        ),
                       Text(
                         playerState.durationFormatted,
                         style: TextStyle(
@@ -482,6 +644,158 @@ class VideoPlayerModal extends ConsumerWidget {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 12),
+
+                  // Pro Audio Toolbar: Speed, Equalizer, Sleep Timer, A-B Loop, Trimmer
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceContainer,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.stroke, width: 0.8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        // Playback Speed
+                        InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: () => _showSpeedDialog(context, playerState, notifier, l10n),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.speed_rounded, size: 16, color: AppColors.primaryAccent),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${playerState.playbackSpeed}x',
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primaryAccent),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        // Equalizer
+                        InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: () => AudioEqualizerModal.show(context),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.equalizer_rounded, size: 16, color: AppColors.secondary),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'EQ',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.secondary),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        // Sleep Timer
+                        InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: () => _showSleepTimerDialog(context, playerState, notifier, l10n),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  playerState.isSleepTimerActive ? Icons.bedtime_rounded : Icons.bedtime_outlined,
+                                  size: 16,
+                                  color: playerState.isSleepTimerActive ? AppColors.tertiary : AppColors.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  playerState.isSleepTimerActive
+                                      ? (playerState.sleepTimerRemaining != null
+                                          ? '${playerState.sleepTimerRemaining!.inMinutes}m'
+                                          : 'End')
+                                      : 'Sleep',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: playerState.isSleepTimerActive ? AppColors.tertiary : AppColors.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        // A-B Loop Button
+                        InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: () {
+                            if (!playerState.isABActive && playerState.aMs == null) {
+                              notifier.setPointA();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Point A set. Tap again to set Point B.'), duration: Duration(seconds: 1)),
+                              );
+                            } else if (!playerState.isABActive && playerState.aMs != null) {
+                              notifier.setPointB();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Point B set. Looping segment!'), duration: Duration(seconds: 1)),
+                              );
+                            } else {
+                              notifier.clearAB();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('A-B Loop cleared.'), duration: Duration(seconds: 1)),
+                              );
+                            }
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.repeat_on_rounded,
+                                  size: 16,
+                                  color: playerState.isABActive ? AppColors.tertiary : (playerState.aMs != null ? AppColors.primaryAccent : AppColors.onSurfaceVariant),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  playerState.isABActive ? 'A-B Loop' : (playerState.aMs != null ? 'Set B' : 'A-B'),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: playerState.isABActive ? AppColors.tertiary : (playerState.aMs != null ? AppColors.primaryAccent : AppColors.onSurfaceVariant),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        // Audio Trimmer (Extract segment)
+                        InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: () => AudioTrimmerModal.show(context, item),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.content_cut_rounded, size: 16, color: AppColors.secondary),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Trim',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.secondary),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ] else ...[
                   // Video Transport: Replay 10, Play/Pause, Forward 10
                   Row(
@@ -525,7 +839,7 @@ class VideoPlayerModal extends ConsumerWidget {
                 const SizedBox(height: 14),
               ],
 
-              // Playlist Queue Section (if active playlist has items)
+              // Playlist Queue Section with Drag-and-drop Reordering
               if (playerState.playlist.isNotEmpty) ...[
                 Container(
                   margin: const EdgeInsets.only(bottom: 12),
@@ -580,44 +894,64 @@ class VideoPlayerModal extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
+
+                      // Drag and Drop Reorderable Queue List
                       ConstrainedBox(
-                        constraints: const BoxConstraints(maxHeight: 180),
-                        child: ListView.separated(
+                        constraints: const BoxConstraints(maxHeight: 200),
+                        child: ReorderableListView.builder(
                           shrinkWrap: true,
+                          buildDefaultDragHandles: false,
                           itemCount: playerState.playlist.length,
-                          separatorBuilder: (_, _) => Divider(height: 1, color: AppColors.stroke),
+                          // ignore: deprecated_member_use
+                          onReorder: (oldIdx, newIdx) {
+                            notifier.reorderQueue(oldIdx, newIdx);
+                          },
                           itemBuilder: (ctx, idx) {
                             final track = playerState.playlist[idx];
                             final isCurrent = idx == playerState.currentIndex;
-                            return InkWell(
-                              onTap: () => notifier.playTrackAtIndex(idx),
-                              borderRadius: BorderRadius.circular(8),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
-                                decoration: BoxDecoration(
-                                  color: isCurrent
-                                      ? AppColors.primaryAccent.withValues(alpha: 0.12)
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  children: [
-                                    SizedBox(
-                                      width: 24,
-                                      child: isCurrent
-                                          ? Icon(Icons.volume_up_rounded, size: 18, color: AppColors.primaryAccent)
-                                          : Text(
-                                              '${idx + 1}',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                              textAlign: TextAlign.center,
-                                            ),
+                            return Container(
+                              key: ValueKey('queue_item_${track.id}_$idx'),
+                              margin: const EdgeInsets.symmetric(vertical: 2),
+                              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                              decoration: BoxDecoration(
+                                color: isCurrent
+                                    ? AppColors.primaryAccent.withValues(alpha: 0.12)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  ReorderableDragStartListener(
+                                    index: idx,
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                                      child: Icon(
+                                        Icons.drag_handle_rounded,
+                                        size: 20,
+                                        color: AppColors.onSurfaceVariant.withValues(alpha: 0.6),
+                                      ),
                                     ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
+                                  ),
+                                  const SizedBox(width: 4),
+                                  SizedBox(
+                                    width: 22,
+                                    child: isCurrent
+                                        ? Icon(Icons.volume_up_rounded, size: 18, color: AppColors.primaryAccent)
+                                        : Text(
+                                            '${idx + 1}',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: () => notifier.playTrackAtIndex(idx),
+                                      borderRadius: BorderRadius.circular(6),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
@@ -640,14 +974,14 @@ class VideoPlayerModal extends ConsumerWidget {
                                         ],
                                       ),
                                     ),
-                                    IconButton(
-                                      icon: const Icon(Icons.close_rounded, size: 16),
-                                      color: AppColors.onSurfaceVariant.withValues(alpha: 0.5),
-                                      visualDensity: VisualDensity.compact,
-                                      onPressed: () => notifier.removeFromQueue(idx),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.close_rounded, size: 16),
+                                    color: AppColors.onSurfaceVariant.withValues(alpha: 0.5),
+                                    visualDensity: VisualDensity.compact,
+                                    onPressed: () => notifier.removeFromQueue(idx),
+                                  ),
+                                ],
                               ),
                             );
                           },

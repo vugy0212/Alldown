@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import '../l10n/l10n.dart';
 import '../models/media_item.dart';
+import '../providers/player_provider.dart';
 import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
+import 'audio_trimmer_modal.dart';
 import 'video_editor_modal.dart';
 
 class LibraryItemCard extends ConsumerWidget {
@@ -78,6 +80,40 @@ class LibraryItemCard extends ConsumerWidget {
                     onPlay();
                   },
                 ),
+                if (item.isAudio) ...[
+                  ListTile(
+                    leading: const Icon(Icons.playlist_play_rounded, color: AppColors.primaryAccent),
+                    title: Text(l10n.isHr ? 'Sviraj sljedeće' : 'Play Next in Queue'),
+                    subtitle: Text(l10n.isHr ? 'Umetni odmah iza trenutne pjesme' : 'Insert directly after current playing track'),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      ref.read(playerProvider.notifier).playNextInQueue(item);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l10n.isHr ? 'Pjesma dodana kao sljedeća u redu' : 'Track inserted next in queue')),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.queue_music_rounded, color: AppColors.secondary),
+                    title: Text(l10n.isHr ? 'Dodaj na kraj reda' : 'Add to Queue End'),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      ref.read(playerProvider.notifier).addToQueue(item);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l10n.isHr ? 'Pjesma dodana na kraj reda' : 'Track added to queue')),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.content_cut_rounded, color: AppColors.tertiary),
+                    title: Text(l10n.isHr ? 'Izreži zvuk (Audio Trimmer)' : 'Trim Audio Segment'),
+                    subtitle: Text(l10n.isHr ? 'Stvori kraći audio isječak ili melodiju' : 'Create audio clip or ringtone'),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      AudioTrimmerModal.show(context, item);
+                    },
+                  ),
+                ],
                 if (!item.isAudio && !isGif) ...[
                   ListTile(
                     leading: Icon(Icons.content_cut_rounded, color: AppColors.secondary),

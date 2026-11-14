@@ -95,6 +95,37 @@ void main() {
       final repeatOneState = endState.copyWith(repeatMode: AudioRepeatMode.one);
       expect(repeatOneState.hasNext, isTrue);
     });
+
+    test('PlayerState Pro Audio features (playbackSpeed, A-B loop, sleepTimer)', () {
+      final baseState = PlayerState(
+        playlist: [track1, track2],
+        currentIndex: 0,
+        currentItem: track1,
+      );
+
+      // Default values
+      expect(baseState.playbackSpeed, 1.0);
+      expect(baseState.isABActive, isFalse);
+      expect(baseState.isSleepTimerActive, isFalse);
+
+      // Playback speed
+      final fastState = baseState.copyWith(playbackSpeed: 1.5);
+      expect(fastState.playbackSpeed, 1.5);
+
+      // A-B loop
+      final abState = baseState.copyWith(aMs: 10000, bMs: 25000, isABActive: true);
+      expect(abState.isABActive, isTrue);
+      expect(abState.aMs, 10000);
+      expect(abState.bMs, 25000);
+
+      // Sleep timer
+      final sleepState = baseState.copyWith(
+        sleepTimerRemaining: const Duration(minutes: 30),
+        isSleepTimerActive: true,
+      );
+      expect(sleepState.isSleepTimerActive, isTrue);
+      expect(sleepState.sleepTimerRemaining?.inMinutes, 30);
+    });
   });
 }
 

@@ -825,6 +825,17 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     );
   }
 
+  void _playSmartPlaylist(List<MediaItem> tracks, String emptyMsg) {
+    if (tracks.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(emptyMsg)),
+      );
+      return;
+    }
+    ref.read(playerProvider.notifier).playPlaylist(tracks, initialIndex: 0);
+    VideoPlayerModal.show(context);
+  }
+
   Widget _buildPlaylistsView(
     BuildContext context,
     LibraryState state,
@@ -832,10 +843,88 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     bool isDark,
     L10n l10n,
   ) {
+    final audioItems = state.items.where((e) => e.isAudio).toList();
+    final recentTracks = List<MediaItem>.from(audioItems);
+    final favoriteTracks = audioItems.where((e) => e.isFavorite).toList();
+    final mostPlayedTracks = List<MediaItem>.from(audioItems)..sort((a, b) => b.duration.compareTo(a.duration));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Top Action: + Nova Playlista
+        // Smart Playlists Section
+        Text(
+          l10n.smartPlaylists,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: isDark ? AppColors.onSurface : const Color(0xFF0F172A),
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 100,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              // 1. Recently Added
+              _buildSmartPlaylistTile(
+                title: l10n.smartRecentlyAdded,
+                count: recentTracks.length,
+                icon: Icons.history_rounded,
+                colors: [const Color(0xFF0EA5E9), const Color(0xFF2563EB)],
+                isDark: isDark,
+                onTap: () => _playSmartPlaylist(recentTracks, l10n.noMediaYet),
+              ),
+              const SizedBox(width: 10),
+              // 2. Favorites
+              _buildSmartPlaylistTile(
+                title: l10n.smartFavorites,
+                count: favoriteTracks.length,
+                icon: Icons.favorite_rounded,
+                colors: [const Color(0xFFF43F5E), const Color(0xFFE11D48)],
+                isDark: isDark,
+                onTap: () => _playSmartPlaylist(favoriteTracks, l10n.noMediaYet),
+              ),
+              const SizedBox(width: 10),
+              // 3. Most Played
+              _buildSmartPlaylistTile(
+                title: l10n.smartMostPlayed,
+                count: mostPlayedTracks.length,
+                icon: Icons.local_fire_department_rounded,
+                colors: [const Color(0xFFF59E0B), const Color(0xFFEA580C)],
+                isDark: isDark,
+                onTap: () => _playSmartPlaylist(mostPlayedTracks, l10n.noMediaYet),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Custom Playlists Section Header
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              l10n.customPlaylists,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: isDark ? AppColors.onSurface : const Color(0xFF0F172A),
+              ),
+            ),
+            Text(
+              '${state.localPlaylists.length}',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: AppColors.secondary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // Action: + Nova Playlista
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
@@ -1035,6 +1124,96 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     ? AppColors.onPrimaryContainer
                     : (isDark ? AppColors.onSurfaceVariant : const Color(0xFF334155)),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSmartPlaylistTile({
+    required String title,
+    required int count,
+    required IconData icon,
+    required List<Color> colors,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 140,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceContainer : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? AppColors.stroke : const Color(0xFFE2E8F0),
+            width: 1,
+          ),
+          boxShadow: isDark
+              ? null
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: colors,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: Icon(icon, color: Colors.white, size: 18),
+                  ),
+                ),
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryAccent.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.play_arrow_rounded, color: AppColors.primaryAccent, size: 18),
+                  ),
+                ),
+              ],
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                Text(
+                  '$count pjesama',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? AppColors.outline : const Color(0xFF64748B),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

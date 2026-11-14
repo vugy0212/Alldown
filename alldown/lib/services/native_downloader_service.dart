@@ -2,18 +2,54 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 
 class NativeDownloaderService {
+  static final NativeDownloaderService _instance = NativeDownloaderService._internal();
+  factory NativeDownloaderService() => _instance;
+
   static const MethodChannel _channel = MethodChannel('com.alldown.app/downloader');
 
   final StreamController<String> _sharedUrlController = StreamController<String>.broadcast();
   Stream<String> get onUrlShared => _sharedUrlController.stream;
 
-  NativeDownloaderService() {
+  // Media Player Callbacks
+  void Function()? onMediaPlay;
+  void Function()? onMediaPause;
+  void Function()? onMediaPlayPause;
+  void Function()? onMediaSkipNext;
+  void Function()? onMediaSkipPrevious;
+  void Function(int posMs)? onMediaSeekTo;
+  void Function()? onMediaStop;
+
+  NativeDownloaderService._internal() {
     _channel.setMethodCallHandler((call) async {
-      if (call.method == 'onUrlShared') {
-        final url = call.arguments as String?;
-        if (url != null && url.isNotEmpty) {
-          _sharedUrlController.add(url);
-        }
+      switch (call.method) {
+        case 'onUrlShared':
+          final url = call.arguments as String?;
+          if (url != null && url.isNotEmpty) {
+            _sharedUrlController.add(url);
+          }
+          break;
+        case 'onMediaPlay':
+          onMediaPlay?.call();
+          break;
+        case 'onMediaPause':
+          onMediaPause?.call();
+          break;
+        case 'onMediaPlayPause':
+          onMediaPlayPause?.call();
+          break;
+        case 'onMediaSkipNext':
+          onMediaSkipNext?.call();
+          break;
+        case 'onMediaSkipPrevious':
+          onMediaSkipPrevious?.call();
+          break;
+        case 'onMediaSeekTo':
+          final pos = (call.arguments as num?)?.toInt() ?? 0;
+          onMediaSeekTo?.call(pos);
+          break;
+        case 'onMediaStop':
+          onMediaStop?.call();
+          break;
       }
     });
   }
@@ -66,6 +102,114 @@ class NativeDownloaderService {
     try {
       await _channel.invokeMethod('showCompletionNotification', {'title': title});
     } catch (_) {}
+  }
+
+  /// Updates Lock Screen & Android System Media Notification
+  Future<void> updateMediaNotification({
+    required String title,
+    required String artist,
+    required bool isPlaying,
+    required int positionMs,
+    required int durationMs,
+    required bool hasNext,
+    required bool hasPrev,
+  }) async {
+    try {
+      await _channel.invokeMethod('updateMediaNotification', {
+        'title': title,
+        'artist': artist,
+        'isPlaying': isPlaying,
+        'positionMs': positionMs,
+        'durationMs': durationMs,
+        'hasNext': hasNext,
+        'hasPrev': hasPrev,
+      });
+    } catch (_) {}
+  }
+
+  /// Stops Lock Screen & Android System Media Notification
+  Future<void> stopMediaNotification() async {
+    try {
+      await _channel.invokeMethod('stopMediaNotification');
+    } catch (_) {}
+  }
+
+  /// Equalizer & Audio FX
+  Future<Map<String, dynamic>?> getEqualizerParams() async {
+    try {
+      final res = await _channel.invokeMethod<dynamic>('getEqualizerParams');
+      if (res is Map) {
+        return Map<String, dynamic>.from(res);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> setEqualizerEnabled(bool enabled) async {
+    try {
+      final res = await _channel.invokeMethod<bool>('setEqualizerEnabled', {'enabled': enabled});
+      return res ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> setEqualizerBandLevel(int band, int level) async {
+    try {
+      final res = await _channel.invokeMethod<bool>('setEqualizerBandLevel', {'band': band, 'level': level});
+      return res ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> useEqualizerPreset(int presetIndex) async {
+    try {
+      final res = await _channel.invokeMethod<bool>('useEqualizerPreset', {'presetIndex': presetIndex});
+      return res ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> setBassBoost(bool enabled, int strength) async {
+    try {
+      final res = await _channel.invokeMethod<bool>('setBassBoost', {'enabled': enabled, 'strength': strength});
+      return res ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> setLoudness(bool enabled, int gainMb) async {
+    try {
+      final res = await _channel.invokeMethod<bool>('setLoudness', {'enabled': enabled, 'gainMb': gainMb});
+      return res ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Trims or extracts audio segment lossless to M4A/AAC
+  Future<bool> extractAndTrimAudio({
+    required String inputPath,
+    required String outputPath,
+    required int startMs,
+    required int endMs,
+  }) async {
+    try {
+      final res = await _channel.invokeMethod<bool>('extractAudio', {
+        'inputPath': inputPath,
+        'outputPath': outputPath,
+        'startMs': startMs,
+        'endMs': endMs,
+      });
+      return res ?? false;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Checks whether the device is connected via Wi-Fi or Ethernet
@@ -188,4 +332,3 @@ class NativeDownloaderService {
     }
   }
 }
-

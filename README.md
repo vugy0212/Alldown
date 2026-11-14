@@ -4,7 +4,7 @@
   <p><b>Universal Media Downloader & Built-in Video / HD GIF Studio for Android</b></p>
 
   <p>
-    <a href="https://github.com/vugy0212/Alldown/releases"><img src="https://img.shields.io/badge/Version-1.5.3-6366F1?style=for-the-badge&logo=android&logoColor=white" alt="Version 1.5.3" /></a>
+    <a href="https://github.com/vugy0212/Alldown/releases"><img src="https://img.shields.io/badge/Version-1.6.0-6366F1?style=for-the-badge&logo=android&logoColor=white" alt="Version 1.6.0" /></a>
     <a href="https://flutter.dev"><img src="https://img.shields.io/badge/Flutter-3.x-06B6D4?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter" /></a>
     <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Platform-Android%208.0%2B-10B981?style=for-the-badge&logo=android&logoColor=white" alt="Platform Android" /></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-F59E0B?style=for-the-badge" alt="License GPLv3" /></a>
@@ -34,6 +34,12 @@ Designed with a sleek **Dark & Light Theme** interface, AllDown combines multi-s
 - 🌐 **Multi-Platform Media Downloader**
   - Direct video (`.mp4`, `.webm`) and audio (`.m4a`, `.mp3`, `.wav`) extraction across major video portals, social networks, and direct CDNs.
   - Real-time metadata resolution (video title, channel/author, duration, thumbnail, and available stream qualities).
+- 🎵 **Pro Audio Player Studio & Smart Playlists**
+  - Native **Lockscreen & Notification Media Controls** (`MediaSession`, seekbar, play/pause, prev/next, headphone unplug detection).
+  - Native **5-Band Graphic Equalizer**, **Bass Boost**, and **Loudness / Volume Booster** (+30 dB).
+  - Variable **Playback Speed (`0.5x` – `2.0x`)**, **A-B Segment Repeat**, and **Countdown Sleep Timer** with smooth 5-second fadeout.
+  - Interactive **Queue Drag-and-Drop Reordering**, "Play Next in Queue", and lossless **Audio Trimmer Modal** to extract clips directly to library.
+  - **Smart Playlists**: Instant auto-curated collections for *Recently Added*, *Favorites*, and *Most Played*.
 - 🎬 **Built-in Video Crop, Zoom & Trim Studio**
   - Frame-accurate start and end time trimming.
   - Aspect ratio presets (`Original`, `16:9`, `9:16`, `1:1`, `4:5`) for Reels, TikTok, Shorts, and YouTube.

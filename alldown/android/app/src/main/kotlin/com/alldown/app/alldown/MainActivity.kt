@@ -7,6 +7,8 @@ import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Bundle
 import androidx.core.content.FileProvider
+import com.alldown.app.alldown.audio.AudioFxManager
+import com.alldown.app.alldown.audio.MediaSessionManager
 import com.alldown.app.alldown.service.DownloadForegroundService
 import com.alldown.app.alldown.video.VideoEditorHelper
 import io.flutter.embedding.android.FlutterActivity
@@ -28,6 +30,8 @@ class MainActivity : FlutterActivity() {
     private var sharedUrl: String? = null
     private var methodChannel: MethodChannel? = null
     private var headlessWebView: WebView? = null
+    private val audioFxManager = AudioFxManager()
+    private var mediaSessionManager: MediaSessionManager? = null
 
     inner class HeadlessWebBridge {
         private var callback: ((Int, String) -> Unit)? = null
@@ -468,10 +472,58 @@ class MainActivity : FlutterActivity() {
                             result.error("INVALID_ARGS", "URL is required", null)
                         }
                     }
+                    "updateMediaNotification" -> {
+                        val title = call.argument<String>("title") ?: "AllDown Audio"
+                        val artist = call.argument<String>("artist") ?: ""
+                        val isPlaying = call.argument<Boolean>("isPlaying") ?: false
+                        val pos = (call.argument<Number>("positionMs"))?.toLong() ?: 0L
+                        val dur = (call.argument<Number>("durationMs"))?.toLong() ?: 0L
+                        val hasNext = call.argument<Boolean>("hasNext") ?: false
+                        val hasPrev = call.argument<Boolean>("hasPrev") ?: false
+                        mediaSessionManager?.updatePlaybackState(title, artist, isPlaying, pos, dur, hasNext, hasPrev)
+                        result.success(true)
+                    }
+                    "stopMediaNotification" -> {
+                        mediaSessionManager?.stopMedia()
+                        result.success(true)
+                    }
+                    "getEqualizerParams" -> {
+                        result.success(audioFxManager.getEqualizerParams())
+                    }
+                    "setEqualizerEnabled" -> {
+                        val enabled = call.argument<Boolean>("enabled") ?: false
+                        result.success(audioFxManager.setEqualizerEnabled(enabled))
+                    }
+                    "setEqualizerBandLevel" -> {
+                        val band = call.argument<Int>("band") ?: 0
+                        val level = call.argument<Int>("level") ?: 0
+                        result.success(audioFxManager.setBandLevel(band, level))
+                    }
+                    "useEqualizerPreset" -> {
+                        val preset = call.argument<Int>("presetIndex") ?: 0
+                        result.success(audioFxManager.usePreset(preset))
+                    }
+                    "setBassBoost" -> {
+                        val enabled = call.argument<Boolean>("enabled") ?: false
+                        val strength = call.argument<Int>("strength") ?: 0
+                        result.success(audioFxManager.setBassBoost(enabled, strength))
+                    }
+                    "setLoudness" -> {
+                        val enabled = call.argument<Boolean>("enabled") ?: false
+                        val gainMb = call.argument<Int>("gainMb") ?: 0
+                        result.success(audioFxManager.setLoudness(enabled, gainMb))
+                    }
                     else -> result.notImplemented()
                 }
             }
         }
+        mediaSessionManager = MediaSessionManager(applicationContext, methodChannel)
+    }
+
+    override fun onDestroy() {
+        mediaSessionManager?.release()
+        audioFxManager.release()
+        super.onDestroy()
     }
 
     private fun openFollowRedirectsConnection(

@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
 import '../models/media_item.dart';
 import '../services/native_downloader_service.dart';
@@ -24,6 +26,16 @@ class PlayerState {
   final AudioRepeatMode repeatMode;
   final List<int> shuffledIndices;
 
+  // Advanced Pro Audio features
+  final double playbackSpeed;
+  final int? aMs;
+  final int? bMs;
+  final bool isABActive;
+  final Duration? sleepTimerRemaining;
+  final bool isSleepTimerActive;
+  final bool sleepAtEndOfTrack;
+  final double volume;
+
   const PlayerState({
     this.currentItem,
     this.playlist = const [],
@@ -36,6 +48,14 @@ class PlayerState {
     this.isShuffle = false,
     this.repeatMode = AudioRepeatMode.off,
     this.shuffledIndices = const [],
+    this.playbackSpeed = 1.0,
+    this.aMs,
+    this.bMs,
+    this.isABActive = false,
+    this.sleepTimerRemaining,
+    this.isSleepTimerActive = false,
+    this.sleepAtEndOfTrack = false,
+    this.volume = 1.0,
   });
 
   PlayerState copyWith({
@@ -52,6 +72,16 @@ class PlayerState {
     bool? isShuffle,
     AudioRepeatMode? repeatMode,
     List<int>? shuffledIndices,
+    double? playbackSpeed,
+    int? aMs,
+    int? bMs,
+    bool? isABActive,
+    bool clearAB = false,
+    Duration? sleepTimerRemaining,
+    bool? isSleepTimerActive,
+    bool? sleepAtEndOfTrack,
+    bool clearSleepTimer = false,
+    double? volume,
   }) {
     return PlayerState(
       currentItem: clearItem ? null : (currentItem ?? this.currentItem),
@@ -65,6 +95,14 @@ class PlayerState {
       isShuffle: isShuffle ?? this.isShuffle,
       repeatMode: repeatMode ?? this.repeatMode,
       shuffledIndices: shuffledIndices ?? this.shuffledIndices,
+      playbackSpeed: playbackSpeed ?? this.playbackSpeed,
+      aMs: clearAB ? null : (aMs ?? this.aMs),
+      bMs: clearAB ? null : (bMs ?? this.bMs),
+      isABActive: clearAB ? false : (isABActive ?? this.isABActive),
+      sleepTimerRemaining: clearSleepTimer ? null : (sleepTimerRemaining ?? this.sleepTimerRemaining),
+      isSleepTimerActive: clearSleepTimer ? false : (isSleepTimerActive ?? this.isSleepTimerActive),
+      sleepAtEndOfTrack: clearSleepTimer ? false : (sleepAtEndOfTrack ?? this.sleepAtEndOfTrack),
+      volume: volume ?? this.volume,
     );
   }
 
@@ -126,10 +164,29 @@ final playerProvider = StateNotifierProvider<PlayerNotifier, PlayerState>((ref) 
 class PlayerNotifier extends StateNotifier<PlayerState> {
   VideoPlayerController? _controller;
   bool _isAdvancing = false;
+  Timer? _sleepTimer;
+  DateTime? _lastNotificationUpdateTime;
 
-  PlayerNotifier() : super(const PlayerState());
+  PlayerNotifier() : super(const PlayerState()) {
+    _initNativeMediaCallbacks();
+  }
 
   VideoPlayerController? get controller => _controller;
+
+  void _initNativeMediaCallbacks() {
+    final native = NativeDownloaderService();
+    native.onMediaPlay = () => togglePlayPause();
+    native.onMediaPause = () => pause();
+    native.onMediaPlayPause = () => togglePlayPause();
+    native.onMediaSkipNext = () => playNext();
+    native.onMediaSkipPrevious = () => playPrevious();
+    native.onMediaSeekTo = (posMs) {
+      if (state.duration.inMilliseconds > 0) {
+        seekTo(posMs / state.duration.inMilliseconds);
+      }
+    };
+    native.onMediaStop = () => stopAndClose();
+  }
 
   List<int> _generateShuffleIndices(int length, int firstIndex) {
     if (length <= 0) return [];
@@ -162,6 +219,7 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     // If same item is already loaded, toggle or keep playing
     if (state.currentItem?.id == item.id && _controller != null && state.isInitialized) {
       await _controller!.play();
+      _syncNativeNotification(isPlaying: true);
       return;
     }
 
@@ -174,6 +232,7 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
       position: Duration.zero,
       duration: Duration.zero,
       clearError: true,
+      clearAB: true,
     );
 
     try {
@@ -224,7 +283,22 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
       _controller = ctrl;
 
       await ctrl.initialize();
+      if (state.playbackSpeed != 1.0) {
+        await ctrl.setPlaybackSpeed(state.playbackSpeed);
+      }
       ctrl.addListener(_onControllerTick);
+
+      // Check saved resume position for long tracks (> 10 mins)
+      try {
+        if (ctrl.value.duration.inMinutes >= 10) {
+          final prefs = await SharedPreferences.getInstance();
+          final savedPosMs = prefs.getInt('resume_pos_${item.id}') ?? 0;
+          if (savedPosMs > 5000 && savedPosMs < ctrl.value.duration.inMilliseconds - 10000) {
+            await ctrl.seekTo(Duration(milliseconds: savedPosMs));
+          }
+        }
+      } catch (_) {}
+
       await ctrl.play();
 
       if (mounted) {
@@ -236,6 +310,7 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
           clearError: true,
         );
       }
+      _syncNativeNotification(isPlaying: true);
     } catch (e, stack) {
       // ignore: avoid_print
       print('ALLDOWN_PLAYBACK_ERROR: $e\n$stack');
@@ -256,11 +331,29 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     final position = ctrl.value.position;
     final duration = ctrl.value.duration;
 
+    // A-B Repeat Loop Check
+    if (state.isABActive && state.aMs != null && state.bMs != null) {
+      if (position.inMilliseconds >= state.bMs!) {
+        ctrl.seekTo(Duration(milliseconds: state.aMs!));
+        return;
+      }
+    }
+
     state = state.copyWith(
       isPlaying: isPlaying,
       position: position,
       duration: duration,
     );
+
+    // Save position periodically for long tracks (> 10 mins)
+    if (duration.inMinutes >= 10 && state.currentItem != null) {
+      final nowSec = position.inSeconds;
+      if (nowSec % 10 == 0) {
+        SharedPreferences.getInstance().then((p) {
+          p.setInt('resume_pos_${state.currentItem!.id}', position.inMilliseconds);
+        });
+      }
+    }
 
     // Auto-advance to next song in playlist when playback reaches the end
     if (duration > Duration.zero &&
@@ -268,11 +361,40 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
         !_isAdvancing) {
       _handleTrackCompleted();
     }
+
+    // Throttle native media notification sync to once every 1.5 seconds during playback
+    final now = DateTime.now();
+    if (_lastNotificationUpdateTime == null ||
+        now.difference(_lastNotificationUpdateTime!).inMilliseconds > 1500) {
+      _lastNotificationUpdateTime = now;
+      _syncNativeNotification(isPlaying: isPlaying);
+    }
+  }
+
+  void _syncNativeNotification({required bool isPlaying}) {
+    final item = state.currentItem;
+    if (item == null) return;
+    NativeDownloaderService().updateMediaNotification(
+      title: item.title,
+      artist: item.channel,
+      isPlaying: isPlaying,
+      positionMs: state.position.inMilliseconds,
+      durationMs: state.duration.inMilliseconds,
+      hasNext: state.hasNext,
+      hasPrev: state.hasPrevious,
+    );
   }
 
   Future<void> _handleTrackCompleted() async {
     if (_isAdvancing) return;
     _isAdvancing = true;
+
+    if (state.sleepAtEndOfTrack) {
+      cancelSleepTimer();
+      await pause();
+      _isAdvancing = false;
+      return;
+    }
 
     if (state.repeatMode == AudioRepeatMode.one) {
       final ctrl = _controller;
@@ -395,6 +517,118 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     state = state.copyWith(repeatMode: next);
   }
 
+  /// Advanced Playback Speed (0.5x, 0.75x, 1.0x, 1.25x, 1.5x, 1.75x, 2.0x)
+  Future<void> setPlaybackSpeed(double speed) async {
+    final validSpeed = speed.clamp(0.25, 3.0);
+    state = state.copyWith(playbackSpeed: validSpeed);
+    final ctrl = _controller;
+    if (ctrl != null && ctrl.value.isInitialized) {
+      await ctrl.setPlaybackSpeed(validSpeed);
+    }
+  }
+
+  /// A-B Repeat Loop controls
+  void setPointA() {
+    state = state.copyWith(
+      aMs: state.position.inMilliseconds,
+      isABActive: false,
+    );
+  }
+
+  void setPointB() {
+    if (state.aMs == null) return;
+    final currentMs = state.position.inMilliseconds;
+    if (currentMs <= state.aMs!) return;
+    state = state.copyWith(
+      bMs: currentMs,
+      isABActive: true,
+    );
+  }
+
+  void clearAB() {
+    state = state.copyWith(clearAB: true);
+  }
+
+  /// Sleep Timer with smooth Fade-Out in the last 5 seconds
+  void setSleepTimer(Duration duration) {
+    cancelSleepTimer();
+    state = state.copyWith(
+      sleepTimerRemaining: duration,
+      isSleepTimerActive: true,
+      sleepAtEndOfTrack: false,
+    );
+
+    _sleepTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+      final rem = state.sleepTimerRemaining;
+      if (rem == null || rem.inSeconds <= 0) {
+        timer.cancel();
+        await pause();
+        cancelSleepTimer();
+        return;
+      }
+
+      final next = rem - const Duration(seconds: 1);
+      state = state.copyWith(sleepTimerRemaining: next);
+
+      // Smooth fade out in the last 5 seconds
+      if (next.inSeconds <= 5 && _controller != null) {
+        final fadeVolume = (next.inSeconds / 5.0).clamp(0.0, 1.0);
+        await _controller?.setVolume(fadeVolume);
+      }
+    });
+  }
+
+  void setSleepAtEndOfTrack() {
+    cancelSleepTimer();
+    state = state.copyWith(
+      sleepAtEndOfTrack: true,
+      isSleepTimerActive: true,
+    );
+  }
+
+  void cancelSleepTimer() {
+    _sleepTimer?.cancel();
+    _sleepTimer = null;
+    _controller?.setVolume(1.0);
+    state = state.copyWith(clearSleepTimer: true, volume: 1.0);
+  }
+
+  /// Queue Management & Drag-and-drop Reordering
+  void reorderQueue(int oldIndex, int newIndex) {
+    if (oldIndex < 0 || oldIndex >= state.playlist.length) return;
+    if (newIndex < 0 || newIndex > state.playlist.length) return;
+
+    var actualNewIndex = newIndex;
+    if (oldIndex < actualNewIndex) {
+      actualNewIndex -= 1;
+    }
+
+    final updated = List<MediaItem>.from(state.playlist);
+    final movedItem = updated.removeAt(oldIndex);
+    updated.insert(actualNewIndex, movedItem);
+
+    int newCurrentIndex = state.currentIndex;
+    if (state.currentIndex == oldIndex) {
+      newCurrentIndex = actualNewIndex;
+    } else if (state.currentIndex > oldIndex && state.currentIndex <= actualNewIndex) {
+      newCurrentIndex--;
+    } else if (state.currentIndex < oldIndex && state.currentIndex >= actualNewIndex) {
+      newCurrentIndex++;
+    }
+
+    state = state.copyWith(
+      playlist: updated,
+      currentIndex: newCurrentIndex,
+    );
+  }
+
+  void playNextInQueue(MediaItem item) {
+    final updated = List<MediaItem>.from(state.playlist);
+    final insertPos = (state.currentIndex + 1).clamp(0, updated.length);
+    updated.insert(insertPos, item);
+    state = state.copyWith(playlist: updated);
+  }
+
   void addToQueue(MediaItem item) {
     final updated = [...state.playlist, item];
     state = state.copyWith(playlist: updated);
@@ -431,6 +665,7 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     if (ctrl.value.isPlaying) {
       await ctrl.pause();
     }
+    _syncNativeNotification(isPlaying: false);
   }
 
   Future<void> togglePlayPause() async {
@@ -438,8 +673,10 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     if (ctrl == null || !ctrl.value.isInitialized) return;
     if (ctrl.value.isPlaying) {
       await ctrl.pause();
+      _syncNativeNotification(isPlaying: false);
     } else {
       await ctrl.play();
+      _syncNativeNotification(isPlaying: true);
     }
   }
 
@@ -448,6 +685,7 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     if (ctrl == null || !ctrl.value.isInitialized) return;
     final targetMs = (ctrl.value.duration.inMilliseconds * fraction.clamp(0.0, 1.0)).toInt();
     await ctrl.seekTo(Duration(milliseconds: targetMs));
+    _syncNativeNotification(isPlaying: ctrl.value.isPlaying);
   }
 
   Future<void> skipForward() async {
@@ -456,6 +694,7 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     final next = ctrl.value.position + const Duration(seconds: 10);
     final clamped = next > ctrl.value.duration ? ctrl.value.duration : next;
     await ctrl.seekTo(clamped);
+    _syncNativeNotification(isPlaying: ctrl.value.isPlaying);
   }
 
   Future<void> skipBackward() async {
@@ -464,10 +703,13 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     final prev = ctrl.value.position - const Duration(seconds: 10);
     final clamped = prev < Duration.zero ? Duration.zero : prev;
     await ctrl.seekTo(clamped);
+    _syncNativeNotification(isPlaying: ctrl.value.isPlaying);
   }
 
   Future<void> stopAndClose() async {
+    cancelSleepTimer();
     await _disposeController();
+    NativeDownloaderService().stopMediaNotification();
     if (mounted) {
       state = const PlayerState();
     }
@@ -485,7 +727,9 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
 
   @override
   void dispose() {
+    cancelSleepTimer();
     _disposeController();
+    NativeDownloaderService().stopMediaNotification();
     super.dispose();
   }
 }

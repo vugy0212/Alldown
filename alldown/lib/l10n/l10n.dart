@@ -227,5 +227,19 @@ class L10n {
   String get generateGif => isHr ? 'Stvori HD GIF' : 'Generate HD GIF';
   String get exportVideo => isHr ? 'Izvezi video' : 'Export Video';
   String get processingVideo => isHr ? 'Obrada u tijeku...' : 'Processing video...';
+
+  // Pro Audio Player Studio & Smart Playlists
+  String get playNextInQueue => isHr ? 'Sviraj sljedeće u redu' : 'Play Next in Queue';
+  String get addToQueueEnd => isHr ? 'Dodaj na kraj reda' : 'Add to Queue End';
+  String get trimAudio => isHr ? 'Obreži audio isječak' : 'Trim Audio Segment';
+  String get audioEqualizer => isHr ? 'Ekvilajzer & Zvuk' : 'Equalizer & Audio FX';
+  String get playbackSpeed => isHr ? 'Brzina reprodukcije' : 'Playback Speed';
+  String get sleepTimer => isHr ? 'Mjerač spavanja' : 'Sleep Timer';
+  String get abLoop => isHr ? 'A-B Ponavljanje' : 'A-B Loop';
+  String get smartPlaylists => isHr ? 'Pametne playliste' : 'Smart Playlists';
+  String get smartMostPlayed => isHr ? 'Najčešće slušano' : 'Most Played';
+  String get smartRecentlyAdded => isHr ? 'Nedavno preuzeto' : 'Recently Added';
+  String get smartFavorites => isHr ? 'Omiljene pjesme' : 'Favorite Audio';
+  String get customPlaylists => isHr ? 'Vaše playliste' : 'Your Playlists';
 }
 

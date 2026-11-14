@@ -2,6 +2,36 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.6.0] - 2026-11-14
+
+### Added
+- **Pro Audio Player Studio & Background MediaSession:**
+  - **Native Lock Screen & Notification Transport Controls**: Seamless integration with Android `MediaSession` and `Notification.MediaStyle`. Displays interactive playback controls (Play, Pause, Skip Previous, Skip Next, Stop) with live track metadata and scrubber directly on the lock screen and notification shade.
+  - **Headphone Unplug Detection**: Automatically pauses audio playback when headphones, Bluetooth earbuds, or AUX cables are disconnected (`ACTION_AUDIO_BECOMING_NOISY`), preventing accidental audio blasting.
+  - **Audio Focus Management**: Automatically handles audio focus changes, pausing playback during incoming phone calls or other apps requesting audio focus.
+  - **Android 14+ Foreground Service**: Added `FOREGROUND_SERVICE_MEDIA_PLAYBACK` permission and configured `foregroundServiceType="dataSync|mediaPlayback"` to ensure smooth background audio without OS interruption.
+
+- **Native 5-Band Equalizer, Bass Boost & Volume Booster:**
+  - Hardware-accelerated audio effects using Android's native `android.media.audiofx` engine (`Equalizer`, `BassBoost`, `LoudnessEnhancer`).
+  - Interactive **5-Band Graphic Equalizer** modal with 5 vertical frequency sliders (60Hz, 230Hz, 910Hz, 3.6kHz, 14kHz) and pre-configured sound presets (Rock, Pop, Jazz, Classical, Flat, etc.).
+  - **Bass Boost** effect with dedicated strength slider (0–100%) and hardware bass virtualization.
+  - **Loudness / Volume Booster** slider providing up to **+30 dB** clean gain boost for quiet tracks and outdoor listening.
+
+- **Playback Speed, A-B Repeat Loop & Countdown Sleep Timer:**
+  - **Variable Playback Speed**: Quick selector chip for `0.5x`, `0.75x`, `1.0x`, `1.25x`, `1.5x`, `1.75x`, and `2.0x` speeds with pitch preservation.
+  - **A-B Segment Looping**: Set custom Start point (A) and End point (B) to endlessly loop any segment of a song or podcast.
+  - **Countdown Sleep Timer**: Choose from presets (15m, 30m, 45m, 60m) or "End of track", featuring an automatic 5-second smooth volume fadeout before stopping playback.
+
+- **Interactive Queue Drag-and-Drop & Smart Playlists:**
+  - **Drag-and-Drop Queue Reordering**: Reorder songs in the active playback queue on the fly via `ReorderableListView`.
+  - **Queue Context Actions**: Added "Play Next in Queue" and "Add to Queue End" directly in the Library context menu.
+  - **Lossless Audio Trimmer Modal**: Extract and save any audio segment with dual start/end trim handles directly into `Music/` and index it in the Library.
+  - **Auto-Curated Smart Playlists**: 3 dynamic playlists available at the top of the Playlists tab:
+    - 🕒 *Recently Added / Nedavno preuzeto*: Plays audio tracks sorted by latest download.
+    - ❤️ *Favorites / Omiljene pjesme*: Instant playback of all favorite songs.
+    - 🔥 *Most Played / Najčešće slušano*: Top audio collection sorted by track length and popularity.
+
+
 ## [1.5.3] - 2026-11-14
 
 ### Added
