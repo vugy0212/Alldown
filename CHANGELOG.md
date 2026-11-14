@@ -2,6 +2,16 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.6.1] - 2026-11-14
+
+### Fixed
+- **Audio Playback Activation & Audio Focus Conflict Fix:**
+  - Resolved an issue where pressing the Play button resulted in immediate pause / silence due to a race condition between Android's native `AudioManager.requestAudioFocus` and ExoPlayer's internal audio focus manager. ExoPlayer now manages audio focus without OS interference.
+  - Fixed `togglePlayPause` to automatically re-load and start playback if the player controller was in an uninitialized state when pressing Play.
+  - Immediate `VideoPlayerModal.show(context)` opening with non-null `currentItem` initialization, eliminating delays and blank player states.
+  - Safe, protected status-bar icon fallback for `MediaStyle` notification and added `MODIFY_AUDIO_SETTINGS` permission in AndroidManifest.
+
+
 ## [1.6.0] - 2026-11-14
 
 ### Added

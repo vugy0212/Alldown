@@ -75,16 +75,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     if (item.isAudio) {
       final audioList = currentList.where((e) => e.isAudio).toList();
       final idx = audioList.indexWhere((e) => e.id == item.id);
-      await ref.read(playerProvider.notifier).playPlaylist(
+      ref.read(playerProvider.notifier).playPlaylist(
             audioList.isNotEmpty ? audioList : [item],
             initialIndex: idx >= 0 ? idx : 0,
           );
     } else {
-      await ref.read(playerProvider.notifier).playMedia(item);
+      ref.read(playerProvider.notifier).playMedia(item);
     }
-    if (mounted) {
-      VideoPlayerModal.show(context);
-    }
+    VideoPlayerModal.show(context);
   }
 
   void _playAllAudio(List<MediaItem> items) {

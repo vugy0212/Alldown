@@ -207,6 +207,7 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
         : <int>[];
 
     state = state.copyWith(
+      currentItem: items[validIndex],
       playlist: items,
       currentIndex: validIndex,
       shuffledIndices: shuffleList,
@@ -310,7 +311,9 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
           clearError: true,
         );
       }
-      _syncNativeNotification(isPlaying: true);
+      try {
+        _syncNativeNotification(isPlaying: true);
+      } catch (_) {}
     } catch (e, stack) {
       // ignore: avoid_print
       print('ALLDOWN_PLAYBACK_ERROR: $e\n$stack');
@@ -364,8 +367,9 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
 
     // Throttle native media notification sync to once every 1.5 seconds during playback
     final now = DateTime.now();
-    if (_lastNotificationUpdateTime == null ||
-        now.difference(_lastNotificationUpdateTime!).inMilliseconds > 1500) {
+    if (isPlaying &&
+        (_lastNotificationUpdateTime == null ||
+            now.difference(_lastNotificationUpdateTime!).inMilliseconds > 1500)) {
       _lastNotificationUpdateTime = now;
       _syncNativeNotification(isPlaying: isPlaying);
     }
@@ -670,7 +674,12 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
 
   Future<void> togglePlayPause() async {
     final ctrl = _controller;
-    if (ctrl == null || !ctrl.value.isInitialized) return;
+    if (ctrl == null || !ctrl.value.isInitialized) {
+      if (state.currentItem != null) {
+        await _loadAndPlayItem(state.currentItem!);
+      }
+      return;
+    }
     if (ctrl.value.isPlaying) {
       await ctrl.pause();
       _syncNativeNotification(isPlaying: false);
