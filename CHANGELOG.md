@@ -2,6 +2,13 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.6.7] - 2026-11-14
+
+### Fixed
+- **UI Overflow in Equalizer Cards (Galaxy S25 Ultra Switch Visibility):**
+  - Resolved an issue on devices with high DPI or larger font scaling where long title text pushed the Volume Booster and Bass Boost switches off the right edge of the card.
+  - Wrapped card headers in `Expanded` / `Flexible` with clean badges and text ellipsis so switches remain permanently visible, pinned, and easy to tap across all Android display sizes.
+
 ## [1.6.6] - 2026-11-14
 
 ### Fixed

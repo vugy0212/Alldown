@@ -133,34 +133,40 @@ class _AudioEqualizerModalState extends ConsumerState<AudioEqualizerModal> {
 
                     // Header with Equalizer Toggle
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryAccent.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(10),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryAccent.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.equalizer_rounded, color: AppColors.primaryAccent, size: 22),
                               ),
-                              child: const Icon(Icons.equalizer_rounded, color: AppColors.primaryAccent, size: 22),
-                            ),
-                            const SizedBox(width: 10),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  l10n.isHr ? 'Grafički Ekvilajzer' : 'Graphic Equalizer',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      l10n.isHr ? 'Grafički Ekvilajzer' : 'Graphic Equalizer',
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      l10n.isHr ? '$_numBands frekvencijskih pojaseva & pojačalo' : '$_numBands Frequency Bands & FX',
+                                      style: TextStyle(fontSize: 11, color: AppColors.secondary),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ),
-                                Text(
-                                  l10n.isHr ? '$_numBands frekvencijskih pojaseva & pojačalo' : '$_numBands Frequency Bands & FX',
-                                  style: TextStyle(fontSize: 11, color: AppColors.secondary),
-                                ),
-                              ],
-                            ),
-                          ],
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Switch(
                           value: _eqEnabled,
                           activeThumbColor: AppColors.primaryAccent,
@@ -295,23 +301,39 @@ class _AudioEqualizerModalState extends ConsumerState<AudioEqualizerModal> {
                       child: Column(
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Row(
-                                children: [
-                                  Icon(Icons.speaker_group_rounded, size: 18, color: AppColors.secondary),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    l10n.isHr ? 'Bass Boost' : 'Bass Boost',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    '${(_bassStrength / 10).toInt()}%',
-                                    style: TextStyle(fontSize: 11, color: AppColors.secondary, fontWeight: FontWeight.bold),
-                                  ),
-                                ],
+                              Icon(Icons.speaker_group_rounded, size: 20, color: AppColors.secondary),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        'Bass Boost',
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.secondary.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        '${(_bassStrength / 10).toInt()}%',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.secondary,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
+                              const SizedBox(width: 8),
                               Switch(
                                 value: _bassEnabled,
                                 activeThumbColor: AppColors.secondary,
@@ -353,23 +375,39 @@ class _AudioEqualizerModalState extends ConsumerState<AudioEqualizerModal> {
                       child: Column(
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Row(
-                                children: [
-                                  Icon(Icons.volume_up_rounded, size: 18, color: AppColors.tertiary),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    l10n.isHr ? 'Pojačalo glasnoće (Volume Booster)' : 'Volume / Loudness Booster',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    '+${(_loudnessGain / 100).toStringAsFixed(1)} dB',
-                                    style: TextStyle(fontSize: 11, color: AppColors.tertiary, fontWeight: FontWeight.bold),
-                                  ),
-                                ],
+                              Icon(Icons.volume_up_rounded, size: 20, color: AppColors.tertiary),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        l10n.isHr ? 'Pojačalo glasnoće' : 'Volume Booster',
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.tertiary.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        '+${(_loudnessGain / 100).toStringAsFixed(1)} dB',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.tertiary,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
+                              const SizedBox(width: 8),
                               Switch(
                                 value: _loudnessEnabled,
                                 activeThumbColor: AppColors.tertiary,
