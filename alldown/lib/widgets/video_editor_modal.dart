@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 import '../models/media_item.dart';
 import '../providers/media_library_provider.dart';
+import '../services/haptic_service.dart';
 import '../services/video_editor_service.dart';
 import '../theme/app_colors.dart';
 
@@ -155,6 +156,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
 
   Future<void> _exportVideo() async {
     if (_isProcessing) return;
+    HapticService.medium();
 
     _controller?.pause();
     final startMs = (_trimRange.start * 1000).toInt();
@@ -477,6 +479,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
     String qualityName = 'Standard',
   }) async {
     if (_isProcessing) return;
+    HapticService.medium();
 
     _controller?.pause();
     final startMs = (_trimRange.start * 1000).toInt();
@@ -797,6 +800,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
     int bitrateKbps = 192,
   }) async {
     if (_isProcessing) return;
+    HapticService.medium();
 
     _controller?.pause();
     final startMs = (_trimRange.start * 1000).toInt();
@@ -1189,6 +1193,8 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                     max: _totalDurationSec,
                     activeColor: AppColors.primary,
                     inactiveColor: AppColors.surfaceContainerHighest,
+                    onChangeStart: _isProcessing ? null : (_) => HapticService.selection(),
+                    onChangeEnd: _isProcessing ? null : (_) => HapticService.selection(),
                     onChanged: _isProcessing ? null : _onRangeChanged,
                   ),
                   const SizedBox(height: 14),
@@ -1288,6 +1294,8 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                                 activeColor: AppColors.secondary,
                                 inactiveColor: AppColors.surfaceContainerHighest,
                                 label: '${_zoom.toStringAsFixed(1)}x',
+                                onChangeStart: _isProcessing ? null : (_) => HapticService.selection(),
+                                onChangeEnd: _isProcessing ? null : (_) => HapticService.selection(),
                                 onChanged: _isProcessing
                                     ? null
                                     : (val) {
@@ -1349,6 +1357,8 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                                   divisions: 20,
                                   activeColor: AppColors.primary,
                                   inactiveColor: AppColors.surfaceContainerHighest,
+                                  onChangeStart: _isProcessing ? null : (_) => HapticService.selection(),
+                                  onChangeEnd: _isProcessing ? null : (_) => HapticService.selection(),
                                   onChanged: _isProcessing
                                       ? null
                                       : (val) => setState(() => _panX = val),
@@ -1367,6 +1377,8 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
                                   divisions: 20,
                                   activeColor: AppColors.primary,
                                   inactiveColor: AppColors.surfaceContainerHighest,
+                                  onChangeStart: _isProcessing ? null : (_) => HapticService.selection(),
+                                  onChangeEnd: _isProcessing ? null : (_) => HapticService.selection(),
                                   onChanged: _isProcessing
                                       ? null
                                       : (val) => setState(() => _panY = val),
@@ -1534,6 +1546,7 @@ class _VideoEditorModalState extends ConsumerState<VideoEditorModal> {
           ? null
           : (val) {
               if (val) {
+                HapticService.light();
                 setState(() => _selectedCrop = value);
               }
             },

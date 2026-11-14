@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/app_settings.dart';
+import '../services/haptic_service.dart';
 import '../services/storage_service.dart';
 
 final storageServiceProvider = Provider<StorageService>((ref) {
@@ -160,6 +161,13 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     _storage.saveSettings(state);
   }
 
+  void toggleHapticFeedback() {
+    final next = !state.hapticFeedback;
+    state = state.copyWith(hapticFeedback: next);
+    _storage.saveSettings(state);
+    HapticService.setEnabled(next);
+  }
+
   void toggleTheme() {
     final next = !state.isDarkMode;
     state = state.copyWith(isDarkMode: next);
@@ -185,6 +193,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   void resetAllSettings() {
     state = const AppSettings();
     _storage.saveSettings(state);
+    HapticService.setEnabled(true);
   }
 
   Future<void> clearAppCache() async {

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/settings_provider.dart';
 import 'screens/main_scaffold.dart';
+import 'services/haptic_service.dart';
 import 'services/storage_service.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
@@ -14,6 +15,7 @@ void main() async {
   final storageService = await StorageService.init();
   final initialSettings = storageService.loadSettings();
   AppColors.setMode(dark: initialSettings.isDarkMode);
+  HapticService.setEnabled(initialSettings.hapticFeedback);
 
   // Edge-to-edge transparent system bars
   SystemChrome.setSystemUIOverlayStyle(

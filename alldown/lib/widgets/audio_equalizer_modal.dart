@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/l10n.dart';
 import '../providers/settings_provider.dart';
 import '../services/native_downloader_service.dart';
+import '../services/haptic_service.dart';
 import '../theme/app_colors.dart';
 
 class AudioEqualizerModal extends ConsumerStatefulWidget {
@@ -164,6 +165,7 @@ class _AudioEqualizerModalState extends ConsumerState<AudioEqualizerModal> {
                           value: _eqEnabled,
                           activeThumbColor: AppColors.primaryAccent,
                           onChanged: (val) async {
+                            HapticService.selection();
                             setState(() => _eqEnabled = val);
                             await _native.setEqualizerEnabled(val);
                           },
@@ -194,6 +196,7 @@ class _AudioEqualizerModalState extends ConsumerState<AudioEqualizerModal> {
                               onSelected: _eqEnabled
                                   ? (selected) async {
                                       if (selected) {
+                                        HapticService.light();
                                         setState(() => _currentPreset = idx);
                                         await _native.useEqualizerPreset(idx);
                                         _loadParams();
@@ -252,6 +255,8 @@ class _AudioEqualizerModalState extends ConsumerState<AudioEqualizerModal> {
                                             value: level.toDouble().clamp(_minLevel.toDouble(), _maxLevel.toDouble()),
                                             min: _minLevel.toDouble(),
                                             max: _maxLevel.toDouble(),
+                                            onChangeStart: _eqEnabled ? (_) => HapticService.selection() : null,
+                                            onChangeEnd: _eqEnabled ? (_) => HapticService.selection() : null,
                                             onChanged: _eqEnabled
                                                 ? (val) {
                                                     setState(() {
@@ -311,6 +316,7 @@ class _AudioEqualizerModalState extends ConsumerState<AudioEqualizerModal> {
                                 value: _bassEnabled,
                                 activeThumbColor: AppColors.secondary,
                                 onChanged: (val) async {
+                                  HapticService.selection();
                                   setState(() => _bassEnabled = val);
                                   await _native.setBassBoost(val, _bassStrength);
                                 },
@@ -322,6 +328,8 @@ class _AudioEqualizerModalState extends ConsumerState<AudioEqualizerModal> {
                             min: 0,
                             max: 1000,
                             activeColor: AppColors.secondary,
+                            onChangeStart: _bassEnabled ? (_) => HapticService.selection() : null,
+                            onChangeEnd: _bassEnabled ? (_) => HapticService.selection() : null,
                             onChanged: _bassEnabled
                                 ? (val) {
                                     setState(() => _bassStrength = val.toInt());
@@ -366,6 +374,7 @@ class _AudioEqualizerModalState extends ConsumerState<AudioEqualizerModal> {
                                 value: _loudnessEnabled,
                                 activeThumbColor: AppColors.tertiary,
                                 onChanged: (val) async {
+                                  HapticService.selection();
                                   setState(() => _loudnessEnabled = val);
                                   await _native.setLoudness(val, _loudnessGain);
                                 },
@@ -377,6 +386,8 @@ class _AudioEqualizerModalState extends ConsumerState<AudioEqualizerModal> {
                             min: 0,
                             max: 3000,
                             activeColor: AppColors.tertiary,
+                            onChangeStart: _loudnessEnabled ? (_) => HapticService.selection() : null,
+                            onChangeEnd: _loudnessEnabled ? (_) => HapticService.selection() : null,
                             onChanged: _loudnessEnabled
                                 ? (val) {
                                     setState(() => _loudnessGain = val.toInt());

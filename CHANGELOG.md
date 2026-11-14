@@ -2,6 +2,19 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.6.4] - 2026-11-14
+
+### Added
+- **Native Haptic Feedback UX (`HapticService`):**
+  - Integrated subtle, tactile haptic feedback using Flutter's built-in `package:flutter/services.dart` (`HapticFeedback` class) without external dependencies.
+  - Centralized `HapticService` helper with granular interaction tiers:
+    - **Light Impact (`HapticFeedback.lightImpact()`):** Standard button taps (Paste, Clear, Search, Play/Pause, Next/Prev, Favorites), format and quality chips, menus, and bottom sheets.
+    - **Medium Impact (`HapticFeedback.mediumImpact()`):** Download starts (single & batch playlists), video/audio clipping saves, and GIF exports.
+    - **Selection Click (`HapticFeedback.selectionClick()`):** Slider touch start/end (Audio scrubber, Equalizer 5-band sliders, Bass Booster, Volume Booster, Video Trim/Zoom/Pan), bottom navigation tab switches, and Settings toggles.
+    - **Warning / Error (`HapticFeedback.heavyImpact()`):** Failed downloads, invalid URL inputs, queue task removal, and library item / playlist deletion.
+  - Added user toggle in **Settings -> Notifications & Background Service** to enable or disable haptic feedback at will, stored persistently via `SharedPreferences`.
+  - Added Android permission `<uses-permission android:name="android.permission.VIBRATE"/>` in `AndroidManifest.xml`.
+
 ## [1.6.3] - 2026-11-14
 
 ### Fixed

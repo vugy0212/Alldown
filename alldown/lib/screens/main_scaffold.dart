@@ -6,6 +6,7 @@ import '../providers/download_queue_provider.dart';
 import '../providers/quick_download_provider.dart';
 import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
+import '../services/haptic_service.dart';
 import '../widgets/custom_header.dart';
 import '../widgets/mini_player_bar.dart';
 import 'home_screen.dart';
@@ -85,6 +86,7 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
       appBar: CustomHeader(
         subtitle: subtitles[_currentIndex],
         onSettingsTap: () {
+          HapticService.light();
           setState(() => _currentIndex = 3);
         },
       ),
@@ -173,7 +175,12 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
     final inactiveColor = isDark ? AppColors.onSurfaceVariant : const Color(0xFF64748B);
 
     return InkWell(
-      onTap: () => setState(() => _currentIndex = index),
+      onTap: () {
+        if (_currentIndex != index) {
+          HapticService.selection();
+          setState(() => _currentIndex = index);
+        }
+      },
       borderRadius: BorderRadius.circular(16),
       child: Container(
         width: 64,

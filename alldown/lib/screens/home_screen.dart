@@ -8,6 +8,7 @@ import '../models/playlist_info.dart';
 import '../providers/quick_download_provider.dart';
 import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
+import '../services/haptic_service.dart';
 import '../widgets/playlist_selection_modal.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -37,6 +38,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _onPaste() async {
+    HapticService.light();
     final data = await Clipboard.getData('text/plain');
     final text = data?.text?.trim() ?? '';
     if (text.isNotEmpty) {
@@ -46,6 +48,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _onClear() {
+    HapticService.light();
     _urlController.clear();
     ref.read(quickDownloadProvider.notifier).clearUrl();
   }
@@ -297,7 +300,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             borderRadius: BorderRadius.circular(28),
                           ),
                         ),
-                        onPressed: state.isAnalyzing ? null : notifier.fetchMetadata,
+                        onPressed: state.isAnalyzing
+                            ? null
+                            : () {
+                                if (_urlController.text.trim().isEmpty) {
+                                  HapticService.error();
+                                } else {
+                                  HapticService.light();
+                                  notifier.fetchMetadata();
+                                }
+                              },
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -689,19 +701,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     title: 'Video (${settings.videoContainer})',
                     icon: Icons.movie_rounded,
                     selected: state.options.format == TargetFormat.videoMp4,
-                    onTap: () => notifier.setFormat(TargetFormat.videoMp4),
+                    onTap: () {
+                      HapticService.light();
+                      notifier.setFormat(TargetFormat.videoMp4);
+                    },
                   ),
                   _buildFormatTab(
                     title: audioTabTitle,
                     icon: Icons.headphones_rounded,
                     selected: state.options.format == TargetFormat.audioMp3,
-                    onTap: () => notifier.setFormat(TargetFormat.audioMp3),
+                    onTap: () {
+                      HapticService.light();
+                      notifier.setFormat(TargetFormat.audioMp3);
+                    },
                   ),
                   _buildFormatTab(
                     title: l10n.customRaw,
                     icon: Icons.terminal_rounded,
                     selected: state.options.format == TargetFormat.customRaw,
-                    onTap: () => notifier.setFormat(TargetFormat.customRaw),
+                    onTap: () {
+                      HapticService.light();
+                      notifier.setFormat(TargetFormat.customRaw);
+                    },
                   ),
                 ],
               ),
@@ -722,6 +743,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 children: [
                   InkWell(
                     onTap: () {
+                      HapticService.selection();
                       setState(() {
                         _isQualityExpanded = !_isQualityExpanded;
                       });
@@ -819,7 +841,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               tag: '320k',
                               icon: Icons.album_rounded,
                               selected: state.options.audioQuality == AudioQuality.kbps320,
-                              onTap: () => notifier.setAudioQuality(AudioQuality.kbps320),
+                              onTap: () {
+                                HapticService.light();
+                                notifier.setAudioQuality(AudioQuality.kbps320);
+                              },
                             ),
                             const SizedBox(height: 8),
                             _buildQualityCard(
@@ -831,7 +856,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               tag: '256k',
                               icon: Icons.graphic_eq_rounded,
                               selected: state.options.audioQuality == AudioQuality.kbps256,
-                              onTap: () => notifier.setAudioQuality(AudioQuality.kbps256),
+                              onTap: () {
+                                HapticService.light();
+                                notifier.setAudioQuality(AudioQuality.kbps256);
+                              },
                             ),
                             const SizedBox(height: 8),
                             _buildQualityCard(
@@ -843,7 +871,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               tag: '192k',
                               icon: Icons.audiotrack_rounded,
                               selected: state.options.audioQuality == AudioQuality.kbps192,
-                              onTap: () => notifier.setAudioQuality(AudioQuality.kbps192),
+                              onTap: () {
+                                HapticService.light();
+                                notifier.setAudioQuality(AudioQuality.kbps192);
+                              },
                             ),
                             const SizedBox(height: 8),
                             _buildQualityCard(
@@ -855,7 +886,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               tag: '128k',
                               icon: Icons.music_note_rounded,
                               selected: state.options.audioQuality == AudioQuality.kbps128,
-                              onTap: () => notifier.setAudioQuality(AudioQuality.kbps128),
+                              onTap: () {
+                                HapticService.light();
+                                notifier.setAudioQuality(AudioQuality.kbps128);
+                              },
                             ),
                           ] else if (state.options.format == TargetFormat.videoMp4) ...[
                             _buildQualityCard(
@@ -865,7 +899,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               tag: '60fps',
                               icon: Icons.hd_rounded,
                               selected: state.options.quality == VideoQuality.res4k,
-                              onTap: () => notifier.setQuality(VideoQuality.res4k),
+                              onTap: () {
+                                HapticService.light();
+                                notifier.setQuality(VideoQuality.res4k);
+                              },
                             ),
                             const SizedBox(height: 8),
                             _buildQualityCard(
@@ -875,7 +912,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               badge: 'Recommended',
                               icon: Icons.check_rounded,
                               selected: state.options.quality == VideoQuality.res1080p,
-                              onTap: () => notifier.setQuality(VideoQuality.res1080p),
+                              onTap: () {
+                                HapticService.light();
+                                notifier.setQuality(VideoQuality.res1080p);
+                              },
                             ),
                             const SizedBox(height: 8),
                             _buildQualityCard(
@@ -884,7 +924,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               size: media?.estimateSizeForQuality(VideoQuality.res720p, false) ?? 'Auto',
                               icon: Icons.video_file_rounded,
                               selected: state.options.quality == VideoQuality.res720p,
-                              onTap: () => notifier.setQuality(VideoQuality.res720p),
+                              onTap: () {
+                                HapticService.light();
+                                notifier.setQuality(VideoQuality.res720p);
+                              },
                             ),
                             const SizedBox(height: 8),
                             _buildQualityCard(
@@ -893,7 +936,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               size: media?.estimateSizeForQuality(VideoQuality.res480p, false) ?? 'Auto',
                               icon: Icons.sd_rounded,
                               selected: state.options.quality == VideoQuality.res480p,
-                              onTap: () => notifier.setQuality(VideoQuality.res480p),
+                              onTap: () {
+                                HapticService.light();
+                                notifier.setQuality(VideoQuality.res480p);
+                              },
                             ),
                           ] else ...[
                             Container(
@@ -956,6 +1002,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       : () {
                           final started = notifier.startDownload();
                           if (!started) {
+                            HapticService.error();
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
@@ -966,6 +1013,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               ),
                             );
                           } else {
+                            HapticService.medium();
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
@@ -1491,6 +1539,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                     ),
                     onPressed: () {
+                      HapticService.medium();
                       notifier.selectAllPlaylistItems(true);
                       final count = notifier.enqueueSelectedPlaylistItems();
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -1548,6 +1597,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                     ),
                     onPressed: () {
+                      HapticService.light();
                       PlaylistSelectionModal.show(context);
                     },
                     child: Row(

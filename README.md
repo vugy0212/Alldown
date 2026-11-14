@@ -4,7 +4,7 @@
   <p><b>Universal Media Downloader, Pro Audio Studio & HD Video/GIF Editor for Android</b></p>
 
   <p>
-    <a href="https://github.com/vugy0212/Alldown/releases"><img src="https://img.shields.io/badge/Version-1.6.3-6366F1?style=for-the-badge&logo=android&logoColor=white" alt="Version 1.6.3" /></a>
+    <a href="https://github.com/vugy0212/Alldown/releases"><img src="https://img.shields.io/badge/Version-1.6.4-6366F1?style=for-the-badge&logo=android&logoColor=white" alt="Version 1.6.4" /></a>
     <a href="https://flutter.dev"><img src="https://img.shields.io/badge/Flutter-3.x-06B6D4?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter" /></a>
     <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Platform-Android%208.0%2B-10B981?style=for-the-badge&logo=android&logoColor=white" alt="Platform Android" /></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-F59E0B?style=for-the-badge" alt="License GPLv3" /></a>
@@ -65,6 +65,11 @@ Built with Flutter 3.x and native Android hardware-accelerated Kotlin engines (M
 - **12+ Platforms Supported**: YouTube, YouTube Shorts, TikTok, Instagram Reels, Facebook Watch, X (Twitter), Streamable, Vimeo, Wikimedia Commons, Archive.org, and universal direct media streams.
 - **Automatic Format Remuxing**: Detects unremuxed MPEG-TS streams and automatically converts them to clean, instantly playable MP4 files.
 - **Network Customization**: Wi-Fi Only download protection, parallel downloads (`1` – `5` simultaneous streams), auto-retry on network dropouts, custom User-Agent headers, and Netscape `cookies.txt` import.
+
+### 📳 Native Haptic Feedback & Tactile UX
+- **Customizable Haptics**: Native vibration engine using Flutter's built-in platform channels (`HapticFeedback`) with no external bloat.
+- **Subtle Tactile Responses**: Distinct sensory feedback for light button taps, medium download/export confirmations, slider/tab adjustments, and error/deletion alerts.
+- **Settings Toggle**: Easily toggle haptic feedback on or off in Settings (saved in local preferences).
 
 ### 🔄 In-App Auto-Updater
 - **One-Tap Updates**: Integrated `AppUpdateService` checks GitHub Releases for new versions, shows detailed changelogs, and downloads/installs the latest APK directly within the app.
@@ -198,7 +203,7 @@ Compiled APKs will be located in: `alldown/build/app/outputs/flutter-apk/`.
 ## 👤 About
 
 - **Project:** AllDown
-- **Current Version:** 1.6.3 (`v1.6.3+25`)
+- **Current Version:** 1.6.4 (`v1.6.4+26`)
 - **Author:** **Allen**
 - **Repository:** [https://github.com/vugy0212/Alldown](https://github.com/vugy0212/Alldown)
 

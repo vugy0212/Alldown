@@ -9,6 +9,7 @@ import '../providers/media_library_provider.dart';
 import '../providers/player_provider.dart';
 import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
+import '../services/haptic_service.dart';
 import '../widgets/library_item_card.dart';
 import '../widgets/video_player_modal.dart';
 
@@ -209,6 +210,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
                         subtitle: Text(item.channel, maxLines: 1, overflow: TextOverflow.ellipsis),
                         onChanged: (val) {
+                          HapticService.selection();
                           setModalState(() {
                             if (val == true) {
                               chosenIds.add(item.id);
@@ -234,7 +236,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     label: Text(l10n.createPlaylist),
                     onPressed: () {
                       final name = titleCtrl.text.trim();
-                      if (name.isEmpty) return;
+                      if (name.isEmpty) {
+                        HapticService.error();
+                        return;
+                      }
+                      HapticService.medium();
                       notifier.createPlaylist(name, chosenIds.toList());
                       Navigator.pop(ctx);
                       setState(() {
@@ -256,6 +262,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   }
 
   void _onDeleteItem(MediaItem item) {
+    HapticService.error();
     try {
       final f = File(item.localPath);
       if (f.existsSync()) {
@@ -360,7 +367,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     title: l10n.categoryAll(libraryState.items.length),
                     icon: Icons.check_rounded,
                     isSelected: libraryState.selectedCategory == LibraryCategory.all,
-                    onTap: () => libraryNotifier.setCategory(LibraryCategory.all),
+                    onTap: () {
+                      HapticService.selection();
+                      libraryNotifier.setCategory(LibraryCategory.all);
+                    },
                     isDark: isDark,
                   ),
                   const SizedBox(width: 8),
@@ -368,7 +378,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     title: l10n.categoryVideos(videoCount),
                     icon: Icons.movie_rounded,
                     isSelected: libraryState.selectedCategory == LibraryCategory.videos,
-                    onTap: () => libraryNotifier.setCategory(LibraryCategory.videos),
+                    onTap: () {
+                      HapticService.selection();
+                      libraryNotifier.setCategory(LibraryCategory.videos);
+                    },
                     isDark: isDark,
                   ),
                   const SizedBox(width: 8),
@@ -376,7 +389,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     title: l10n.categoryAudio(audioCount),
                     icon: Icons.headphones_rounded,
                     isSelected: libraryState.selectedCategory == LibraryCategory.audio,
-                    onTap: () => libraryNotifier.setCategory(LibraryCategory.audio),
+                    onTap: () {
+                      HapticService.selection();
+                      libraryNotifier.setCategory(LibraryCategory.audio);
+                    },
                     isDark: isDark,
                   ),
                   const SizedBox(width: 8),
@@ -384,7 +400,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     title: l10n.categoryPlaylists(playlistsCount),
                     icon: Icons.queue_music_rounded,
                     isSelected: libraryState.selectedCategory == LibraryCategory.playlists,
-                    onTap: () => libraryNotifier.setCategory(LibraryCategory.playlists),
+                    onTap: () {
+                      HapticService.selection();
+                      libraryNotifier.setCategory(LibraryCategory.playlists);
+                    },
                     isDark: isDark,
                   ),
                   const SizedBox(width: 8),
@@ -392,7 +411,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     title: l10n.categoryFavorites(libraryState.items.where((e) => e.isFavorite).length),
                     icon: Icons.favorite_rounded,
                     isSelected: libraryState.selectedCategory == LibraryCategory.favorites,
-                    onTap: () => libraryNotifier.setCategory(LibraryCategory.favorites),
+                    onTap: () {
+                      HapticService.selection();
+                      libraryNotifier.setCategory(LibraryCategory.favorites);
+                    },
                     isDark: isDark,
                   ),
                 ],
@@ -1048,6 +1070,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                       icon: const Icon(Icons.delete_outline_rounded, size: 20),
                       color: AppColors.errorAccent.withValues(alpha: 0.7),
                       onPressed: () {
+                        HapticService.error();
                         notifier.deletePlaylist(pl.id);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text(l10n.playlistDeleted)),

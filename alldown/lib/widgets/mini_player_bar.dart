@@ -4,6 +4,7 @@ import '../l10n/l10n.dart';
 import '../providers/player_provider.dart';
 import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
+import '../services/haptic_service.dart';
 import 'video_player_modal.dart';
 
 class MiniPlayerBar extends ConsumerWidget {
@@ -21,7 +22,10 @@ class MiniPlayerBar extends ConsumerWidget {
     if (item == null) return const SizedBox.shrink();
 
     return GestureDetector(
-      onTap: () => VideoPlayerModal.show(context),
+      onTap: () {
+        HapticService.light();
+        VideoPlayerModal.show(context);
+      },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -113,14 +117,20 @@ class MiniPlayerBar extends ConsumerWidget {
                         icon: const Icon(Icons.skip_previous_rounded, size: 22),
                         color: player.hasPrevious ? AppColors.onSurface : AppColors.onSurfaceVariant.withValues(alpha: 0.4),
                         visualDensity: VisualDensity.compact,
-                        onPressed: notifier.playPrevious,
+                        onPressed: () {
+                          HapticService.light();
+                          notifier.playPrevious();
+                        },
                       )
                     else
                       IconButton(
                         icon: const Icon(Icons.replay_10_rounded, size: 20),
                         color: AppColors.onSurfaceVariant,
                         visualDensity: VisualDensity.compact,
-                        onPressed: notifier.skipBackward,
+                        onPressed: () {
+                          HapticService.light();
+                          notifier.skipBackward();
+                        },
                       ),
                     Container(
                       width: 34,
@@ -136,7 +146,10 @@ class MiniPlayerBar extends ConsumerWidget {
                           size: 20,
                           color: Colors.white,
                         ),
-                        onPressed: notifier.togglePlayPause,
+                        onPressed: () {
+                          HapticService.light();
+                          notifier.togglePlayPause();
+                        },
                       ),
                     ),
                     if (player.hasPlaylist)
@@ -144,13 +157,19 @@ class MiniPlayerBar extends ConsumerWidget {
                         icon: const Icon(Icons.skip_next_rounded, size: 22),
                         color: player.hasNext ? AppColors.onSurface : AppColors.onSurfaceVariant.withValues(alpha: 0.4),
                         visualDensity: VisualDensity.compact,
-                        onPressed: notifier.playNext,
+                        onPressed: () {
+                          HapticService.light();
+                          notifier.playNext();
+                        },
                       ),
                     IconButton(
                       icon: const Icon(Icons.close_rounded, size: 18),
                       color: AppColors.onSurfaceVariant,
                       visualDensity: VisualDensity.compact,
-                      onPressed: notifier.stopAndClose,
+                      onPressed: () {
+                        HapticService.light();
+                        notifier.stopAndClose();
+                      },
                     ),
                   ],
                 ),

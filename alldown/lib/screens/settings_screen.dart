@@ -8,6 +8,7 @@ import '../models/media_item.dart';
 import '../providers/media_library_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/app_update_service.dart';
+import '../services/haptic_service.dart';
 import '../theme/app_colors.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -672,7 +673,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   title: l10n.completionNotifications,
                   subtitle: l10n.completionNotificationsSub,
                   value: settings.notifyOnComplete,
-                  onChanged: (_) => notifier.toggleNotifyOnComplete(),
+                  onChanged: (_) {
+                    HapticService.selection();
+                    notifier.toggleNotifyOnComplete();
+                  },
+                ),
+                Divider(color: AppColors.stroke, height: 16),
+                _buildSettingSwitch(
+                  title: l10n.hapticFeedbackTitle,
+                  subtitle: l10n.hapticFeedbackSub,
+                  value: settings.hapticFeedback,
+                  onChanged: (_) {
+                    HapticService.selection();
+                    notifier.toggleHapticFeedback();
+                  },
                 ),
                 Divider(color: AppColors.stroke, height: 16),
                 Row(

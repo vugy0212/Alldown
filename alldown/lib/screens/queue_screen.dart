@@ -6,6 +6,7 @@ import '../models/download_task.dart';
 import '../providers/download_queue_provider.dart';
 import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
+import '../services/haptic_service.dart';
 import '../widgets/queue_task_card.dart';
 import '../widgets/telemetry_waveform.dart';
 
@@ -75,19 +76,34 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
                         title: l10n.active,
                         badge: '$activeCount',
                         isSelected: _currentTab == QueueFilterTab.active,
-                        onTap: () => setState(() => _currentTab = QueueFilterTab.active),
+                        onTap: () {
+                          if (_currentTab != QueueFilterTab.active) {
+                            HapticService.selection();
+                            setState(() => _currentTab = QueueFilterTab.active);
+                          }
+                        },
                       ),
                       _buildTabButton(
                         title: l10n.completed,
                         badge: '$completedCount',
                         isSelected: _currentTab == QueueFilterTab.completed,
-                        onTap: () => setState(() => _currentTab = QueueFilterTab.completed),
+                        onTap: () {
+                          if (_currentTab != QueueFilterTab.completed) {
+                            HapticService.selection();
+                            setState(() => _currentTab = QueueFilterTab.completed);
+                          }
+                        },
                       ),
                       _buildTabButton(
                         title: l10n.paused,
                         badge: '$pausedCount',
                         isSelected: _currentTab == QueueFilterTab.paused,
-                        onTap: () => setState(() => _currentTab = QueueFilterTab.paused),
+                        onTap: () {
+                          if (_currentTab != QueueFilterTab.paused) {
+                            HapticService.selection();
+                            setState(() => _currentTab = QueueFilterTab.paused);
+                          }
+                        },
                       ),
                     ],
                   ),
@@ -341,7 +357,10 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
                             ),
                             padding: const EdgeInsets.symmetric(vertical: 10),
                           ),
-                          onPressed: () => queueNotifier.pauseAll(),
+                          onPressed: () {
+                            HapticService.light();
+                            queueNotifier.pauseAll();
+                          },
                           icon: const Icon(Icons.pause_circle_rounded, size: 18),
                           label: Text('${l10n.pauseAll} ($activeCount)'),
                         ),
@@ -358,7 +377,10 @@ class _QueueScreenState extends ConsumerState<QueueScreen> {
                           ),
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         ),
-                        onPressed: () => queueNotifier.clearFinished(),
+                        onPressed: () {
+                          HapticService.error();
+                          queueNotifier.clearFinished();
+                        },
                         icon: const Icon(Icons.cleaning_services_rounded, size: 18),
                         label: Text(l10n.clean),
                       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/download_task.dart';
+import '../services/haptic_service.dart';
 import '../theme/app_colors.dart';
 
 class QueueTaskCard extends StatelessWidget {
@@ -324,7 +325,10 @@ class QueueTaskCard extends StatelessWidget {
                           minimumSize: const Size(32, 32),
                           padding: EdgeInsets.zero,
                         ),
-                        onPressed: onBoost,
+                        onPressed: () {
+                          HapticService.light();
+                          onBoost?.call();
+                        },
                         tooltip: 'Boost Priority',
                       ),
                       const SizedBox(width: 6),
@@ -341,7 +345,10 @@ class QueueTaskCard extends StatelessWidget {
                           minimumSize: const Size(32, 32),
                           padding: EdgeInsets.zero,
                         ),
-                        onPressed: onPauseResume,
+                        onPressed: () {
+                          HapticService.light();
+                          onPauseResume();
+                        },
                         tooltip: isPaused ? 'Resume' : 'Pause',
                       ),
                       const SizedBox(width: 6),
@@ -354,7 +361,10 @@ class QueueTaskCard extends StatelessWidget {
                         minimumSize: const Size(32, 32),
                         padding: EdgeInsets.zero,
                       ),
-                      onPressed: onCancel,
+                      onPressed: () {
+                        HapticService.error();
+                        onCancel();
+                      },
                       tooltip: 'Remove',
                     ),
                   ],
@@ -400,7 +410,10 @@ class QueueTaskCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       InkWell(
-                        onTap: onStartNow,
+                        onTap: () {
+                          HapticService.medium();
+                          onStartNow?.call();
+                        },
                         borderRadius: BorderRadius.circular(20),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -432,7 +445,10 @@ class QueueTaskCard extends StatelessWidget {
                           minimumSize: const Size(28, 28),
                           padding: EdgeInsets.zero,
                         ),
-                        onPressed: onCancel,
+                        onPressed: () {
+                          HapticService.error();
+                          onCancel();
+                        },
                       ),
                     ],
                   ),

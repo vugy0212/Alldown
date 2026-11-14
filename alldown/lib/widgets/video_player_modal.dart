@@ -9,6 +9,7 @@ import '../providers/media_library_provider.dart';
 import '../providers/player_provider.dart';
 import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
+import '../services/haptic_service.dart';
 import 'audio_equalizer_modal.dart';
 import 'audio_trimmer_modal.dart';
 import 'video_editor_modal.dart';
@@ -521,7 +522,9 @@ class VideoPlayerModal extends ConsumerWidget {
                   ),
                   child: Slider(
                     value: playerState.progressFraction,
+                    onChangeStart: (_) => HapticService.selection(),
                     onChanged: (val) => notifier.seekTo(val),
+                    onChangeEnd: (_) => HapticService.selection(),
                   ),
                 ),
                 Padding(
@@ -577,7 +580,10 @@ class VideoPlayerModal extends ConsumerWidget {
                               ? AppColors.primaryAccent
                               : AppColors.onSurfaceVariant.withValues(alpha: 0.5),
                         ),
-                        onPressed: notifier.toggleShuffle,
+                        onPressed: () {
+                          HapticService.light();
+                          notifier.toggleShuffle();
+                        },
                       ),
 
                       // Previous Track
@@ -587,7 +593,10 @@ class VideoPlayerModal extends ConsumerWidget {
                         color: playerState.hasPrevious
                             ? AppColors.onSurface
                             : AppColors.onSurfaceVariant.withValues(alpha: 0.3),
-                        onPressed: notifier.playPrevious,
+                        onPressed: () {
+                          HapticService.light();
+                          notifier.playPrevious();
+                        },
                       ),
 
                       // Play / Pause Circle
@@ -610,7 +619,10 @@ class VideoPlayerModal extends ConsumerWidget {
                             size: 32,
                             color: Colors.white,
                           ),
-                          onPressed: notifier.togglePlayPause,
+                          onPressed: () {
+                            HapticService.light();
+                            notifier.togglePlayPause();
+                          },
                         ),
                       ),
 
@@ -621,7 +633,10 @@ class VideoPlayerModal extends ConsumerWidget {
                         color: playerState.hasNext
                             ? AppColors.onSurface
                             : AppColors.onSurfaceVariant.withValues(alpha: 0.3),
-                        onPressed: notifier.playNext,
+                        onPressed: () {
+                          HapticService.light();
+                          notifier.playNext();
+                        },
                       ),
 
                       // Repeat Button
@@ -640,7 +655,10 @@ class VideoPlayerModal extends ConsumerWidget {
                               ? AppColors.primaryAccent
                               : AppColors.onSurfaceVariant.withValues(alpha: 0.5),
                         ),
-                        onPressed: notifier.toggleRepeat,
+                        onPressed: () {
+                          HapticService.light();
+                          notifier.toggleRepeat();
+                        },
                       ),
                     ],
                   ),
@@ -804,7 +822,10 @@ class VideoPlayerModal extends ConsumerWidget {
                       IconButton(
                         icon: const Icon(Icons.replay_10_rounded, size: 28),
                         color: AppColors.onSurface,
-                        onPressed: notifier.skipBackward,
+                        onPressed: () {
+                          HapticService.light();
+                          notifier.skipBackward();
+                        },
                       ),
                       Container(
                         width: 56,
@@ -825,13 +846,19 @@ class VideoPlayerModal extends ConsumerWidget {
                             size: 32,
                             color: Colors.white,
                           ),
-                          onPressed: notifier.togglePlayPause,
+                          onPressed: () {
+                            HapticService.light();
+                            notifier.togglePlayPause();
+                          },
                         ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.forward_10_rounded, size: 28),
                         color: AppColors.onSurface,
-                        onPressed: notifier.skipForward,
+                        onPressed: () {
+                          HapticService.light();
+                          notifier.skipForward();
+                        },
                       ),
                     ],
                   ),

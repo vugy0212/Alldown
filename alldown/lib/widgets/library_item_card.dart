@@ -7,6 +7,7 @@ import '../models/media_item.dart';
 import '../providers/player_provider.dart';
 import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
+import '../services/haptic_service.dart';
 import 'audio_trimmer_modal.dart';
 import 'video_editor_modal.dart';
 
@@ -185,6 +186,7 @@ class LibraryItemCard extends ConsumerWidget {
                       ? (l10n.isHr ? 'Ukloni iz favorita' : 'Remove from Favorites')
                       : (l10n.isHr ? 'Dodaj u favorite' : 'Add to Favorites')),
                   onTap: () {
+                    HapticService.light();
                     Navigator.pop(ctx);
                     onToggleFavorite();
                   },
@@ -197,6 +199,7 @@ class LibraryItemCard extends ConsumerWidget {
                     style: const TextStyle(color: AppColors.errorAccent),
                   ),
                   onTap: () {
+                    HapticService.error();
                     Navigator.pop(ctx);
                     onDelete();
                   },
@@ -220,7 +223,15 @@ class LibraryItemCard extends ConsumerWidget {
 
   Widget _buildListCard(BuildContext context, WidgetRef ref, L10n l10n) {
     return InkWell(
-      onTap: isSelectionMode ? onToggleSelect : onPlay,
+      onTap: () {
+        if (isSelectionMode) {
+          HapticService.selection();
+          onToggleSelect?.call();
+        } else {
+          HapticService.light();
+          onPlay();
+        }
+      },
       borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
@@ -353,7 +364,10 @@ class LibraryItemCard extends ConsumerWidget {
                           padding: EdgeInsets.zero,
                           minimumSize: const Size(28, 28),
                         ),
-                        onPressed: () => _showContextMenu(context, ref),
+                        onPressed: () {
+                          HapticService.light();
+                          _showContextMenu(context, ref);
+                        },
                       ),
                     ],
                   ),
@@ -462,7 +476,15 @@ class LibraryItemCard extends ConsumerWidget {
 
   Widget _buildGridCard(BuildContext context) {
     return InkWell(
-      onTap: isSelectionMode ? onToggleSelect : onPlay,
+      onTap: () {
+        if (isSelectionMode) {
+          HapticService.selection();
+          onToggleSelect?.call();
+        } else {
+          HapticService.light();
+          onPlay();
+        }
+      },
       borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(

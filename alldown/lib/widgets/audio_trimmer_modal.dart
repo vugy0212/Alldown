@@ -6,6 +6,7 @@ import '../l10n/l10n.dart';
 import '../models/media_item.dart';
 import '../providers/media_library_provider.dart';
 import '../providers/settings_provider.dart';
+import '../services/haptic_service.dart';
 import '../services/native_downloader_service.dart';
 import '../theme/app_colors.dart';
 
@@ -101,6 +102,7 @@ class _AudioTrimmerModalState extends ConsumerState<AudioTrimmerModal> {
 
   Future<void> _saveClip() async {
     if (_isSaving) return;
+    HapticService.medium();
     setState(() => _isSaving = true);
 
     try {
@@ -280,6 +282,8 @@ class _AudioTrimmerModalState extends ConsumerState<AudioTrimmerModal> {
                 max: _totalDurationMs,
                 activeColor: AppColors.secondary,
                 inactiveColor: isDark ? AppColors.stroke : const Color(0xFFCBD5E1),
+                onChangeStart: (_) => HapticService.selection(),
+                onChangeEnd: (_) => HapticService.selection(),
                 onChanged: (vals) {
                   if (vals.end - vals.start >= 1000) {
                     // Min 1 second clip
@@ -315,7 +319,10 @@ class _AudioTrimmerModalState extends ConsumerState<AudioTrimmerModal> {
                   ),
                   icon: Icon(_isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded),
                   label: Text(_isPlaying ? 'Pause Preview' : 'Play Selected Clip'),
-                  onPressed: _togglePreview,
+                  onPressed: () {
+                    HapticService.light();
+                    _togglePreview();
+                  },
                 ),
               ),
               const SizedBox(height: 24),

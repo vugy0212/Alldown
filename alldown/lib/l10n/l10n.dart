@@ -203,6 +203,8 @@ class L10n {
   String get notificationsSummary => isHr ? 'Aktivna Android pozadinska usluga' : 'Android Foreground Service with active notifications';
   String get completionNotifications => isHr ? 'Obavijesti o dovršetku' : 'Completion Notifications';
   String get completionNotificationsSub => isHr ? 'Prikaži obavijest kada preuzimanje završi' : 'Show notification when downloads finish';
+  String get hapticFeedbackTitle => isHr ? 'Haptički odziv (Vibracija)' : 'Haptic Feedback';
+  String get hapticFeedbackSub => isHr ? 'Suptilne vibracije pri dodiru gumba, odabiru i preuzimanju' : 'Subtle vibration on button taps, selections, and actions';
 
   String get sectionInfoHelp => isHr ? 'INFORMACIJE, POMOĆ I SUSTAV' : 'INFORMATION, HELP & SYSTEM';
   String get helpAndUserGuide => isHr ? 'Korisnički vodič i pomoć' : 'Help & User Guide';

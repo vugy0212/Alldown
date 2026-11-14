@@ -34,6 +34,7 @@ class AppSettings {
   final String userAgent;
   final int connectionTimeout;
   final bool notifyOnComplete;
+  final bool hapticFeedback;
   final bool isDarkMode;
   final AppLanguage language;
 
@@ -56,6 +57,7 @@ class AppSettings {
     this.userAgent = "Android Chrome",
     this.connectionTimeout = 15,
     this.notifyOnComplete = true,
+    this.hapticFeedback = true,
     this.isDarkMode = true,
     this.language = AppLanguage.hr,
   });
@@ -123,6 +125,7 @@ class AppSettings {
     String? userAgent,
     int? connectionTimeout,
     bool? notifyOnComplete,
+    bool? hapticFeedback,
     bool? isDarkMode,
     AppLanguage? language,
   }) {
@@ -145,6 +148,7 @@ class AppSettings {
       userAgent: userAgent ?? this.userAgent,
       connectionTimeout: connectionTimeout ?? this.connectionTimeout,
       notifyOnComplete: notifyOnComplete ?? this.notifyOnComplete,
+      hapticFeedback: hapticFeedback ?? this.hapticFeedback,
       isDarkMode: isDarkMode ?? this.isDarkMode,
       language: language ?? this.language,
     );
@@ -169,6 +173,7 @@ class AppSettings {
     'userAgent': userAgent,
     'connectionTimeout': connectionTimeout,
     'notifyOnComplete': notifyOnComplete,
+    'hapticFeedback': hapticFeedback,
     'isDarkMode': isDarkMode,
     'language': language.name,
   };
@@ -198,6 +203,7 @@ class AppSettings {
       userAgent: json['userAgent'] as String? ?? "Android Chrome",
       connectionTimeout: json['connectionTimeout'] as int? ?? 15,
       notifyOnComplete: json['notifyOnComplete'] as bool? ?? true,
+      hapticFeedback: json['hapticFeedback'] as bool? ?? true,
       isDarkMode: json['isDarkMode'] as bool? ?? true,
       language: AppLanguage.values.firstWhere(
         (e) => e.name == json['language'],
