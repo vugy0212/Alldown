@@ -12,6 +12,7 @@ import '../theme/app_colors.dart';
 import '../services/haptic_service.dart';
 import 'audio_equalizer_modal.dart';
 import 'audio_trimmer_modal.dart';
+import 'animated_equalizer_visualizer.dart';
 import 'video_editor_modal.dart';
 
 class VideoPlayerModal extends ConsumerWidget {
@@ -438,7 +439,7 @@ class VideoPlayerModal extends ConsumerWidget {
                                                     color: AppColors.secondary,
                                                   ),
                                                 ),
-                                                const SizedBox(height: 10),
+                                                const SizedBox(height: 8),
                                                 Text(
                                                   '${item.format} • ${item.resolution}',
                                                   style: TextStyle(
@@ -449,6 +450,17 @@ class VideoPlayerModal extends ConsumerWidget {
                                                   ),
                                                 ),
                                               ],
+                                            ),
+                                          ),
+                                          // Dynamic Animated Graphic Equalizer Visualizer
+                                          Positioned(
+                                            left: 20,
+                                            right: 20,
+                                            bottom: 12,
+                                            child: AnimatedEqualizerVisualizer(
+                                              isPlaying: playerState.isPlaying,
+                                              barCount: 26,
+                                              height: 32,
                                             ),
                                           ),
                                         ],

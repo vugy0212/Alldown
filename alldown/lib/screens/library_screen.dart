@@ -204,7 +204,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final l10n = L10n(settings.language);
 
     final items = libraryState.filteredItems;
-    final videoCount = libraryState.items.where((e) => !e.isAudio).length;
+    final allCount = libraryState.allItems.length;
+    final videoCount = libraryState.allItems.where((e) => !e.isAudio).length;
     final audioCount = libraryState.allItems.where((e) => e.isAudio).length;
     final playlistsCount = libraryState.allPlaylists.length;
     final isPlaylistsTab = libraryState.selectedCategory == LibraryCategory.playlists;
@@ -254,7 +255,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         fontSize: 13,
                       ),
                       decoration: InputDecoration(
-                        hintText: l10n.searchDownloaded(libraryState.items.length),
+                        hintText: l10n.searchDownloaded(allCount),
                         hintStyle: TextStyle(
                           color: isDark ? AppColors.outline : const Color(0xFF94A3B8),
                           fontSize: 13,
@@ -284,7 +285,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               child: Row(
                 children: [
                   _buildCategoryChip(
-                    title: l10n.categoryAll(libraryState.items.length),
+                    title: l10n.categoryAll(allCount),
                     icon: Icons.check_rounded,
                     isSelected: libraryState.selectedCategory == LibraryCategory.all,
                     onTap: () {
