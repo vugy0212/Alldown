@@ -11,6 +11,8 @@ class StorageService {
   static const String _keyLibrary = 'alldown_library_v2';
   static const String _keyQueue = 'alldown_queue_v2';
   static const String _keyPlaylists = 'alldown_local_playlists_v1';
+  static const String _keyFavorites = 'alldown_favorite_ids_v1';
+  static const String _keyCustomTitles = 'alldown_custom_titles_v1';
 
   final SharedPreferences _prefs;
 
@@ -113,6 +115,31 @@ class StorageService {
       return decoded.map((e) => LocalPlaylist.fromJson(e as Map<String, dynamic>)).toList();
     } catch (_) {
       return [];
+    }
+  }
+
+  // Favorite Track IDs
+  Future<void> saveFavoriteIds(List<String> ids) async {
+    await _prefs.setStringList(_keyFavorites, ids);
+  }
+
+  List<String> loadFavoriteIds() {
+    return _prefs.getStringList(_keyFavorites) ?? [];
+  }
+
+  // Custom Track Titles (persisted across scans even for ID3-tagged external files)
+  Future<void> saveCustomTitles(Map<String, String> titles) async {
+    await _prefs.setString(_keyCustomTitles, jsonEncode(titles));
+  }
+
+  Map<String, String> loadCustomTitles() {
+    final raw = _prefs.getString(_keyCustomTitles);
+    if (raw == null || raw.isEmpty) return {};
+    try {
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      return decoded.map((k, v) => MapEntry(k, v.toString()));
+    } catch (_) {
+      return {};
     }
   }
 }

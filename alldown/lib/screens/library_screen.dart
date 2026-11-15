@@ -12,6 +12,9 @@ import '../theme/app_colors.dart';
 import '../services/haptic_service.dart';
 import '../widgets/library_item_card.dart';
 import '../widgets/video_player_modal.dart';
+import '../widgets/external_folders_modal.dart';
+import '../widgets/playlist_editor_modal.dart';
+import '../widgets/playlist_detail_modal.dart';
 
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
@@ -34,14 +37,20 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   String _calculateRealStorageUsed(List<MediaItem> items, AppLanguage lang) {
     final isHr = lang == AppLanguage.hr;
     if (items.isEmpty) return isHr ? '0.0 MB iskorišteno' : '0.0 MB used';
-    int totalBytes = 0;
+    double totalBytes = 0;
     for (final item in items) {
-      try {
-        final f = File(item.localPath);
-        if (f.existsSync()) {
-          totalBytes += f.lengthSync();
-        }
-      } catch (_) {}
+      if (item.localPath.startsWith('content://')) {
+        totalBytes += _parseSizeBytes(item.sizeFormatted);
+      } else {
+        try {
+          final f = File(item.localPath);
+          if (f.existsSync()) {
+            totalBytes += f.lengthSync();
+          } else {
+            totalBytes += _parseSizeBytes(item.sizeFormatted);
+          }
+        } catch (_) {}
+      }
     }
     final mb = totalBytes / (1024 * 1024);
     if (mb >= 1024) {
@@ -50,6 +59,23 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     }
     final mbStr = mb.toStringAsFixed(1);
     return isHr ? '$mbStr MB iskorišteno (${items.length} datoteka)' : '$mbStr MB used (${items.length} files)';
+  }
+
+  double _parseSizeBytes(String s) {
+    final parts = s.trim().split(' ');
+    if (parts.isEmpty) return 0;
+    final val = double.tryParse(parts[0]) ?? 0;
+    if (parts.length < 2) return val;
+    switch (parts[1].toUpperCase()) {
+      case 'GB':
+        return val * 1024 * 1024 * 1024;
+      case 'MB':
+        return val * 1024 * 1024;
+      case 'KB':
+        return val * 1024;
+      default:
+        return val;
+    }
   }
 
   String _sortLabel(LibrarySort sort, AppLanguage lang) {
@@ -124,155 +150,94 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     });
   }
 
-  void _showCreatePlaylistDialog(
-    BuildContext context,
-    MediaLibraryNotifier notifier,
-    List<MediaItem> availableItems,
-    L10n l10n,
-  ) {
-    final titleCtrl = TextEditingController();
-    final Set<String> chosenIds = {..._selectedItemIds};
+  void _openExternalFoldersModal(BuildContext context) {
+    HapticService.selection();
+    final state = ref.read(mediaLibraryProvider);
+    final notifier = ref.read(mediaLibraryProvider.notifier);
+    ExternalFoldersModal.show(
+      context,
+      folders: state.externalFolders,
+      onAddFolder: () => notifier.pickAndAddExternalFolder(),
+      onRemoveFolder: (uri) => notifier.removeExternalFolder(uri),
+    );
+  }
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) {
-          final isDark = ref.watch(settingsProvider).isDarkMode;
-          final audioItems = availableItems.where((e) => e.isAudio).toList();
+  void _openPlaylistEditor({LocalPlaylist? existingPlaylist}) {
+    HapticService.selection();
+    final state = ref.read(mediaLibraryProvider);
+    final notifier = ref.read(mediaLibraryProvider.notifier);
 
-          return Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.85,
-            ),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.surfaceContainerHigh : Colors.white,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              border: Border.all(color: isDark ? AppColors.stroke : const Color(0xFFE2E8F0)),
-            ),
-            padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.stroke : const Color(0xFFCBD5E1),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Icon(Icons.queue_music_rounded, color: AppColors.primaryAccent, size: 24),
-                    const SizedBox(width: 8),
-                    Text(
-                      l10n.newPlaylist,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: titleCtrl,
-                  autofocus: true,
-                  decoration: InputDecoration(
-                    labelText: l10n.playlistName,
-                    hintText: l10n.enterPlaylistName,
-                    filled: true,
-                    fillColor: isDark ? AppColors.surfaceContainer : const Color(0xFFF8FAFC),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  '${l10n.selectTracks} (${chosenIds.length}/${audioItems.length})',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: audioItems.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (_, idx) {
-                      final item = audioItems[idx];
-                      final isSelected = chosenIds.contains(item.id);
-                      return CheckboxListTile(
-                        value: isSelected,
-                        activeColor: AppColors.primaryAccent,
-                        dense: true,
-                        title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        subtitle: Text(item.channel, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        onChanged: (val) {
-                          HapticService.selection();
-                          setModalState(() {
-                            if (val == true) {
-                              chosenIds.add(item.id);
-                            } else {
-                              chosenIds.remove(item.id);
-                            }
-                          });
-                        },
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 14),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primaryAccent,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    icon: const Icon(Icons.check_rounded),
-                    label: Text(l10n.createPlaylist),
-                    onPressed: () {
-                      final name = titleCtrl.text.trim();
-                      if (name.isEmpty) {
-                        HapticService.error();
-                        return;
-                      }
-                      HapticService.medium();
-                      notifier.createPlaylist(name, chosenIds.toList());
-                      Navigator.pop(ctx);
-                      setState(() {
-                        _isSelectionMode = false;
-                        _selectedItemIds.clear();
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.playlistCreated)),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+    PlaylistEditorModal.show(
+      context,
+      playlist: existingPlaylist,
+      initialSelectedIds: (_isSelectionMode && _selectedItemIds.isNotEmpty)
+          ? Set<String>.from(_selectedItemIds)
+          : null,
+      allAudioTracks: state.allItems.where((e) => e.isAudio).toList(),
+      externalFolders: state.externalFolders,
+      onSave: (title, trackIds) {
+        if (existingPlaylist != null) {
+          notifier.updatePlaylist(existingPlaylist.id, title: title, trackIds: trackIds);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Ažurirana playlista "$title"')),
+            );
+          }
+        } else {
+          notifier.createPlaylist(title, trackIds);
+          setState(() {
+            _isSelectionMode = false;
+            _selectedItemIds.clear();
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Stvorena playlista "$title"')),
+            );
+          }
+        }
+      },
     );
   }
 
   void _onDeleteItem(MediaItem item) {
     HapticService.error();
-    try {
-      final f = File(item.localPath);
-      if (f.existsSync()) {
-        f.deleteSync();
-      }
-    } catch (_) {}
-    ref.read(mediaLibraryProvider.notifier).removeItem(item.id);
-    if (ref.read(playerProvider).currentItem?.id == item.id) {
-      ref.read(playerProvider.notifier).stopAndClose();
-    }
+    showDialog(
+      context: context,
+      builder: (dlgCtx) => AlertDialog(
+        title: const Text('Obriši datoteku?'),
+        content: Text(
+          'Želite li trajno obrisati "${item.title}" s vašeg uređaja?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dlgCtx),
+            child: const Text('Odustani'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.errorAccent),
+            onPressed: () async {
+              Navigator.pop(dlgCtx);
+              final deleted = await ref.read(mediaLibraryProvider.notifier).deleteTrack(item);
+              if (deleted && ref.read(playerProvider).currentItem?.id == item.id) {
+                ref.read(playerProvider.notifier).stopAndClose();
+              }
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      deleted
+                          ? 'Datoteka "${item.title}" je obrisana'
+                          : 'Neuspjelo brisanje datoteke',
+                    ),
+                  ),
+                );
+              }
+            },
+            child: const Text('Obriši'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -284,9 +249,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final l10n = L10n(settings.language);
 
     final items = libraryState.filteredItems;
-    final videoCount = libraryState.items.where((e) => !e.isAudio).length;
-    final audioCount = libraryState.items.where((e) => e.isAudio).length;
-    final playlistsCount = libraryState.localPlaylists.length;
+    final allCount = libraryState.allItems.length;
+    final videoCount = libraryState.allItems.where((e) => !e.isAudio).length;
+    final audioCount = libraryState.allItems.where((e) => e.isAudio).length;
+    final playlistsCount = libraryState.allPlaylists.length;
     final isPlaylistsTab = libraryState.selectedCategory == LibraryCategory.playlists;
 
     return Scaffold(
@@ -334,7 +300,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         fontSize: 13,
                       ),
                       decoration: InputDecoration(
-                        hintText: l10n.searchDownloaded(libraryState.items.length),
+                        hintText: l10n.searchDownloaded(allCount),
                         hintStyle: TextStyle(
                           color: isDark ? AppColors.outline : const Color(0xFF94A3B8),
                           fontSize: 13,
@@ -364,7 +330,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               child: Row(
                 children: [
                   _buildCategoryChip(
-                    title: l10n.categoryAll(libraryState.items.length),
+                    title: l10n.categoryAll(allCount),
                     icon: Icons.check_rounded,
                     isSelected: libraryState.selectedCategory == LibraryCategory.all,
                     onTap: () {
@@ -408,7 +374,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   ),
                   const SizedBox(width: 8),
                   _buildCategoryChip(
-                    title: l10n.categoryFavorites(libraryState.items.where((e) => e.isFavorite).length),
+                    title: l10n.categoryFavorites(libraryState.allItems.where((e) => e.isFavorite).length),
                     icon: Icons.favorite_rounded,
                     isSelected: libraryState.selectedCategory == LibraryCategory.favorites,
                     onTap: () {
@@ -481,6 +447,18 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                       onPressed: _selectedItemIds.isNotEmpty ? () => _playSelectedAsPlaylist(items) : null,
                     ),
                     const SizedBox(width: 4),
+                    // Save Selected as Playlist Button
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.secondary,
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      ),
+                      icon: const Icon(Icons.playlist_add_rounded, size: 18),
+                      label: const Text('+ Playlista', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      onPressed: _selectedItemIds.isNotEmpty ? () => _openPlaylistEditor() : null,
+                    ),
+                    const SizedBox(width: 4),
                     // Cancel Selection
                     IconButton(
                       icon: const Icon(Icons.close_rounded, size: 18),
@@ -540,7 +518,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                                       ),
                                     ),
                                     Text(
-                                      _calculateRealStorageUsed(libraryState.items, settings.language),
+                                      _calculateRealStorageUsed(libraryState.allItems, settings.language),
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         fontSize: 13,
@@ -686,7 +664,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                                 flex: audioCount * 10,
                                 child: Container(color: AppColors.secondary),
                               ),
-                            if (libraryState.items.isEmpty)
+                            if (allCount == 0)
                               Expanded(
                                 child: Container(
                                   color: isDark ? AppColors.surfaceContainerHighest : const Color(0xFFE2E8F0),
@@ -863,7 +841,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     bool isDark,
     L10n l10n,
   ) {
-    final audioItems = state.items.where((e) => e.isAudio).toList();
+    final audioItems = state.allItems.where((e) => e.isAudio).toList();
     final recentTracks = List<MediaItem>.from(audioItems);
     final favoriteTracks = audioItems.where((e) => e.isFavorite).toList();
     final mostPlayedTracks = List<MediaItem>.from(audioItems)..sort((a, b) => b.duration.compareTo(a.duration));
@@ -933,7 +911,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               ),
             ),
             Text(
-              '${state.localPlaylists.length}',
+              '${state.allPlaylists.length}',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
@@ -944,23 +922,38 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         ),
         const SizedBox(height: 10),
 
-        // Action: + Nova Playlista
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primaryAccent,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        // Action: + Nova Playlista & Vanjske Mape
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primaryAccent,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                icon: const Icon(Icons.add_rounded, size: 20),
+                label: Text(l10n.newPlaylist, style: const TextStyle(fontWeight: FontWeight.bold)),
+                onPressed: () => _openPlaylistEditor(),
+              ),
             ),
-            icon: const Icon(Icons.add_rounded, size: 20),
-            label: Text(l10n.newPlaylist, style: const TextStyle(fontWeight: FontWeight.bold)),
-            onPressed: () => _showCreatePlaylistDialog(context, notifier, state.items, l10n),
-          ),
+            const SizedBox(width: 8),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: isDark ? AppColors.onSurface : const Color(0xFF0F172A),
+                side: BorderSide(color: isDark ? AppColors.stroke : const Color(0xFFCBD5E1)),
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              icon: const Icon(Icons.folder_open_rounded, size: 20, color: AppColors.primaryAccent),
+              label: const Text('Mape', style: TextStyle(fontWeight: FontWeight.bold)),
+              onPressed: () => _openExternalFoldersModal(context),
+            ),
+          ],
         ),
         const SizedBox(height: 14),
 
-        if (state.localPlaylists.isEmpty)
+        if (state.allPlaylists.isEmpty)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
@@ -997,87 +990,158 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: state.localPlaylists.length,
+            itemCount: state.allPlaylists.length,
             separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (ctx, idx) {
-              final pl = state.localPlaylists[idx];
+              final pl = state.allPlaylists[idx];
+              final isExternalFolder = pl.id.startsWith('ext_pl_');
               final matchingTracks = pl.trackIds
-                  .map((id) => state.items.where((e) => e.id == id).firstOrNull)
+                  .map((id) => state.allItems.where((e) => e.id == id).firstOrNull)
                   .whereType<MediaItem>()
                   .toList();
 
-              return Container(
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.surfaceContainer : Colors.white,
+              return Material(
+                color: Colors.transparent,
+                child: InkWell(
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: isDark ? AppColors.stroke : const Color(0xFFE2E8F0)),
-                ),
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    // Playlist Icon Box
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        gradient: AppColors.primaryGradient,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Center(
-                        child: Icon(Icons.queue_music_rounded, color: Colors.white, size: 26),
-                      ),
+                  onTap: () {
+                    HapticService.selection();
+                    PlaylistDetailModal.show(
+                      context,
+                      playlist: pl,
+                      isExternalFolder: isExternalFolder,
+                    );
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.surfaceContainer : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: isDark ? AppColors.stroke : const Color(0xFFE2E8F0)),
                     ),
-                    const SizedBox(width: 12),
-
-                    // Info
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            pl.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        // Playlist Icon Box
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            gradient: isExternalFolder
+                                ? const LinearGradient(
+                                    colors: [Color(0xFF0D9488), Color(0xFF14B8A6)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  )
+                                : AppColors.primaryGradient,
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${pl.trackIds.length} pjesama (${matchingTracks.length} dostupno)',
-                            style: TextStyle(fontSize: 12, color: AppColors.secondary),
+                          child: Center(
+                            child: Icon(
+                              isExternalFolder ? Icons.folder_rounded : Icons.queue_music_rounded,
+                              color: Colors.white,
+                              size: 26,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+
+                        // Info
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                pl.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                isExternalFolder
+                                    ? '${pl.trackIds.length} pjesama (Vanjska mapa)'
+                                    : '${pl.trackIds.length} pjesama (${matchingTracks.length} dostupno)',
+                                style: TextStyle(fontSize: 12, color: AppColors.secondary),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Play Button
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryAccent.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            icon: const Icon(Icons.play_arrow_rounded, color: AppColors.primaryAccent, size: 22),
+                            onPressed: matchingTracks.isNotEmpty ? () => _playLocalPlaylist(pl, state.allItems) : null,
+                          ),
+                        ),
+                        if (!isExternalFolder) ...[
+                          const SizedBox(width: 4),
+                          // Edit Playlist Button
+                          IconButton(
+                            icon: const Icon(Icons.edit_note_rounded, size: 22),
+                            color: AppColors.primaryAccent,
+                            tooltip: 'Uredi playlistu',
+                            onPressed: () => _openPlaylistEditor(existingPlaylist: pl),
                           ),
                         ],
-                      ),
-                    ),
+                        const SizedBox(width: 4),
 
-                    // Play Button
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryAccent.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        icon: const Icon(Icons.play_arrow_rounded, color: AppColors.primaryAccent, size: 22),
-                        onPressed: matchingTracks.isNotEmpty ? () => _playLocalPlaylist(pl, state.items) : null,
-                      ),
+                        // Delete / Remove
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                          color: AppColors.errorAccent.withValues(alpha: 0.7),
+                          onPressed: () async {
+                            HapticService.error();
+                            if (isExternalFolder) {
+                              final folder = state.externalFolders
+                                  .where((f) => 'ext_pl_${f.uri.hashCode}' == pl.id)
+                                  .firstOrNull;
+                              if (folder != null) {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (dlgCtx) => AlertDialog(
+                                    title: const Text('Ukloni vanjsku mapu?'),
+                                    content: Text('Želite li ukloniti "${folder.name}" iz AllDowna? Vaše datoteke na memoriji telefona neće biti dirane niti obrisane.'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(dlgCtx, false),
+                                        child: const Text('Odustani'),
+                                      ),
+                                      FilledButton(
+                                        onPressed: () => Navigator.pop(dlgCtx, true),
+                                        style: FilledButton.styleFrom(backgroundColor: AppColors.errorAccent),
+                                        child: const Text('Ukloni'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirm == true) {
+                                  await notifier.removeExternalFolder(folder.uri);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Uklonjena mapa ${folder.name}')),
+                                    );
+                                  }
+                                }
+                              }
+                              return;
+                            }
+                            notifier.deletePlaylist(pl.id);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(l10n.playlistDeleted)),
+                            );
+                          },
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 4),
-
-                    // Delete Playlist
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, size: 20),
-                      color: AppColors.errorAccent.withValues(alpha: 0.7),
-                      onPressed: () {
-                        HapticService.error();
-                        notifier.deletePlaylist(pl.id);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(l10n.playlistDeleted)),
-                        );
-                      },
-                    ),
-                  ],
+                  ),
                 ),
               );
             },

@@ -2,6 +2,36 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.7.0] - 2026-11-15
+
+### Added
+- **External Music Folders Support (Storage Access Framework - SAF):**
+  - Seamlessly import and play local audio collections from external SD cards or internal storage folders (`mp3`, `m4a`, `flac`, `wav`, `ogg`, `aac`, `opus`) without moving or duplicating files.
+  - Pure standard Android SDK `DocumentsContract` implementation with zero external Gradle libraries, ensuring 100% offline compilation and zero dependency conflicts.
+  - Automatically loads and synchronizes metadata (ID3 title, artist, duration, size, format) via native `MediaMetadataRetriever`.
+  - Persistable URI permissions (`takePersistableUriPermission` with both read and write flags) for permanent access across reboots.
+- **Smart Folder Playlists & Folder Detail Viewer:**
+  - Auto-generated smart playlists (`📁 [Folder Name]`) representing each imported external folder.
+  - Tapping any folder card opens the dedicated `PlaylistDetailModal` featuring "Sviraj sve" (Play All), "Nasumično" (Shuffle), tracklist, instant favorite toggles, renaming, and deletion.
+- **Dynamic Playlist Editor & External Track Inclusion:**
+  - Full-featured playlist creation and editing modal (`PlaylistEditorModal`) with search, filter chips ("Sve", "Preuzeto", and individual folder chips), track checkboxes, and "Označi sve" (Select All).
+  - Selected tracks in Library selection mode are automatically carried into the playlist editor.
+  - Fast "Dodaj u playlistu" action in track context menu across all library lists.
+- **Animated Graphic Equalizer Visualizer in Audio Player:**
+  - High-performance, 60 FPS real-time audio frequency visualizer (`AnimatedEqualizerVisualizer`) featuring 26 dynamic spectrum bars with smooth rounded caps and cyan-to-magenta gradient (`AppColors.secondary` -> `AppColors.primaryAccent`).
+  - Dances dynamically with multi-frequency harmonic curves (bass, mid-range, treble) while audio is playing; gracefully settles into a gentle wave in paused state with 0% CPU consumption.
+- **Track Renaming & Deletion via SAF:**
+  - In-app file renaming and permanent file deletion for external tracks using `DocumentsContract.renameDocument` and `DocumentsContract.deleteDocument`.
+  - Custom track titles are persistently cached across folder re-scans.
+- **Universal Favorite Support:**
+  - Synchronized favorite toggles across both downloaded and external tracks with persistent ID storage via `SharedPreferences`.
+
+### Fixed
+- **Category Filter "Sve" Count Discrepancy:**
+  - Resolved an issue where the category chip "Sve" and search bar hint displayed `0` instead of total tracks when files were imported from external folders. Now aggregates both downloaded items and external tracks (`allItems`).
+- **Library Storage Meter Calculation:**
+  - Storage gauge and header text now accurately calculate and display total space consumed and total file count across all media items.
+
 ## [1.6.7] - 2026-11-14
 
 ### Fixed

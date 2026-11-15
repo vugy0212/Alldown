@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import '../l10n/l10n.dart';
 import '../models/media_item.dart';
 import '../providers/player_provider.dart';
+import '../providers/media_library_provider.dart';
 import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
 import '../services/haptic_service.dart';
@@ -106,6 +107,15 @@ class LibraryItemCard extends ConsumerWidget {
                     },
                   ),
                   ListTile(
+                    leading: const Icon(Icons.playlist_add_rounded, color: AppColors.primaryAccent),
+                    title: Text(l10n.isHr ? 'Dodaj u playlistu' : 'Add to Playlist'),
+                    subtitle: Text(l10n.isHr ? 'Uvrsti u postojeću ili novu playlistu' : 'Add to custom playlist'),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _showAddToPlaylistSheet(context, ref, item, l10n);
+                    },
+                  ),
+                  ListTile(
                     leading: Icon(Icons.content_cut_rounded, color: AppColors.tertiary),
                     title: Text(l10n.isHr ? 'Izreži zvuk (Audio Trimmer)' : 'Trim Audio Segment'),
                     subtitle: Text(l10n.isHr ? 'Stvori kraći audio isječak ili melodiju' : 'Create audio clip or ringtone'),
@@ -191,6 +201,15 @@ class LibraryItemCard extends ConsumerWidget {
                     onToggleFavorite();
                   },
                 ),
+                ListTile(
+                  leading: Icon(Icons.edit_rounded, color: AppColors.secondary),
+                  title: Text(l10n.isHr ? 'Preimenuj' : 'Rename'),
+                  onTap: () {
+                    HapticService.light();
+                    Navigator.pop(ctx);
+                    _showRenameDialog(context, ref, item, l10n);
+                  },
+                ),
                 Divider(color: AppColors.stroke),
                 ListTile(
                   leading: const Icon(Icons.delete_outline_rounded, color: AppColors.errorAccent),
@@ -209,6 +228,190 @@ class LibraryItemCard extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showRenameDialog(BuildContext context, WidgetRef ref, MediaItem track, L10n l10n) {
+    final titleCtrl = TextEditingController(text: track.title);
+    showDialog(
+      context: context,
+      builder: (dlgCtx) => AlertDialog(
+        title: Text(l10n.isHr ? 'Preimenuj stavku' : 'Rename Item'),
+        content: TextField(
+          controller: titleCtrl,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: l10n.isHr ? 'Naziv' : 'Title',
+            hintText: l10n.isHr ? 'Unesite novi naziv' : 'Enter new title',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dlgCtx),
+            child: Text(l10n.isHr ? 'Odustani' : 'Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final newName = titleCtrl.text.trim();
+              if (newName.isNotEmpty && newName != track.title) {
+                Navigator.pop(dlgCtx);
+                final success = await ref
+                    .read(mediaLibraryProvider.notifier)
+                    .renameTrack(track, newName);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        success
+                            ? (l10n.isHr ? 'Preimenovano u "$newName"' : 'Renamed to "$newName"')
+                            : (l10n.isHr ? 'Neuspjelo preimenovanje' : 'Failed to rename'),
+                      ),
+                    ),
+                  );
+                }
+              }
+            },
+            child: Text(l10n.isHr ? 'Spremi' : 'Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddToPlaylistSheet(BuildContext context, WidgetRef ref, MediaItem track, L10n l10n) {
+    final libraryState = ref.read(mediaLibraryProvider);
+    final notifier = ref.read(mediaLibraryProvider.notifier);
+    final isDark = ref.read(settingsProvider).isDarkMode;
+    final playlists = libraryState.localPlaylists;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppColors.surfaceContainerHigh : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.stroke : const Color(0xFFCBD5E1),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.isHr ? 'Dodaj u playlistu' : 'Add to Playlist',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  leading: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.primaryGradient,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                  ),
+                  title: Text(
+                    l10n.newPlaylist,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    final titleCtrl = TextEditingController();
+                    showDialog(
+                      context: context,
+                      builder: (dlgCtx) => AlertDialog(
+                        title: Text(l10n.newPlaylist),
+                        content: TextField(
+                          controller: titleCtrl,
+                          autofocus: true,
+                          decoration: InputDecoration(hintText: l10n.enterPlaylistName),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(dlgCtx),
+                            child: const Text('Odustani'),
+                          ),
+                          FilledButton(
+                            onPressed: () {
+                              final name = titleCtrl.text.trim();
+                              if (name.isNotEmpty) {
+                                notifier.createPlaylist(name, [track.id]);
+                                Navigator.pop(dlgCtx);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Pjesma dodana u novu playlistu "$name"')),
+                                );
+                              }
+                            },
+                            child: const Text('Stvori'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const Divider(),
+                if (playlists.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Center(
+                      child: Text(
+                        l10n.noPlaylistsYet,
+                        style: TextStyle(color: isDark ? AppColors.outline : const Color(0xFF64748B)),
+                      ),
+                    ),
+                  )
+                else
+                  Flexible(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: playlists.length,
+                      itemBuilder: (_, idx) {
+                        final pl = playlists[idx];
+                        final contains = pl.trackIds.contains(track.id);
+                        return ListTile(
+                          leading: const Icon(Icons.queue_music_rounded, color: AppColors.primaryAccent),
+                          title: Text(pl.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                          subtitle: Text('${pl.trackIds.length} pjesama'),
+                          trailing: contains
+                              ? const Icon(Icons.check_circle_rounded, color: AppColors.primaryAccent, size: 20)
+                              : null,
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            if (contains) {
+                              notifier.removeTrackFromPlaylist(pl.id, track.id);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Pjesma uklonjena iz "${pl.title}"')),
+                              );
+                            } else {
+                              notifier.addTracksToPlaylist(pl.id, [track.id]);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Pjesma dodana u "${pl.title}"')),
+                              );
+                            }
+                          },
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -357,17 +560,37 @@ class LibraryItemCard extends ConsumerWidget {
                               ),
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.more_vert_rounded, size: 18),
-                        color: AppColors.outline,
-                        style: IconButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          minimumSize: const Size(28, 28),
-                        ),
-                        onPressed: () {
-                          HapticService.light();
-                          _showContextMenu(context, ref);
-                        },
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              item.isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                              size: 19,
+                              color: item.isFavorite ? AppColors.errorAccent : AppColors.outline,
+                            ),
+                            style: IconButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: const Size(28, 28),
+                            ),
+                            onPressed: () {
+                              HapticService.selection();
+                              onToggleFavorite();
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.more_vert_rounded, size: 18),
+                            color: AppColors.outline,
+                            style: IconButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: const Size(28, 28),
+                            ),
+                            onPressed: () {
+                              HapticService.light();
+                              _showContextMenu(context, ref);
+                            },
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -550,6 +773,28 @@ class LibraryItemCard extends ConsumerWidget {
                         ),
                       ),
                     ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticService.selection();
+                        onToggleFavorite();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          item.isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                          color: item.isFavorite ? AppColors.errorAccent : Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  ),
                   Positioned.fill(
                     child: Center(
                       child: Container(
