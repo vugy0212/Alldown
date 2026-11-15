@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import '../l10n/l10n.dart';
 import '../models/media_item.dart';
 import '../providers/player_provider.dart';
+import '../providers/media_library_provider.dart';
 import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
 import '../services/haptic_service.dart';
@@ -103,6 +104,15 @@ class LibraryItemCard extends ConsumerWidget {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text(l10n.isHr ? 'Pjesma dodana na kraj reda' : 'Track added to queue')),
                       );
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.playlist_add_rounded, color: AppColors.primaryAccent),
+                    title: Text(l10n.isHr ? 'Dodaj u playlistu' : 'Add to Playlist'),
+                    subtitle: Text(l10n.isHr ? 'Uvrsti u postojeću ili novu playlistu' : 'Add to custom playlist'),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _showAddToPlaylistSheet(context, ref, item, l10n);
                     },
                   ),
                   ListTile(
@@ -209,6 +219,143 @@ class LibraryItemCard extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showAddToPlaylistSheet(BuildContext context, WidgetRef ref, MediaItem track, L10n l10n) {
+    final libraryState = ref.read(mediaLibraryProvider);
+    final notifier = ref.read(mediaLibraryProvider.notifier);
+    final isDark = ref.read(settingsProvider).isDarkMode;
+    final playlists = libraryState.localPlaylists;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppColors.surfaceContainerHigh : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.stroke : const Color(0xFFCBD5E1),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.isHr ? 'Dodaj u playlistu' : 'Add to Playlist',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  leading: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.primaryGradient,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                  ),
+                  title: Text(
+                    l10n.newPlaylist,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    final titleCtrl = TextEditingController();
+                    showDialog(
+                      context: context,
+                      builder: (dlgCtx) => AlertDialog(
+                        title: Text(l10n.newPlaylist),
+                        content: TextField(
+                          controller: titleCtrl,
+                          autofocus: true,
+                          decoration: InputDecoration(hintText: l10n.enterPlaylistName),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(dlgCtx),
+                            child: const Text('Odustani'),
+                          ),
+                          FilledButton(
+                            onPressed: () {
+                              final name = titleCtrl.text.trim();
+                              if (name.isNotEmpty) {
+                                notifier.createPlaylist(name, [track.id]);
+                                Navigator.pop(dlgCtx);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Pjesma dodana u novu playlistu "$name"')),
+                                );
+                              }
+                            },
+                            child: const Text('Stvori'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const Divider(),
+                if (playlists.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Center(
+                      child: Text(
+                        l10n.noPlaylistsYet,
+                        style: TextStyle(color: isDark ? AppColors.outline : const Color(0xFF64748B)),
+                      ),
+                    ),
+                  )
+                else
+                  Flexible(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: playlists.length,
+                      itemBuilder: (_, idx) {
+                        final pl = playlists[idx];
+                        final contains = pl.trackIds.contains(track.id);
+                        return ListTile(
+                          leading: const Icon(Icons.queue_music_rounded, color: AppColors.primaryAccent),
+                          title: Text(pl.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                          subtitle: Text('${pl.trackIds.length} pjesama'),
+                          trailing: contains
+                              ? const Icon(Icons.check_circle_rounded, color: AppColors.primaryAccent, size: 20)
+                              : null,
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            if (contains) {
+                              notifier.removeTrackFromPlaylist(pl.id, track.id);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Pjesma uklonjena iz "${pl.title}"')),
+                              );
+                            } else {
+                              notifier.addTracksToPlaylist(pl.id, [track.id]);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Pjesma dodana u "${pl.title}"')),
+                              );
+                            }
+                          },
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

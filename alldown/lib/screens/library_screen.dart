@@ -13,6 +13,7 @@ import '../services/haptic_service.dart';
 import '../widgets/library_item_card.dart';
 import '../widgets/video_player_modal.dart';
 import '../widgets/external_folders_modal.dart';
+import '../widgets/playlist_editor_modal.dart';
 
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
@@ -137,140 +138,37 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     );
   }
 
-  void _showCreatePlaylistDialog(
-    BuildContext context,
-    MediaLibraryNotifier notifier,
-    List<MediaItem> availableItems,
-    L10n l10n,
-  ) {
-    final titleCtrl = TextEditingController();
-    final Set<String> chosenIds = {..._selectedItemIds};
+  void _openPlaylistEditor({LocalPlaylist? existingPlaylist}) {
+    HapticService.selection();
+    final state = ref.read(mediaLibraryProvider);
+    final notifier = ref.read(mediaLibraryProvider.notifier);
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) {
-          final isDark = ref.watch(settingsProvider).isDarkMode;
-          final audioItems = availableItems.where((e) => e.isAudio).toList();
-
-          return Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.85,
-            ),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.surfaceContainerHigh : Colors.white,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              border: Border.all(color: isDark ? AppColors.stroke : const Color(0xFFE2E8F0)),
-            ),
-            padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.stroke : const Color(0xFFCBD5E1),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Icon(Icons.queue_music_rounded, color: AppColors.primaryAccent, size: 24),
-                    const SizedBox(width: 8),
-                    Text(
-                      l10n.newPlaylist,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: titleCtrl,
-                  autofocus: true,
-                  decoration: InputDecoration(
-                    labelText: l10n.playlistName,
-                    hintText: l10n.enterPlaylistName,
-                    filled: true,
-                    fillColor: isDark ? AppColors.surfaceContainer : const Color(0xFFF8FAFC),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  '${l10n.selectTracks} (${chosenIds.length}/${audioItems.length})',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: audioItems.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (_, idx) {
-                      final item = audioItems[idx];
-                      final isSelected = chosenIds.contains(item.id);
-                      return CheckboxListTile(
-                        value: isSelected,
-                        activeColor: AppColors.primaryAccent,
-                        dense: true,
-                        title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        subtitle: Text(item.channel, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        onChanged: (val) {
-                          HapticService.selection();
-                          setModalState(() {
-                            if (val == true) {
-                              chosenIds.add(item.id);
-                            } else {
-                              chosenIds.remove(item.id);
-                            }
-                          });
-                        },
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 14),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primaryAccent,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    icon: const Icon(Icons.check_rounded),
-                    label: Text(l10n.createPlaylist),
-                    onPressed: () {
-                      final name = titleCtrl.text.trim();
-                      if (name.isEmpty) {
-                        HapticService.error();
-                        return;
-                      }
-                      HapticService.medium();
-                      notifier.createPlaylist(name, chosenIds.toList());
-                      Navigator.pop(ctx);
-                      setState(() {
-                        _isSelectionMode = false;
-                        _selectedItemIds.clear();
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.playlistCreated)),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+    PlaylistEditorModal.show(
+      context,
+      playlist: existingPlaylist,
+      allAudioTracks: state.allItems.where((e) => e.isAudio).toList(),
+      externalFolders: state.externalFolders,
+      onSave: (title, trackIds) {
+        if (existingPlaylist != null) {
+          notifier.updatePlaylist(existingPlaylist.id, title: title, trackIds: trackIds);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Ažurirana playlista "$title"')),
+            );
+          }
+        } else {
+          notifier.createPlaylist(title, trackIds);
+          setState(() {
+            _isSelectionMode = false;
+            _selectedItemIds.clear();
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Stvorena playlista "$title"')),
+            );
+          }
+        }
+      },
     );
   }
 
@@ -374,17 +272,6 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         libraryNotifier.setSearchQuery('');
                       },
                     ),
-                  IconButton(
-                    icon: Icon(
-                      Icons.folder_open_rounded,
-                      size: 20,
-                      color: libraryState.externalFolders.isNotEmpty
-                          ? AppColors.primaryAccent
-                          : (isDark ? AppColors.outline : const Color(0xFF64748B)),
-                    ),
-                    tooltip: 'Vanjske mape s glazbom',
-                    onPressed: () => _openExternalFoldersModal(context),
-                  ),
                 ],
               ),
             ),
@@ -511,6 +398,18 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                       icon: const Icon(Icons.playlist_play_rounded, size: 18),
                       label: Text(l10n.playAsPlaylist, style: const TextStyle(fontSize: 11)),
                       onPressed: _selectedItemIds.isNotEmpty ? () => _playSelectedAsPlaylist(items) : null,
+                    ),
+                    const SizedBox(width: 4),
+                    // Save Selected as Playlist Button
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.secondary,
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      ),
+                      icon: const Icon(Icons.playlist_add_rounded, size: 18),
+                      label: const Text('+ Playlista', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      onPressed: _selectedItemIds.isNotEmpty ? () => _openPlaylistEditor() : null,
                     ),
                     const SizedBox(width: 4),
                     // Cancel Selection
@@ -988,7 +887,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 ),
                 icon: const Icon(Icons.add_rounded, size: 20),
                 label: Text(l10n.newPlaylist, style: const TextStyle(fontWeight: FontWeight.bold)),
-                onPressed: () => _showCreatePlaylistDialog(context, notifier, state.items, l10n),
+                onPressed: () => _openPlaylistEditor(),
               ),
             ),
             const SizedBox(width: 8),
@@ -1123,6 +1022,16 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         onPressed: matchingTracks.isNotEmpty ? () => _playLocalPlaylist(pl, state.allItems) : null,
                       ),
                     ),
+                    if (!isExternalFolder) ...[
+                      const SizedBox(width: 4),
+                      // Edit Playlist Button
+                      IconButton(
+                        icon: const Icon(Icons.edit_note_rounded, size: 22),
+                        color: AppColors.primaryAccent,
+                        tooltip: 'Uredi playlistu',
+                        onPressed: () => _openPlaylistEditor(existingPlaylist: pl),
+                      ),
+                    ],
                     const SizedBox(width: 4),
 
                     // Delete / Remove

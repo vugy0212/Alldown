@@ -229,6 +229,21 @@ class MediaLibraryNotifier extends StateNotifier<LibraryState> {
     return newPlaylist;
   }
 
+  void updatePlaylist(String id, {String? title, List<String>? trackIds}) {
+    final updated = state.localPlaylists.map((pl) {
+      if (pl.id == id) {
+        return pl.copyWith(
+          title: title ?? pl.title,
+          trackIds: trackIds ?? pl.trackIds,
+        );
+      }
+      return pl;
+    }).toList();
+
+    state = state.copyWith(localPlaylists: updated);
+    _storage.saveLocalPlaylists(updated);
+  }
+
   void deletePlaylist(String id) {
     final updated = state.localPlaylists.where((pl) => pl.id != id).toList();
     state = state.copyWith(localPlaylists: updated);
