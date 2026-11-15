@@ -11,6 +11,7 @@ class StorageService {
   static const String _keyLibrary = 'alldown_library_v2';
   static const String _keyQueue = 'alldown_queue_v2';
   static const String _keyPlaylists = 'alldown_local_playlists_v1';
+  static const String _keyFavorites = 'alldown_favorite_ids_v1';
 
   final SharedPreferences _prefs;
 
@@ -114,5 +115,14 @@ class StorageService {
     } catch (_) {
       return [];
     }
+  }
+
+  // Favorite Track IDs
+  Future<void> saveFavoriteIds(List<String> ids) async {
+    await _prefs.setStringList(_keyFavorites, ids);
+  }
+
+  List<String> loadFavoriteIds() {
+    return _prefs.getStringList(_keyFavorites) ?? [];
   }
 }

@@ -20,6 +20,25 @@ object ExternalFolderManager {
         } catch (_: Exception) {}
     }
 
+    fun deleteFile(context: Context, docUri: Uri): Boolean {
+        return try {
+            DocumentsContract.deleteDocument(context.contentResolver, docUri)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    fun renameFile(context: Context, docUri: Uri, newDisplayName: String): String? {
+        return try {
+            val resultUri = DocumentsContract.renameDocument(context.contentResolver, docUri, newDisplayName)
+            resultUri?.toString() ?: docUri.toString()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     fun scanAudioFiles(context: Context, treeUri: Uri): List<Map<String, Any>> = scanFolder(context, treeUri)
 
     fun getFolderDisplayName(context: Context, treeUri: Uri): String {

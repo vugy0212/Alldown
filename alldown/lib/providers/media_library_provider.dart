@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/media_item.dart';
 import '../models/local_playlist.dart';
@@ -122,10 +123,21 @@ class MediaLibraryNotifier extends StateNotifier<LibraryState> {
 
   MediaLibraryNotifier(this._storage)
       : super(LibraryState(
-          items: _storage.loadLibrary(),
+          items: _initItemsWithFavorites(_storage),
           localPlaylists: _storage.loadLocalPlaylists(),
         )) {
     loadExternalMusic();
+  }
+
+  static List<MediaItem> _initItemsWithFavorites(dynamic storage) {
+    try {
+      final items = storage.loadLibrary() as List<MediaItem>;
+      final favIds = (storage.loadFavoriteIds() as List<String>? ?? []).toSet();
+      if (favIds.isEmpty) return items;
+      return items.map((it) => favIds.contains(it.id) ? it.copyWith(isFavorite: true) : it).toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   Future<void> loadExternalMusic() async {
@@ -133,10 +145,18 @@ class MediaLibraryNotifier extends StateNotifier<LibraryState> {
       final service = ExternalMusicService();
       final folders = await service.getSavedFolders();
       final tracks = await service.scanAllFolders();
+      final favIds = (_storage.loadFavoriteIds() as List<String>? ?? []).toSet();
+      final tracksWithFav = tracks.map((t) {
+        if (favIds.contains(t.id)) {
+          return t.copyWith(isFavorite: true);
+        }
+        return t;
+      }).toList();
+
       if (mounted) {
         state = state.copyWith(
           externalFolders: folders,
-          externalTracks: tracks,
+          externalTracks: tracksWithFav,
         );
       }
     } catch (_) {}
@@ -180,15 +200,36 @@ class MediaLibraryNotifier extends StateNotifier<LibraryState> {
   }
 
   void toggleFavorite(String id) {
-    final updated = state.items.map((item) {
+    var inItems = false;
+    final updatedItems = state.items.map((item) {
+      if (item.id == id) {
+        inItems = true;
+        return item.copyWith(isFavorite: !item.isFavorite);
+      }
+      return item;
+    }).toList();
+
+    final updatedExternal = state.externalTracks.map((item) {
       if (item.id == id) {
         return item.copyWith(isFavorite: !item.isFavorite);
       }
       return item;
     }).toList();
 
-    state = state.copyWith(items: updated);
-    _storage.saveLibrary(updated);
+    state = state.copyWith(
+      items: updatedItems,
+      externalTracks: updatedExternal,
+    );
+
+    if (inItems) {
+      _storage.saveLibrary(updatedItems);
+    }
+
+    final allFavIds = [...updatedItems, ...updatedExternal]
+        .where((e) => e.isFavorite)
+        .map((e) => e.id)
+        .toList();
+    _storage.saveFavoriteIds(allFavIds);
   }
 
   void addItem(MediaItem item) {
@@ -275,5 +316,75 @@ class MediaLibraryNotifier extends StateNotifier<LibraryState> {
 
     state = state.copyWith(localPlaylists: updated);
     _storage.saveLocalPlaylists(updated);
+  }
+
+  void removeTrackFromAllPlaylists(String trackId) {
+    final updated = state.localPlaylists.map((pl) {
+      if (pl.trackIds.contains(trackId)) {
+        return pl.copyWith(trackIds: pl.trackIds.where((t) => t != trackId).toList());
+      }
+      return pl;
+    }).toList();
+    state = state.copyWith(localPlaylists: updated);
+    _storage.saveLocalPlaylists(updated);
+  }
+
+  Future<bool> renameTrack(MediaItem item, String newTitle) async {
+    final clean = newTitle.trim();
+    if (clean.isEmpty) return false;
+
+    if (item.localPath.startsWith('content://')) {
+      final newUri = await ExternalMusicService().renameExternalFile(item.localPath, clean);
+      final updatedTracks = state.externalTracks.map((t) {
+        if (t.id == item.id) {
+          return t.copyWith(
+            title: clean,
+            localPath: (newUri != null && newUri.isNotEmpty) ? newUri : t.localPath,
+          );
+        }
+        return t;
+      }).toList();
+      state = state.copyWith(externalTracks: updatedTracks);
+      return true;
+    } else {
+      final updated = state.items.map((t) {
+        if (t.id == item.id) {
+          return t.copyWith(title: clean);
+        }
+        return t;
+      }).toList();
+      state = state.copyWith(items: updated);
+      _storage.saveLibrary(updated);
+      return true;
+    }
+  }
+
+  Future<bool> deleteTrack(MediaItem item) async {
+    if (item.localPath.startsWith('content://')) {
+      final deleted = await ExternalMusicService().deleteExternalFile(item.localPath);
+      if (deleted) {
+        final updatedTracks = state.externalTracks.where((t) => t.id != item.id).toList();
+        final updatedFolders = state.externalFolders.map((f) {
+          if (item.localPath.startsWith(f.uri)) {
+            final count = updatedTracks.where((t) => t.localPath.startsWith(f.uri)).length;
+            return f.copyWith(trackCount: count);
+          }
+          return f;
+        }).toList();
+        state = state.copyWith(externalTracks: updatedTracks, externalFolders: updatedFolders);
+        removeTrackFromAllPlaylists(item.id);
+        return true;
+      }
+      return false;
+    } else {
+      try {
+        final f = File(item.localPath);
+        if (f.existsSync()) {
+          f.deleteSync();
+        }
+      } catch (_) {}
+      removeItem(item.id);
+      return true;
+    }
   }
 }

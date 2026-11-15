@@ -504,17 +504,37 @@ class LibraryItemCard extends ConsumerWidget {
                               ),
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.more_vert_rounded, size: 18),
-                        color: AppColors.outline,
-                        style: IconButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          minimumSize: const Size(28, 28),
-                        ),
-                        onPressed: () {
-                          HapticService.light();
-                          _showContextMenu(context, ref);
-                        },
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              item.isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                              size: 19,
+                              color: item.isFavorite ? AppColors.errorAccent : AppColors.outline,
+                            ),
+                            style: IconButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: const Size(28, 28),
+                            ),
+                            onPressed: () {
+                              HapticService.selection();
+                              onToggleFavorite();
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.more_vert_rounded, size: 18),
+                            color: AppColors.outline,
+                            style: IconButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: const Size(28, 28),
+                            ),
+                            onPressed: () {
+                              HapticService.light();
+                              _showContextMenu(context, ref);
+                            },
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -697,6 +717,28 @@ class LibraryItemCard extends ConsumerWidget {
                         ),
                       ),
                     ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticService.selection();
+                        onToggleFavorite();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          item.isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                          color: item.isFavorite ? AppColors.errorAccent : Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  ),
                   Positioned.fill(
                     child: Center(
                       child: Container(

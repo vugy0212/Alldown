@@ -637,6 +637,25 @@ class MainActivity : FlutterActivity() {
                             result.success(false)
                         }
                     }
+                    "deleteExternalFile" -> {
+                        val uriStr = call.argument<String>("uri")
+                        if (!uriStr.isNullOrEmpty()) {
+                            val ok = ExternalFolderManager.deleteFile(applicationContext, Uri.parse(uriStr))
+                            result.success(ok)
+                        } else {
+                            result.success(false)
+                        }
+                    }
+                    "renameExternalFile" -> {
+                        val uriStr = call.argument<String>("uri")
+                        val newName = call.argument<String>("newName")
+                        if (!uriStr.isNullOrEmpty() && !newName.isNullOrBlank()) {
+                            val updatedUri = ExternalFolderManager.renameFile(applicationContext, Uri.parse(uriStr), newName)
+                            result.success(updatedUri)
+                        } else {
+                            result.success(null)
+                        }
+                    }
                     else -> result.notImplemented()
                 }
             }

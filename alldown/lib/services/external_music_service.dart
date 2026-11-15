@@ -174,6 +174,29 @@ class ExternalMusicService {
     return allTracks;
   }
 
+  /// Permanently deletes an external file via SAF DocumentsContract.
+  Future<bool> deleteExternalFile(String uri) async {
+    try {
+      final res = await _channel.invokeMethod<bool>('deleteExternalFile', {'uri': uri});
+      return res ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Renames an external file via SAF DocumentsContract.
+  Future<String?> renameExternalFile(String uri, String newName) async {
+    try {
+      final res = await _channel.invokeMethod<String>('renameExternalFile', {
+        'uri': uri,
+        'newName': newName,
+      });
+      return res;
+    } catch (_) {
+      return null;
+    }
+  }
+
   MediaItem _mapNativeToMediaItem(Map<dynamic, dynamic> raw) {
     final id = raw['id']?.toString() ?? 'ext_${DateTime.now().microsecondsSinceEpoch}';
     final title = raw['title']?.toString() ?? 'Nepoznato';
