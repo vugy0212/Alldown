@@ -87,7 +87,39 @@ class LibraryState {
         break;
     }
 
+    // Sort order
+    switch (sort) {
+      case LibrarySort.newest:
+        break;
+      case LibrarySort.oldest:
+        list = list.reversed.toList();
+        break;
+      case LibrarySort.largest:
+        list.sort((a, b) => _parseSizeBytes(b.sizeFormatted).compareTo(_parseSizeBytes(a.sizeFormatted)));
+        break;
+      case LibrarySort.title:
+        list.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+        break;
+    }
+
     return list;
+  }
+
+  static double _parseSizeBytes(String s) {
+    final parts = s.trim().split(' ');
+    if (parts.isEmpty) return 0;
+    final val = double.tryParse(parts[0]) ?? 0;
+    if (parts.length < 2) return val;
+    switch (parts[1].toUpperCase()) {
+      case 'GB':
+        return val * 1024 * 1024 * 1024;
+      case 'MB':
+        return val * 1024 * 1024;
+      case 'KB':
+        return val * 1024;
+      default:
+        return val;
+    }
   }
 
   LibraryState copyWith({
@@ -146,11 +178,21 @@ class MediaLibraryNotifier extends StateNotifier<LibraryState> {
       final folders = await service.getSavedFolders();
       final tracks = await service.scanAllFolders();
       final favIds = (_storage.loadFavoriteIds() as List<String>? ?? []).toSet();
+      Map<String, String> customTitles = {};
+      try {
+        customTitles = _storage.loadCustomTitles() as Map<String, String>? ?? {};
+      } catch (_) {}
+
       final tracksWithFav = tracks.map((t) {
-        if (favIds.contains(t.id)) {
-          return t.copyWith(isFavorite: true);
+        var updated = t;
+        final customTitle = customTitles[t.localPath] ?? customTitles[t.id];
+        if (customTitle != null && customTitle.isNotEmpty) {
+          updated = updated.copyWith(title: customTitle);
         }
-        return t;
+        if (favIds.contains(t.id)) {
+          updated = updated.copyWith(isFavorite: true);
+        }
+        return updated;
       }).toList();
 
       if (mounted) {
@@ -334,12 +376,27 @@ class MediaLibraryNotifier extends StateNotifier<LibraryState> {
     if (clean.isEmpty) return false;
 
     if (item.localPath.startsWith('content://')) {
-      final newUri = await ExternalMusicService().renameExternalFile(item.localPath, clean);
+      final ext = item.format.toLowerCase();
+      final fileName = (ext.isNotEmpty && ext != 'audio' && !clean.toLowerCase().endsWith('.$ext'))
+          ? '$clean.$ext'
+          : clean;
+      final newUri = await ExternalMusicService().renameExternalFile(item.localPath, fileName);
+      final effectiveUri = (newUri != null && newUri.isNotEmpty) ? newUri : item.localPath;
+
+      try {
+        final customTitles = Map<String, String>.from(
+          _storage.loadCustomTitles() as Map<String, String>? ?? {},
+        );
+        customTitles[effectiveUri] = clean;
+        customTitles[item.id] = clean;
+        _storage.saveCustomTitles(customTitles);
+      } catch (_) {}
+
       final updatedTracks = state.externalTracks.map((t) {
         if (t.id == item.id) {
           return t.copyWith(
             title: clean,
-            localPath: (newUri != null && newUri.isNotEmpty) ? newUri : t.localPath,
+            localPath: effectiveUri,
           );
         }
         return t;

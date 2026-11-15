@@ -37,14 +37,20 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   String _calculateRealStorageUsed(List<MediaItem> items, AppLanguage lang) {
     final isHr = lang == AppLanguage.hr;
     if (items.isEmpty) return isHr ? '0.0 MB iskorišteno' : '0.0 MB used';
-    int totalBytes = 0;
+    double totalBytes = 0;
     for (final item in items) {
-      try {
-        final f = File(item.localPath);
-        if (f.existsSync()) {
-          totalBytes += f.lengthSync();
-        }
-      } catch (_) {}
+      if (item.localPath.startsWith('content://')) {
+        totalBytes += _parseSizeBytes(item.sizeFormatted);
+      } else {
+        try {
+          final f = File(item.localPath);
+          if (f.existsSync()) {
+            totalBytes += f.lengthSync();
+          } else {
+            totalBytes += _parseSizeBytes(item.sizeFormatted);
+          }
+        } catch (_) {}
+      }
     }
     final mb = totalBytes / (1024 * 1024);
     if (mb >= 1024) {
@@ -53,6 +59,23 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     }
     final mbStr = mb.toStringAsFixed(1);
     return isHr ? '$mbStr MB iskorišteno (${items.length} datoteka)' : '$mbStr MB used (${items.length} files)';
+  }
+
+  double _parseSizeBytes(String s) {
+    final parts = s.trim().split(' ');
+    if (parts.isEmpty) return 0;
+    final val = double.tryParse(parts[0]) ?? 0;
+    if (parts.length < 2) return val;
+    switch (parts[1].toUpperCase()) {
+      case 'GB':
+        return val * 1024 * 1024 * 1024;
+      case 'MB':
+        return val * 1024 * 1024;
+      case 'KB':
+        return val * 1024;
+      default:
+        return val;
+    }
   }
 
   String _sortLabel(LibrarySort sort, AppLanguage lang) {
@@ -147,6 +170,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     PlaylistEditorModal.show(
       context,
       playlist: existingPlaylist,
+      initialSelectedIds: (_isSelectionMode && _selectedItemIds.isNotEmpty)
+          ? Set<String>.from(_selectedItemIds)
+          : null,
       allAudioTracks: state.allItems.where((e) => e.isAudio).toList(),
       externalFolders: state.externalFolders,
       onSave: (title, trackIds) {
@@ -175,24 +201,43 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
   void _onDeleteItem(MediaItem item) {
     HapticService.error();
-    if (item.localPath.startsWith('content://')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pjesma je iz vanjske mape. Koristite izbornik mapa za upravljanje.'),
+    showDialog(
+      context: context,
+      builder: (dlgCtx) => AlertDialog(
+        title: const Text('Obriši datoteku?'),
+        content: Text(
+          'Želite li trajno obrisati "${item.title}" s vašeg uređaja?',
         ),
-      );
-      return;
-    }
-    try {
-      final f = File(item.localPath);
-      if (f.existsSync()) {
-        f.deleteSync();
-      }
-    } catch (_) {}
-    ref.read(mediaLibraryProvider.notifier).removeItem(item.id);
-    if (ref.read(playerProvider).currentItem?.id == item.id) {
-      ref.read(playerProvider.notifier).stopAndClose();
-    }
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dlgCtx),
+            child: const Text('Odustani'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.errorAccent),
+            onPressed: () async {
+              Navigator.pop(dlgCtx);
+              final deleted = await ref.read(mediaLibraryProvider.notifier).deleteTrack(item);
+              if (deleted && ref.read(playerProvider).currentItem?.id == item.id) {
+                ref.read(playerProvider.notifier).stopAndClose();
+              }
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      deleted
+                          ? 'Datoteka "${item.title}" je obrisana'
+                          : 'Neuspjelo brisanje datoteke',
+                    ),
+                  ),
+                );
+              }
+            },
+            child: const Text('Obriši'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -473,7 +518,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                                       ),
                                     ),
                                     Text(
-                                      _calculateRealStorageUsed(libraryState.items, settings.language),
+                                      _calculateRealStorageUsed(libraryState.allItems, settings.language),
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         fontSize: 13,
@@ -619,7 +664,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                                 flex: audioCount * 10,
                                 child: Container(color: AppColors.secondary),
                               ),
-                            if (libraryState.items.isEmpty)
+                            if (allCount == 0)
                               Expanded(
                                 child: Container(
                                   color: isDark ? AppColors.surfaceContainerHighest : const Color(0xFFE2E8F0),

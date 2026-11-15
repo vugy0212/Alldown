@@ -201,6 +201,15 @@ class LibraryItemCard extends ConsumerWidget {
                     onToggleFavorite();
                   },
                 ),
+                ListTile(
+                  leading: Icon(Icons.edit_rounded, color: AppColors.secondary),
+                  title: Text(l10n.isHr ? 'Preimenuj' : 'Rename'),
+                  onTap: () {
+                    HapticService.light();
+                    Navigator.pop(ctx);
+                    _showRenameDialog(context, ref, item, l10n);
+                  },
+                ),
                 Divider(color: AppColors.stroke),
                 ListTile(
                   leading: const Icon(Icons.delete_outline_rounded, color: AppColors.errorAccent),
@@ -218,6 +227,53 @@ class LibraryItemCard extends ConsumerWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _showRenameDialog(BuildContext context, WidgetRef ref, MediaItem track, L10n l10n) {
+    final titleCtrl = TextEditingController(text: track.title);
+    showDialog(
+      context: context,
+      builder: (dlgCtx) => AlertDialog(
+        title: Text(l10n.isHr ? 'Preimenuj stavku' : 'Rename Item'),
+        content: TextField(
+          controller: titleCtrl,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: l10n.isHr ? 'Naziv' : 'Title',
+            hintText: l10n.isHr ? 'Unesite novi naziv' : 'Enter new title',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dlgCtx),
+            child: Text(l10n.isHr ? 'Odustani' : 'Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final newName = titleCtrl.text.trim();
+              if (newName.isNotEmpty && newName != track.title) {
+                Navigator.pop(dlgCtx);
+                final success = await ref
+                    .read(mediaLibraryProvider.notifier)
+                    .renameTrack(track, newName);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        success
+                            ? (l10n.isHr ? 'Preimenovano u "$newName"' : 'Renamed to "$newName"')
+                            : (l10n.isHr ? 'Neuspjelo preimenovanje' : 'Failed to rename'),
+                      ),
+                    ),
+                  );
+                }
+              }
+            },
+            child: Text(l10n.isHr ? 'Spremi' : 'Save'),
+          ),
+        ],
       ),
     );
   }

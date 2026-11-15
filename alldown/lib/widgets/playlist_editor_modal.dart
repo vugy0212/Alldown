@@ -7,6 +7,7 @@ import '../theme/app_colors.dart';
 
 class PlaylistEditorModal extends StatefulWidget {
   final LocalPlaylist? playlist;
+  final Set<String>? initialSelectedIds;
   final List<MediaItem> allAudioTracks;
   final List<ExternalFolder> externalFolders;
   final void Function(String title, List<String> trackIds) onSave;
@@ -14,6 +15,7 @@ class PlaylistEditorModal extends StatefulWidget {
   const PlaylistEditorModal({
     super.key,
     this.playlist,
+    this.initialSelectedIds,
     required this.allAudioTracks,
     required this.externalFolders,
     required this.onSave,
@@ -22,6 +24,7 @@ class PlaylistEditorModal extends StatefulWidget {
   static Future<void> show(
     BuildContext context, {
     LocalPlaylist? playlist,
+    Set<String>? initialSelectedIds,
     required List<MediaItem> allAudioTracks,
     required List<ExternalFolder> externalFolders,
     required void Function(String title, List<String> trackIds) onSave,
@@ -32,6 +35,7 @@ class PlaylistEditorModal extends StatefulWidget {
       backgroundColor: Colors.transparent,
       builder: (ctx) => PlaylistEditorModal(
         playlist: playlist,
+        initialSelectedIds: initialSelectedIds,
         allAudioTracks: allAudioTracks,
         externalFolders: externalFolders,
         onSave: onSave,
@@ -59,7 +63,7 @@ class _PlaylistEditorModalState extends State<PlaylistEditorModal> {
     );
     _selectedTrackIds = widget.playlist != null
         ? Set<String>.from(widget.playlist!.trackIds)
-        : <String>{};
+        : (widget.initialSelectedIds != null ? Set<String>.from(widget.initialSelectedIds!) : <String>{});
   }
 
   @override

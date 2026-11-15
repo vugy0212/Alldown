@@ -118,6 +118,9 @@ class PlaylistDetailModal extends ConsumerWidget {
               final deleted = await ref
                   .read(mediaLibraryProvider.notifier)
                   .deleteTrack(track);
+              if (deleted && ref.read(playerProvider).currentItem?.id == track.id) {
+                ref.read(playerProvider.notifier).stopAndClose();
+              }
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(

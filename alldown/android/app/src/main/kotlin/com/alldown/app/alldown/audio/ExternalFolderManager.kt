@@ -15,9 +15,16 @@ object ExternalFolderManager {
         try {
             context.contentResolver.releasePersistableUriPermission(
                 treeUri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             )
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+            try {
+                context.contentResolver.releasePersistableUriPermission(
+                    treeUri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) {}
+        }
     }
 
     fun deleteFile(context: Context, docUri: Uri): Boolean {

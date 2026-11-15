@@ -599,7 +599,11 @@ class MainActivity : FlutterActivity() {
                     "pickExternalFolder" -> {
                         pendingFolderResult = result
                         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+                            addFlags(
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                                Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                            )
                         }
                         try {
                             startActivityForResult(intent, REQUEST_CODE_PICK_FOLDER)
@@ -671,10 +675,15 @@ class MainActivity : FlutterActivity() {
                 try {
                     contentResolver.takePersistableUriPermission(
                         treeUri,
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                     )
                 } catch (e: Exception) {
-                    android.util.Log.w("MainActivity", "takePersistableUriPermission failed: ${e.message}")
+                    try {
+                        contentResolver.takePersistableUriPermission(
+                            treeUri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        )
+                    } catch (_: Exception) {}
                 }
                 val folderName = ExternalFolderManager.getFolderDisplayName(applicationContext, treeUri)
                 pendingFolderResult?.success(mapOf("uri" to treeUri.toString(), "name" to folderName))
