@@ -237,12 +237,16 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     );
 
     try {
-      final file = File(item.localPath);
-      if (!file.existsSync()) {
-        state = state.copyWith(
-          errorMessage: 'File not found on storage: ${item.localPath}',
-        );
-        return;
+      final isContentUri = item.localPath.startsWith('content://');
+      File? file;
+      if (!isContentUri) {
+        file = File(item.localPath);
+        if (!file.existsSync()) {
+          state = state.copyWith(
+            errorMessage: 'File not found on storage: ${item.localPath}',
+          );
+          return;
+        }
       }
 
       // Animated GIFs are rendered as image sequences in Flutter Image widget, not ExoPlayer
@@ -257,36 +261,47 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
         return;
       }
 
-      var targetFile = file;
-      try {
-        final raf = file.openSync(mode: FileMode.read);
-        final firstByte = raf.readByteSync();
-        raf.closeSync();
-        if (firstByte == 0x47) {
-          // Unremuxed MPEG-TS file (sync byte 0x47). Auto-remux to clean MP4 for instant ExoPlayer playback!
-          final fixedPath = '${file.path.replaceAll(RegExp(r'\.mp4$', caseSensitive: false), '')}_clean.mp4';
-          final fixedFile = File(fixedPath);
-          if (!fixedFile.existsSync() || fixedFile.lengthSync() < 1024) {
-            final ok = await NativeDownloaderService().remuxTsToMp4(
-              inputPath: file.path,
-              outputPath: fixedPath,
-            );
-            if (ok && fixedFile.existsSync() && fixedFile.lengthSync() > 1024) {
+      final VideoPlayerController ctrl;
+      if (isContentUri) {
+        ctrl = VideoPlayerController.contentUri(
+          Uri.parse(item.localPath),
+          videoPlayerOptions: VideoPlayerOptions(
+            mixWithOthers: true,
+            allowBackgroundPlayback: true,
+          ),
+        );
+      } else {
+        var targetFile = file!;
+        try {
+          final raf = file.openSync(mode: FileMode.read);
+          final firstByte = raf.readByteSync();
+          raf.closeSync();
+          if (firstByte == 0x47) {
+            // Unremuxed MPEG-TS file (sync byte 0x47). Auto-remux to clean MP4 for instant ExoPlayer playback!
+            final fixedPath = '${file.path.replaceAll(RegExp(r'\.mp4$', caseSensitive: false), '')}_clean.mp4';
+            final fixedFile = File(fixedPath);
+            if (!fixedFile.existsSync() || fixedFile.lengthSync() < 1024) {
+              final ok = await NativeDownloaderService().remuxTsToMp4(
+                inputPath: file.path,
+                outputPath: fixedPath,
+              );
+              if (ok && fixedFile.existsSync() && fixedFile.lengthSync() > 1024) {
+                targetFile = fixedFile;
+              }
+            } else {
               targetFile = fixedFile;
             }
-          } else {
-            targetFile = fixedFile;
           }
-        }
-      } catch (_) {}
+        } catch (_) {}
 
-      final ctrl = VideoPlayerController.file(
-        targetFile,
-        videoPlayerOptions: VideoPlayerOptions(
-          mixWithOthers: true,
-          allowBackgroundPlayback: true,
-        ),
-      );
+        ctrl = VideoPlayerController.file(
+          targetFile,
+          videoPlayerOptions: VideoPlayerOptions(
+            mixWithOthers: true,
+            allowBackgroundPlayback: true,
+          ),
+        );
+      }
       _controller = ctrl;
 
       await ctrl.initialize();

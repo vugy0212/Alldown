@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/media_item.dart';
 import '../models/local_playlist.dart';
+import '../services/external_music_service.dart';
 import 'settings_provider.dart';
 
 enum LibraryCategory {
@@ -21,6 +22,8 @@ enum LibrarySort {
 class LibraryState {
   final List<MediaItem> items;
   final List<LocalPlaylist> localPlaylists;
+  final List<ExternalFolder> externalFolders;
+  final List<MediaItem> externalTracks;
   final String searchQuery;
   final LibraryCategory selectedCategory;
   final bool isGridView;
@@ -29,14 +32,31 @@ class LibraryState {
   const LibraryState({
     required this.items,
     this.localPlaylists = const [],
+    this.externalFolders = const [],
+    this.externalTracks = const [],
     this.searchQuery = '',
     this.selectedCategory = LibraryCategory.all,
     this.isGridView = false,
     this.sort = LibrarySort.newest,
   });
 
+  List<MediaItem> get allItems => [...items, ...externalTracks];
+
+  List<LocalPlaylist> get allPlaylists {
+    final folderPlaylists = externalFolders.map((f) {
+      final tracks = externalTracks.where((t) => t.localPath.startsWith(f.uri)).toList();
+      return LocalPlaylist(
+        id: 'ext_pl_${f.uri.hashCode}',
+        title: '📁 ${f.name}',
+        createdAt: f.addedAt,
+        trackIds: tracks.map((t) => t.id).toList(),
+      );
+    }).toList();
+    return [...localPlaylists, ...folderPlaylists];
+  }
+
   List<MediaItem> get filteredItems {
-    var list = items;
+    var list = [...items, ...externalTracks];
 
     // Search filter
     if (searchQuery.isNotEmpty) {
@@ -60,7 +80,6 @@ class LibraryState {
         list = list.where((item) => item.isFavorite).toList();
         break;
       case LibraryCategory.playlists:
-        // Playlists category displays LocalPlaylist cards, but if needed filters items:
         list = list.where((item) => item.isAudio).toList();
         break;
       case LibraryCategory.all:
@@ -73,6 +92,8 @@ class LibraryState {
   LibraryState copyWith({
     List<MediaItem>? items,
     List<LocalPlaylist>? localPlaylists,
+    List<ExternalFolder>? externalFolders,
+    List<MediaItem>? externalTracks,
     String? searchQuery,
     LibraryCategory? selectedCategory,
     bool? isGridView,
@@ -81,6 +102,8 @@ class LibraryState {
     return LibraryState(
       items: items ?? this.items,
       localPlaylists: localPlaylists ?? this.localPlaylists,
+      externalFolders: externalFolders ?? this.externalFolders,
+      externalTracks: externalTracks ?? this.externalTracks,
       searchQuery: searchQuery ?? this.searchQuery,
       selectedCategory: selectedCategory ?? this.selectedCategory,
       isGridView: isGridView ?? this.isGridView,
@@ -101,7 +124,44 @@ class MediaLibraryNotifier extends StateNotifier<LibraryState> {
       : super(LibraryState(
           items: _storage.loadLibrary(),
           localPlaylists: _storage.loadLocalPlaylists(),
-        ));
+        )) {
+    loadExternalMusic();
+  }
+
+  Future<void> loadExternalMusic() async {
+    try {
+      final service = ExternalMusicService();
+      final folders = await service.getSavedFolders();
+      final tracks = await service.scanAllFolders();
+      if (mounted) {
+        state = state.copyWith(
+          externalFolders: folders,
+          externalTracks: tracks,
+        );
+      }
+    } catch (_) {}
+  }
+
+  Future<ExternalFolder?> pickAndAddExternalFolder() async {
+    try {
+      final service = ExternalMusicService();
+      final folder = await service.pickAndAddFolder();
+      if (folder != null) {
+        await loadExternalMusic();
+      }
+      return folder;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> removeExternalFolder(String uri) async {
+    try {
+      final service = ExternalMusicService();
+      await service.removeFolder(uri);
+      await loadExternalMusic();
+    } catch (_) {}
+  }
 
   void setSearchQuery(String query) {
     state = state.copyWith(searchQuery: query);

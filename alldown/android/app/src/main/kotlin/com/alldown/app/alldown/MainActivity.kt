@@ -32,9 +32,12 @@ import java.net.URL
 import android.webkit.WebView
 import org.json.JSONObject
 import kotlin.concurrent.thread
+import com.alldown.app.alldown.audio.ExternalFolderManager
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.alldown.app/downloader"
+    private val REQUEST_CODE_PICK_FOLDER = 9921
+    private var pendingFolderResult: MethodChannel.Result? = null
     private var sharedUrl: String? = null
     private var methodChannel: MethodChannel? = null
     private var headlessWebView: WebView? = null
@@ -593,11 +596,74 @@ class MainActivity : FlutterActivity() {
                         val gainMb = call.argument<Int>("gainMb") ?: 0
                         result.success(audioFxManager.setLoudness(enabled, gainMb))
                     }
+                    "pickExternalFolder" -> {
+                        pendingFolderResult = result
+                        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+                        }
+                        try {
+                            startActivityForResult(intent, REQUEST_CODE_PICK_FOLDER)
+                        } catch (e: Exception) {
+                            pendingFolderResult?.error("SAF_ERROR", e.message, null)
+                            pendingFolderResult = null
+                        }
+                    }
+                    "scanExternalFolder" -> {
+                        val uriStr = call.argument<String>("uri")
+                        if (!uriStr.isNullOrEmpty()) {
+                            thread {
+                                try {
+                                    val uri = Uri.parse(uriStr)
+                                    val files = ExternalFolderManager.scanAudioFiles(applicationContext, uri)
+                                    runOnUiThread {
+                                        result.success(files)
+                                    }
+                                } catch (e: Exception) {
+                                    runOnUiThread {
+                                        result.error("SCAN_ERROR", e.message, null)
+                                    }
+                                }
+                            }
+                        } else {
+                            result.error("INVALID_URI", "Folder URI is required", null)
+                        }
+                    }
+                    "releaseExternalFolder" -> {
+                        val uriStr = call.argument<String>("uri")
+                        if (!uriStr.isNullOrEmpty()) {
+                            ExternalFolderManager.releaseUriPermission(applicationContext, Uri.parse(uriStr))
+                            result.success(true)
+                        } else {
+                            result.success(false)
+                        }
+                    }
                     else -> result.notImplemented()
                 }
             }
         }
         mediaSessionManager = MediaSessionManager(applicationContext, methodChannel)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_CODE_PICK_FOLDER) {
+            if (resultCode == android.app.Activity.RESULT_OK && data?.data != null) {
+                val treeUri = data.data!!
+                try {
+                    contentResolver.takePersistableUriPermission(
+                        treeUri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                } catch (e: Exception) {
+                    android.util.Log.w("MainActivity", "takePersistableUriPermission failed: ${e.message}")
+                }
+                val folderName = ExternalFolderManager.getFolderDisplayName(applicationContext, treeUri)
+                pendingFolderResult?.success(mapOf("uri" to treeUri.toString(), "name" to folderName))
+            } else {
+                pendingFolderResult?.success(null)
+            }
+            pendingFolderResult = null
+        }
     }
 
     override fun onDestroy() {

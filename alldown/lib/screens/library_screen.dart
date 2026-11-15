@@ -12,6 +12,7 @@ import '../theme/app_colors.dart';
 import '../services/haptic_service.dart';
 import '../widgets/library_item_card.dart';
 import '../widgets/video_player_modal.dart';
+import '../widgets/external_folders_modal.dart';
 
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
@@ -122,6 +123,18 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         _selectedItemIds.add(id);
       }
     });
+  }
+
+  void _openExternalFoldersModal(BuildContext context) {
+    HapticService.selection();
+    final state = ref.read(mediaLibraryProvider);
+    final notifier = ref.read(mediaLibraryProvider.notifier);
+    ExternalFoldersModal.show(
+      context,
+      folders: state.externalFolders,
+      onAddFolder: () => notifier.pickAndAddExternalFolder(),
+      onRemoveFolder: (uri) => notifier.removeExternalFolder(uri),
+    );
   }
 
   void _showCreatePlaylistDialog(
@@ -263,6 +276,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
   void _onDeleteItem(MediaItem item) {
     HapticService.error();
+    if (item.localPath.startsWith('content://')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pjesma je iz vanjske mape. Koristite izbornik mapa za upravljanje.'),
+        ),
+      );
+      return;
+    }
     try {
       final f = File(item.localPath);
       if (f.existsSync()) {
@@ -285,8 +306,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
     final items = libraryState.filteredItems;
     final videoCount = libraryState.items.where((e) => !e.isAudio).length;
-    final audioCount = libraryState.items.where((e) => e.isAudio).length;
-    final playlistsCount = libraryState.localPlaylists.length;
+    final audioCount = libraryState.allItems.where((e) => e.isAudio).length;
+    final playlistsCount = libraryState.allPlaylists.length;
     final isPlaylistsTab = libraryState.selectedCategory == LibraryCategory.playlists;
 
     return Scaffold(
@@ -353,6 +374,17 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         libraryNotifier.setSearchQuery('');
                       },
                     ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.folder_open_rounded,
+                      size: 20,
+                      color: libraryState.externalFolders.isNotEmpty
+                          ? AppColors.primaryAccent
+                          : (isDark ? AppColors.outline : const Color(0xFF64748B)),
+                    ),
+                    tooltip: 'Vanjske mape s glazbom',
+                    onPressed: () => _openExternalFoldersModal(context),
+                  ),
                 ],
               ),
             ),
@@ -933,7 +965,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               ),
             ),
             Text(
-              '${state.localPlaylists.length}',
+              '${state.allPlaylists.length}',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
@@ -944,23 +976,38 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         ),
         const SizedBox(height: 10),
 
-        // Action: + Nova Playlista
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primaryAccent,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        // Action: + Nova Playlista & Vanjske Mape
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primaryAccent,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                icon: const Icon(Icons.add_rounded, size: 20),
+                label: Text(l10n.newPlaylist, style: const TextStyle(fontWeight: FontWeight.bold)),
+                onPressed: () => _showCreatePlaylistDialog(context, notifier, state.items, l10n),
+              ),
             ),
-            icon: const Icon(Icons.add_rounded, size: 20),
-            label: Text(l10n.newPlaylist, style: const TextStyle(fontWeight: FontWeight.bold)),
-            onPressed: () => _showCreatePlaylistDialog(context, notifier, state.items, l10n),
-          ),
+            const SizedBox(width: 8),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: isDark ? AppColors.onSurface : const Color(0xFF0F172A),
+                side: BorderSide(color: isDark ? AppColors.stroke : const Color(0xFFCBD5E1)),
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              icon: const Icon(Icons.folder_open_rounded, size: 20, color: AppColors.primaryAccent),
+              label: const Text('Mape', style: TextStyle(fontWeight: FontWeight.bold)),
+              onPressed: () => _openExternalFoldersModal(context),
+            ),
+          ],
         ),
         const SizedBox(height: 14),
 
-        if (state.localPlaylists.isEmpty)
+        if (state.allPlaylists.isEmpty)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
@@ -997,12 +1044,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: state.localPlaylists.length,
+            itemCount: state.allPlaylists.length,
             separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (ctx, idx) {
-              final pl = state.localPlaylists[idx];
+              final pl = state.allPlaylists[idx];
+              final isExternalFolder = pl.id.startsWith('ext_pl_');
               final matchingTracks = pl.trackIds
-                  .map((id) => state.items.where((e) => e.id == id).firstOrNull)
+                  .map((id) => state.allItems.where((e) => e.id == id).firstOrNull)
                   .whereType<MediaItem>()
                   .toList();
 
@@ -1020,11 +1068,21 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                       width: 50,
                       height: 50,
                       decoration: BoxDecoration(
-                        gradient: AppColors.primaryGradient,
+                        gradient: isExternalFolder
+                            ? const LinearGradient(
+                                colors: [Color(0xFF0D9488), Color(0xFF14B8A6)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              )
+                            : AppColors.primaryGradient,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Center(
-                        child: Icon(Icons.queue_music_rounded, color: Colors.white, size: 26),
+                      child: Center(
+                        child: Icon(
+                          isExternalFolder ? Icons.folder_rounded : Icons.queue_music_rounded,
+                          color: Colors.white,
+                          size: 26,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -1042,7 +1100,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '${pl.trackIds.length} pjesama (${matchingTracks.length} dostupno)',
+                            isExternalFolder
+                                ? '${pl.trackIds.length} pjesama (Vanjska mapa)'
+                                : '${pl.trackIds.length} pjesama (${matchingTracks.length} dostupno)',
                             style: TextStyle(fontSize: 12, color: AppColors.secondary),
                           ),
                         ],
@@ -1060,17 +1120,51 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                       child: IconButton(
                         padding: EdgeInsets.zero,
                         icon: const Icon(Icons.play_arrow_rounded, color: AppColors.primaryAccent, size: 22),
-                        onPressed: matchingTracks.isNotEmpty ? () => _playLocalPlaylist(pl, state.items) : null,
+                        onPressed: matchingTracks.isNotEmpty ? () => _playLocalPlaylist(pl, state.allItems) : null,
                       ),
                     ),
                     const SizedBox(width: 4),
 
-                    // Delete Playlist
+                    // Delete / Remove
                     IconButton(
                       icon: const Icon(Icons.delete_outline_rounded, size: 20),
                       color: AppColors.errorAccent.withValues(alpha: 0.7),
-                      onPressed: () {
+                      onPressed: () async {
                         HapticService.error();
+                        if (isExternalFolder) {
+                          final folder = state.externalFolders
+                              .where((f) => 'ext_pl_${f.uri.hashCode}' == pl.id)
+                              .firstOrNull;
+                          if (folder != null) {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (dlgCtx) => AlertDialog(
+                                title: const Text('Ukloni vanjsku mapu?'),
+                                content: Text('Želite li ukloniti "${folder.name}" iz AllDowna? Vaše datoteke na memoriji telefona neće biti dirane niti obrisane.'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(dlgCtx, false),
+                                    child: const Text('Odustani'),
+                                  ),
+                                  FilledButton(
+                                    onPressed: () => Navigator.pop(dlgCtx, true),
+                                    style: FilledButton.styleFrom(backgroundColor: AppColors.errorAccent),
+                                    child: const Text('Ukloni'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirm == true) {
+                              await notifier.removeExternalFolder(folder.uri);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Uklonjena mapa ${folder.name}')),
+                                );
+                              }
+                            }
+                          }
+                          return;
+                        }
                         notifier.deletePlaylist(pl.id);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text(l10n.playlistDeleted)),
