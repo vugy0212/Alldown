@@ -2,6 +2,14 @@
 
 All notable changes to **AllDown** are documented in this file.
 
+## [1.7.1] - 2026-11-20
+
+### Added & Improved
+- **Buy Me a Coffee Creator Support Integration:**
+  - Added direct Buy Me a Coffee support link (`https://buymeacoffee.com/mvugrek`) in the Settings "About AllDown" section.
+  - One-tap donation/support banner launching directly in the external browser.
+  - Added Buy Me a Coffee badges and support links in repository README.
+
 ## [1.7.0] - 2026-11-15
 
 ### Added
