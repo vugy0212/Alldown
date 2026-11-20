@@ -1046,10 +1046,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Buy Me a Coffee Support Banner (Placeholder - active when link is configured)
+                // Buy Me a Coffee Support Banner
                 InkWell(
                   onTap: () {
-                    const bmcUrl = ''; // TODO: Insert active BuyMeACoffee URL when ready (e.g. 'https://buymeacoffee.com/vugy0212')
+                    const bmcUrl = 'https://buymeacoffee.com/mvugrek';
                     if (bmcUrl.isNotEmpty) {
                       launchUrl(
                         Uri.parse(bmcUrl),

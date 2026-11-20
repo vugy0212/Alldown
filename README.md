@@ -8,6 +8,7 @@
     <a href="https://flutter.dev"><img src="https://img.shields.io/badge/Flutter-3.x-06B6D4?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter" /></a>
     <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Platform-Android%208.0%2B-10B981?style=for-the-badge&logo=android&logoColor=white" alt="Platform Android" /></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-F59E0B?style=for-the-badge" alt="License GPLv3" /></a>
+    <a href="https://buymeacoffee.com/mvugrek"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me A Coffee" /></a>
   </p>
 
   <p>
@@ -206,6 +207,7 @@ Compiled APKs will be located in: `alldown/build/app/outputs/flutter-apk/`.
 - **Current Version:** 1.7.0 (`v1.7.0+30`)
 - **Author:** **Allen**
 - **Repository:** [https://github.com/vugy0212/Alldown](https://github.com/vugy0212/Alldown)
+- **Support / Donate:** [Buy Me a Coffee (mvugrek)](https://buymeacoffee.com/mvugrek)
 
 ---
 
